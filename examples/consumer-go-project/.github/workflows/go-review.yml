@@ -21,10 +21,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # Replace this with `go install <your-module>/cmd/go-review@<version>`
-      # after go-review is published as a module/release.
+      # Replace this with the real published module path and tag.
+      # Recommended release builds set version metadata with:
+      # -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
       - name: Install go-review
         run: go install github.com/OWNER/go-code-reviewer/cmd/go-review@v0.1.0
+
+      - name: Show go-review version
+        run: go-review version
 
       - name: Run go-review CI profile
         run: go-review check --config go-review.yaml --profile ci --workdir .

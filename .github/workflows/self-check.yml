@@ -33,6 +33,9 @@ jobs:
       - name: Verify CLI help
         run: go run ./cmd/go-review --help
 
+      - name: Verify CLI version metadata
+        run: go run ./cmd/go-review version
+
       - name: Run go-review framework self-check matrix
         shell: bash
         run: |

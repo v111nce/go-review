@@ -5,8 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 
 	"go-code-reviewer/internal/engine"
+)
+
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
 )
 
 func main() {
@@ -22,6 +29,9 @@ func run(args []string) int {
 	switch command {
 	case "check", "fix":
 		return runCommand(command, args[1:])
+	case "version", "--version", "-v":
+		printVersion()
+		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", command)
 		printHelp()
@@ -53,13 +63,19 @@ func printHelp() {
 Usage:
   go-review check --config <path> [--profile local]
   go-review fix   --config <path> [--profile local]
+  go-review version
 
 Commands:
   check   run configured adapters without applying edits
   fix     run configured adapters in fix mode when adapters support safe local fixes
+  version print build version metadata
 
 Flags:
   --config   path to go-review YAML config with schema_version
   --profile  profile name, defaults to local
   --workdir  project working directory override`)
+}
+
+func printVersion() {
+	fmt.Fprintf(os.Stdout, "go-review version=%s commit=%s date=%s go=%s os=%s arch=%s\n", version, commit, date, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 }
