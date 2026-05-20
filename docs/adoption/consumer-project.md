@@ -17,6 +17,7 @@ The framework does not need to know the consumer repository layout beyond `--wor
 From a consumer repository root:
 
 ```bash
+go-review version
 go-review check --config go-review.yaml --profile local --workdir .
 go-review fix --config go-review.yaml --profile local --workdir .
 go-review check --config go-review.yaml --profile ci --workdir .
@@ -49,6 +50,21 @@ go install github.com/OWNER/go-code-reviewer/cmd/go-review@v0.1.0
 ```
 
 Replace it with the real module path and release tag after publishing. Until then, projects can run the framework from a checked-out path or a private module path.
+The template also runs `go-review version` so CI logs record the exact tool build used for the gate.
+
+## Version metadata
+
+`go-review version` prints the tool version, commit, build date, Go runtime, OS, and architecture. Development builds default to `version=dev commit=unknown date=unknown`.
+
+Release builds should stamp these variables:
+
+```bash
+go build \
+  -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
+  -o go-review ./cmd/go-review
+```
+
+Consumer CI should pin a release tag instead of tracking an unversioned branch.
 
 ## Framework self-check vs consumer CI
 
@@ -62,5 +78,4 @@ The self-check should remain deterministic and fixture-backed. Consumer CI shoul
 ## Next adoption hardening steps
 
 - Publish a real module path and versioned install command.
-- Add a `go-review version` command before public release.
 - Add richer reporter artifacts such as SARIF/GitHub Checks when PR annotation becomes required.

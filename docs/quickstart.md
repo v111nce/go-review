@@ -20,6 +20,7 @@ Use the regression fixtures for smoke checks:
 ```bash
 go test ./...
 go run ./cmd/go-review --help
+go run ./cmd/go-review version
 go run ./cmd/go-review check \
   --config testdata/fixtures/regression-gates/configs/go-review.yaml \
   --profile local \
@@ -57,6 +58,7 @@ That workflow is a framework regression guard, not the full consumer-project ado
 
 - It runs `go test ./...` to protect the framework implementation.
 - It runs CLI help to protect the user-facing command surface.
+- It runs CLI version output so release/debug metadata stays available.
 - It runs the same fixture-backed local, ci, nightly, semantic, and fix smoke matrix documented above.
 - It copies `autofix-project` into the CI runner temp directory before `fix`, so the self-check proves fix behavior without mutating tracked fixtures.
 - It finishes with a clean-worktree assertion to catch accidental tracked fixture edits.
