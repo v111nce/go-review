@@ -25,7 +25,7 @@ jobs:
       # Recommended release builds set version metadata with:
       # -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
       - name: Install go-review
-        run: go install github.com/OWNER/go-code-reviewer/cmd/go-review@v0.1.0
+        run: go install github.com/v111nce/go-review/cmd/go-review@v0.1.0
 
       - name: Show go-review version
         run: go-review version

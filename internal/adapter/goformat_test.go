@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"go-code-reviewer/internal/result"
+	"github.com/v111nce/go-review/internal/result"
 )
 
 func TestGoFormatAdapterCheckDetectsUnformattedFile(t *testing.T) {

@@ -19,8 +19,8 @@ go run ../../cmd/go-review fix --config go-review.yaml --profile local --workdir
 ## Consumer repository flow after release
 
 ```bash
-go install github.com/OWNER/go-code-reviewer/cmd/go-review@v0.1.0
+go install github.com/v111nce/go-review/cmd/go-review@v0.1.0
 go-review check --config go-review.yaml --profile ci --workdir .
 ```
 
-Replace `github.com/OWNER/go-code-reviewer` and `v0.1.0` with the real module path and release tag once published.
+Replace `v0.1.0` with the real release tag once published.

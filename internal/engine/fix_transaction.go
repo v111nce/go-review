@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go-code-reviewer/internal/config"
+	"github.com/v111nce/go-review/internal/config"
 )
 
 type fixTransaction struct {

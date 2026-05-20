@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"go-code-reviewer/internal/config"
+	"github.com/v111nce/go-review/internal/config"
 )
 
 func TestCommandAdapterSuccessFailureAndArtifacts(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime"
 
-	"go-code-reviewer/internal/engine"
+	"github.com/v111nce/go-review/internal/engine"
 )
 
 var (

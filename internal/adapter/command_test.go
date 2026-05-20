@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"go-code-reviewer/internal/result"
+	"github.com/v111nce/go-review/internal/result"
 )
 
 func TestCommandAdapterSuccessCapturesOutputAndEnv(t *testing.T) {

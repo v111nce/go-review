@@ -1,6 +1,6 @@
 package adapter
 
-import "go-code-reviewer/internal/result"
+import "github.com/v111nce/go-review/internal/result"
 
 func adapterID(req ExecutionRequest, fallback string) string {
 	if req.AdapterID != "" {
