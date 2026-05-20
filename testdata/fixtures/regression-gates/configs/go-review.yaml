@@ -1,0 +1,76 @@
+schema_version: "1.0"
+tools:
+  go_review: "0.1.0-fixture"
+  adapters:
+    go.format: "system-gofmt"
+    go.test: "go1.24+"
+    fixture_contract: "2026-05-19"
+defaults:
+  timeout: 30s
+  workdir: .
+artifacts:
+  dir: "artifacts/go-review"
+adapters:
+  - id: go.format
+    type: go.format
+    command: go.format
+    capabilities: [check, fix]
+    timeout: 30s
+    fix_safety: safe
+  - id: go.test
+    type: cmd
+    command: go
+    args: [test, ./...]
+    capabilities: [test]
+    timeout: 1m
+    parser: go-test
+  - id: fixture.security-lite
+    type: cmd
+    command: ../scripts/fake-tool.sh
+    args: [pass]
+    capabilities: [scan]
+    timeout: 10s
+    parser: text
+  - id: fixture.security-full
+    type: cmd
+    command: ../scripts/fake-tool.sh
+    args: [pass]
+    capabilities: [scan]
+    timeout: 2m
+    parser: text
+  - id: fixture.custom-long
+    type: cmd
+    command: ../scripts/fake-tool.sh
+    args: [pass]
+    capabilities: [check]
+    timeout: 2m
+    parser: text
+steps:
+  - id: format-check
+    adapter: go.format
+    on_fail: stop
+    allow_fix: false
+  - id: test
+    adapter: go.test
+    depends_on: [format-check]
+    on_fail: stop
+  - id: security-lite
+    adapter: fixture.security-lite
+    depends_on: [format-check]
+    on_fail: continue
+  - id: full-security
+    adapter: fixture.security-full
+    on_fail: continue
+  - id: custom-long-rules
+    adapter: fixture.custom-long
+    depends_on: [test]
+    on_fail: continue
+profiles:
+  - name: local
+    steps: [format-check, test]
+  - name: ci
+    steps: [format-check, test, security-lite]
+  - name: main
+    steps: [format-check, test, security-lite]
+  - name: nightly
+    steps: [format-check, test, security-lite, full-security, custom-long-rules]

@@ -1,0 +1,215 @@
+# Review Pipeline 与自动修复
+
+本主题定义通用 Go code-review 编排平台的技术契约。核心引擎不绑定任何单一工具，只负责 adapter 生命周期、pipeline 调度、统一结果、修复事务、报告生成和门禁输出；格式化、lint、架构、安全、测试、报告和团队语义规则都作为 adapter 接入。
+
+## 产品语义输入
+
+| Product Module Key | 用户验收信号 | 来源 |
+| --- | --- | --- |
+| `tool-adapter-platform` | 一个配置文件能同时运行内置 adapter 和通用 `cmd` adapter | [产品能力](../product/go-code-quality-governance.md#工具接入平台) |
+| `review-pipeline` | 配置能表达顺序、并行、依赖和失败策略 | [产品能力](../product/go-code-quality-governance.md#review-pipeline-编排) |
+| `custom-rule-adapters` | 示例规则或外部工具能进入 pipeline 并影响门禁 | [产品能力](../product/go-code-quality-governance.md#自定义规约-adapter) |
+| `policy-and-autofix` | 每个 adapter 和规则都有明确修复策略 | [产品能力](../product/go-code-quality-governance.md#策略与安全自动修复) |
+| `regression-gates` | PR 和定时任务可复用同一套 pipeline 配置 | [产品能力](../product/go-code-quality-governance.md#回归门禁) |
+
+## 主题定位和约束
+
+平台不是替代 Go 编译器、测试或人工评审的系统。它负责把多个质量工具接成一个稳定、可复用、可审计的 review pipeline，把确定性违规报告出来，并在安全条件满足时生成可应用的修复。
+
+约束：
+
+- 核心不硬编码具体工具；内置工具也通过 adapter 接口运行。
+- adapter 可以包装成熟工具、自研工具、Go analyzer、测试命令或报告器。
+- pipeline 必须能表达顺序、并行、依赖、超时、失败策略和 profile。
+- 自动修复必须是局部、可格式化、可测试、可回滚的修改。
+- 架构边界和目录归属默认不自动迁移，只报告违规。
+
+## 核心设计
+
+```text
+go-review CLI
+  |
+  |-- Config Loader
+  |-- Adapter Registry
+  |-- Pipeline Planner
+  |-- DAG Scheduler
+  |-- Result Normalizer
+  |-- Fix Transaction Manager
+  |-- Report Writers
+        |
+        |-- cmd adapter
+        |-- go.format adapter
+        |-- go.lint adapter
+        |-- go.arch adapter
+        |-- go.security adapter
+        |-- go.test adapter
+        |-- go.semantic adapter
+        |-- report.github adapter
+```
+
+## Adapter 类型
+
+| 类型 | 职责 | 示例 |
+| --- | --- | --- |
+| `command` | 运行任意外部命令 | 任意已有内部工具 |
+| `checker` | 发现违规 | lint、架构规则、安全扫描 |
+| `fixer` | 生成或应用修复 | 格式化、import 整理、局部安全替换 |
+| `runner` | 执行测试或回归 | `go test`、race、coverage |
+| `parser` | 把工具输出解析为统一结果 | JSON、JUnit、SARIF、go test 输出 |
+| `reporter` | 输出 review 结果 | 终端、JSON、Markdown、SARIF、GitHub PR 评论 |
+| `policy` | 处理严重级别、豁免和门禁策略 | profile、ignore、baseline |
+
+一个 adapter 可以同时实现多个类型。例如 `go.format` 既是 `checker` 也是 `fixer`。
+
+## 通用工具接入契约
+
+任意工具接入时，需要声明：
+
+| 字段 | 含义 |
+| --- | --- |
+| `id` | adapter ID，例如 `go.lint` 或 `internal.naming-check` |
+| `command` | 外部命令或内置 adapter 名称 |
+| `args` | 参数模板 |
+| `workdir` | 工作目录 |
+| `env` | 环境变量 |
+| `inputs` | 读取哪些文件或范围 |
+| `outputs` | 输出格式和 artifact |
+| `parser` | 如何把 stdout、stderr 或文件解析成统一结果 |
+| `capabilities` | `check`、`fix`、`test`、`scan`、`report` |
+| `timeout` | 最大执行时间 |
+| `cache_key` | 可选缓存键 |
+
+## Review Pipeline 模型
+
+Pipeline 是有向无环图。每个 step 绑定一个 adapter，并声明依赖、失败策略和输出。
+
+| 字段 | 含义 |
+| --- | --- |
+| `id` | step ID |
+| `adapter` | 使用哪个 adapter |
+| `depends_on` | 必须先完成的 steps |
+| `run_if` | 执行条件，例如 changed files、profile、previous status |
+| `parallel_group` | 可并行执行的分组 |
+| `on_fail` | `stop`、`continue`、`skip_dependents` |
+| `allow_fix` | 是否允许该 step 自动修复 |
+| `artifacts` | 输出报告、覆盖率、SARIF、日志等 |
+
+示例执行图：
+
+```text
+format-check
+  -> lint
+  -> arch
+  -> test
+
+security ------------------^
+
+report-github depends_on: lint, arch, test, security
+```
+
+## 常用 Adapter
+
+第一版提供常用 adapter，但平台边界不是这些工具：
+
+| Adapter | 默认执行 | 主要输出 |
+| --- | --- | --- |
+| `cmd` | 任意外部命令 | 用户自定义解析结果 |
+| `go.format` | `gofmt`、`goimports`、`gofumpt`、`gci` | 格式违规和可应用修复 |
+| `go.lint` | `golangci-lint`、`go vet`、`staticcheck`、`revive` 等 | lint 违规 |
+| `go.arch` | Go `internal/` 规则、`depguard`、package 依赖图 | 架构边界违规 |
+| `go.security` | `gosec`、`govulncheck` | 安全和漏洞问题 |
+| `go.test` | `go test`、coverage、race | 测试和回归结果 |
+| `go.semantic` | 自定义 `go/analysis` analyzer 运行时 | 团队语义规约违规 |
+| `report.github` | GitHub Checks、PR Review、SARIF | PR 评论和检查结果 |
+
+## 统一结果模型
+
+| 字段 | 含义 |
+| --- | --- |
+| `adapter_id` | 来源 adapter |
+| `step_id` | 来源 pipeline step |
+| `rule_id` | 触发规则或检查项 |
+| `kind` | `violation`、`test`、`coverage`、`security`、`artifact` |
+| `file` | 文件路径 |
+| `line` | 行号 |
+| `column` | 列号 |
+| `message` | 违规或失败原因 |
+| `suggestion` | 修复建议 |
+| `fix_available` | 是否存在自动修复 |
+| `fix_safety` | `safe`、`review`、`none` |
+| `gate_status` | `pass`、`warn`、`fail` |
+
+## 执行流程
+
+```text
+Load Config
+  -> Resolve Adapters
+  -> Build Pipeline DAG
+  -> Execute Ready Steps
+  -> Parse and Normalize Results
+  -> Apply Safe Fixes when requested
+  -> Re-run Affected Steps
+  -> Write Reports and Artifacts
+  -> Return Gate Exit Code
+```
+
+## 自动修复契约
+
+自动修复分为三档：
+
+| 档位 | 含义 | 示例 |
+| --- | --- | --- |
+| `safe` | 可证明局部语义不变，允许自动应用 | import 排序、格式化、确定性的局部替换 |
+| `review` | 可以生成建议，但不默认应用 | 错误处理结构调整、复杂条件拆分 |
+| `none` | 只报告 | 架构迁移、业务逻辑重写、危险字段写操作 |
+
+修复流程：
+
+```text
+Diagnostic
+  -> Suggested Fix or Text Edit
+  -> Conflict Check
+  -> Apply in Transaction
+  -> Run Formatter
+  -> Re-run Dependent Steps
+  -> Commit Fix Result or Roll Back
+```
+
+## 示例规则：对象访问约束
+
+字段访问只是示例，不是内置主线规则。它说明平台为什么需要语义 adapter：
+
+- 简单文本替换无法区分读取、写入、取地址和同名字段。
+- 安全修复需要知道表达式的真实类型。
+- 某些场景可以自动修，某些场景只能报告。
+
+因此这类规则应该作为 `go.semantic` 自定义 adapter 示例，而不是产品内置固定规则。
+
+## 失败和安全策略
+
+- adapter 启动失败时，按 step 的 `on_fail` 决定继续、跳过下游或失败。
+- 自动修复后格式化失败时，回滚该修复并报告。
+- 自动修复后依赖 step 失败时，保留失败证据，不把该修复标记为安全完成。
+- 同一文件存在多个互相重叠的 text edit 时，必须拒绝自动应用并转人工处理。
+- 豁免必须记录 adapter ID、规则 ID、原因和范围。
+- CI 环境默认只检查，不直接改写主分支代码。
+
+## 测试策略
+
+| 测试对象 | 验证方式 |
+| --- | --- |
+| adapter 配置 | 使用 fixture 项目验证启停、参数、输出解析和超时 |
+| pipeline 调度 | 验证顺序、并行、依赖、失败策略和 profile |
+| 常用 adapter | 用故意违规样例验证每个 adapter 能产出统一结果 |
+| 自定义语义 adapter | 使用 `analysistest` 覆盖 AST 和类型边界 |
+| 自动修复 | golden file 验证修复前后代码 |
+| 报告输出 | 快照测试验证终端、JSON、Markdown、SARIF 输出 |
+| 回归门禁 | 用故意违规样例确认门禁失败 |
+
+## 相关决策
+
+- [B-1](../_process/backend/DECISIONS.md#b-1-通用规则优先复用成熟-go-工具链)：通用规则优先复用成熟 Go 工具链。
+- [B-2](../_process/backend/DECISIONS.md#b-2-自定义语义规则通过-goanalysis-承载)：自定义语义规则通过 `go/analysis` 承载。
+- [B-3](../_process/backend/DECISIONS.md#b-3-平台提供自己的-cli并把-golangci-lint-作为-adapter-调用)：平台提供自己的 CLI，并把 `golangci-lint` 作为 adapter 调用。
+- [B-4](../_process/backend/DECISIONS.md#b-4-核心引擎采用工具无关-adapter-和-pipeline-dag)：核心引擎采用工具无关 adapter 和 pipeline DAG。
+- [B-5](../_process/backend/DECISIONS.md#b-5-第一版配置采用简单稳定-yaml-schema)：第一版配置采用简单稳定 YAML schema。

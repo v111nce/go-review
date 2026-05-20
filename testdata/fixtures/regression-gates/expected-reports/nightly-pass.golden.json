@@ -1,0 +1,11 @@
+{
+  "profile": "nightly",
+  "gate_status": "pass",
+  "steps": [
+    {"id": "format-check", "adapter_id": "go.format", "gate_status": "pass"},
+    {"id": "test", "adapter_id": "go.test", "gate_status": "pass"},
+    {"id": "security-lite", "adapter_id": "fixture.security-lite", "gate_status": "pass"},
+    {"id": "full-security", "adapter_id": "fixture.security-full", "gate_status": "pass"},
+    {"id": "custom-long-rules", "adapter_id": "fixture.custom-long", "gate_status": "pass"}
+  ]
+}
