@@ -26,25 +26,37 @@
 
 ## 核心设计
 
-```text
-go-review CLI
-  |
-  |-- Config Loader
-  |-- Adapter Registry
-  |-- Pipeline Planner
-  |-- DAG Scheduler
-  |-- Result Normalizer
-  |-- Fix Transaction Manager
-  |-- Report Writers
-        |
-        |-- cmd adapter
-        |-- go.format adapter
-        |-- go.lint adapter
-        |-- go.arch adapter
-        |-- go.security adapter
-        |-- go.test adapter
-        |-- go.semantic adapter
-        |-- report.github adapter
+```mermaid
+flowchart TD
+  cli[go-review CLI]
+  cfg[Config Loader]
+  registry[Adapter Registry]
+  planner[Pipeline Planner]
+  scheduler[DAG Scheduler]
+  runtime[Adapter Runtime]
+  normalizer[Result Normalizer]
+  fixer[Fix Transaction Manager]
+  writers[Report Writers]
+
+  cli --> cfg
+  cfg --> registry
+  cfg --> planner
+  planner --> scheduler
+  scheduler --> runtime
+  registry --> runtime
+  runtime --> normalizer
+  normalizer --> writers
+  normalizer --> fixer
+  fixer --> scheduler
+
+  registry --> cmd[cmd adapter]
+  registry --> format[go.format adapter]
+  registry --> lint[go.lint adapter]
+  registry --> arch[go.arch adapter]
+  registry --> security[go.security adapter]
+  registry --> test[go.test adapter]
+  registry --> semantic[go.semantic adapter]
+  writers --> github[report.github / SARIF]
 ```
 
 ## Adapter 类型

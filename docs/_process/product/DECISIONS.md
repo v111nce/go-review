@@ -39,3 +39,11 @@ Status: accepted
 决策：第一版交付 `cmd`、`go.format`、`go.lint`、`go.arch`、`go.security`、`go.test`、`go.semantic`、`report.github` 这组常用 adapter。第一版只支持项目内本地 adapter，不提供 adapter 市场或远程安装能力。
 
 理由：这组 adapter 已覆盖通用 Go code-review 的基本闭环。本地 adapter 足以验证接入模型、pipeline 编排和门禁体验；市场和远程安装属于后续分发能力。
+
+## P-6 Product 文档必须包含 Mermaid 架构图
+
+Status: accepted
+
+决策：Product 总入口和核心产品能力文档必须包含 Mermaid 架构图，用用户、能力模块、profile、结果和门禁闭环解释产品。
+
+理由：本项目是框架型工具，仅靠表格和段落不容易让读者快速理解“谁配置、平台编排什么、结果如何回到用户”。Product 图负责先建立产品心智，再由模块表和 Story 候选展开细节。

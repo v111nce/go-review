@@ -66,6 +66,23 @@ Go 项目长期维护时，质量退化通常不是单点 bug，而是目录边�
 | `policy-and-autofix` | 策略与安全自动修复 | 减少机械修复成本，同时避免破坏代码语义 | draft |
 | `regression-gates` | 回归门禁 | 保证规则长期执行，不随项目演进失效 | draft |
 
+## 产品能力闭环图
+
+```mermaid
+flowchart LR
+  user[Go 项目维护者] --> config[定义 go-review.yaml]
+  config --> adapters[接入检查/测试/安全/报告工具]
+  adapters --> pipeline[编排 local / ci / nightly pipeline]
+  pipeline --> findings[统一违规、测试和 artifact 结果]
+  findings --> policy{是否安全自动修复?}
+  policy -->|safe| fix[应用修复并重跑验证]
+  policy -->|review / none| report[只报告并给出建议]
+  fix --> gate[质量门禁结果]
+  report --> gate
+  gate -->|pass| merge[允许继续开发/合入]
+  gate -->|fail| feedback[阻断并反馈原因]
+```
+
 ## 工具接入平台
 
 `tool-adapter-platform` 是最小核心。它不关心某个工具是否叫 linter、tester、scanner 或 reporter，只要求 adapter 按契约输入输出。

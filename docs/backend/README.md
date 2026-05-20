@@ -2,6 +2,32 @@
 
 后端文档定义通用 Go code-review 编排平台的技术契约：adapter 生命周期、pipeline 调度、规则来源、检测执行、自动修复边界、报告输出和与任意工具的集成方式。
 
+## 后端架构图
+
+```mermaid
+flowchart TD
+  cli[go-review CLI]
+  cfg[Config Loader]
+  registry[Adapter Registry]
+  planner[Pipeline Planner]
+  scheduler[DAG Scheduler]
+  runner[Adapter Runtime]
+  normalizer[Result Normalizer]
+  fixer[Fix Transaction Manager]
+  reports[Report Writers]
+  gate[Gate Exit Code]
+
+  cli --> cfg --> planner --> scheduler --> runner
+  cfg --> registry --> runner
+  runner --> normalizer --> reports --> gate
+  normalizer --> fixer --> scheduler
+
+  registry --> cmd[cmd adapter]
+  registry --> format[go.format]
+  registry --> semantic[go.semantic]
+  registry --> test[go.test via cmd]
+```
+
 ## 主题索引
 
 | 主题 | Product Module | 状态 |

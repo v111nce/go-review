@@ -33,6 +33,12 @@
 - 主分支合入依赖 required status checks。
 - 定时全量回归运行全量测试、race、漏洞扫描或长耗时 adapter。
 
+## 文档架构图
+
+- Product 总入口和核心产品能力文档必须包含 Mermaid 架构图，表达用户、能力模块和质量闭环。
+- Backend 总入口和核心后端主题文档必须包含 Mermaid 架构图，表达运行对象、adapter、pipeline、结果、修复和报告之间的关系。
+- Mermaid 图必须使用正文已有术语和 module key；图示用于建立理解框架，不能替代契约表、验收信号或测试证据。
+
 ## 质量证据
 
 - 至少有一组违规 fixture 和一组合规 fixture。

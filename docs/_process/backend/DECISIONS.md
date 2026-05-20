@@ -39,3 +39,11 @@ Status: accepted
 决策：第一版使用 YAML 配置 adapter 和 pipeline。配置先覆盖 adapter ID、命令、参数、工作目录、环境变量、输出解析、step 顺序、依赖、失败策略、是否允许自动修复和 profile。
 
 理由：YAML 对目标用户直观，适合手写和代码审查。第一版 schema 保持简单，可以先保证本地和 CI 复用同一配置，后续再扩展缓存、远程 adapter 和复杂条件。
+
+## B-6 Backend 文档必须包含 Mermaid 架构图
+
+Status: accepted
+
+决策：Backend 总入口和核心后端主题文档必须包含 Mermaid 架构图，用运行对象、adapter registry、pipeline planner、DAG scheduler、result normalizer、fix transaction manager 和 report writers 表达技术结构。
+
+理由：后端契约涉及多个运行对象和回流路径。Mermaid 图能在不引入额外图片资产的前提下保持可读、可 diff、可维护，并方便 GitHub 直接渲染。
