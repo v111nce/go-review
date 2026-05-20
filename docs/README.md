@@ -11,6 +11,7 @@
 | Backend | [backend/README.md](backend/README.md) | 规则引擎、检测器、自动修复和运行契约 |
 | Quality | [quality/README.md](quality/README.md) | 质量基线、检查矩阵、完成定义和验证策略 |
 | Implementation | [implementation/README.md](implementation/README.md) | 后续从产品 Story 候选物化的执行 story |
+| Adoption | [adoption/consumer-project.md](adoption/consumer-project.md) | 其他 Go 项目如何接入 `go-review` 的配置、命令和 CI 模板 |
 | ADR | [adr/README.md](adr/README.md) | 长期架构决策 |
 
 ## 当前结论

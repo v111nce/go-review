@@ -1,0 +1,40 @@
+schema_version: "1.0"
+tools:
+  go_review: "0.1.0-example"
+  adapters:
+    go.format: "system-gofmt"
+    go.test: "go1.24+"
+defaults:
+  timeout: 30s
+  workdir: .
+artifacts:
+  dir: "artifacts/go-review"
+adapters:
+  - id: go.format
+    type: go.format
+    capabilities: [check, fix]
+    timeout: 30s
+    fix_safety: safe
+  - id: go.test
+    type: cmd
+    command: go
+    args: [test, ./...]
+    capabilities: [test]
+    timeout: 1m
+    parser: go-test
+steps:
+  - id: format-check
+    adapter: go.format
+    on_fail: stop
+    allow_fix: true
+  - id: test
+    adapter: go.test
+    depends_on: [format-check]
+    on_fail: stop
+profiles:
+  - name: local
+    steps: [format-check, test]
+  - name: ci
+    steps: [format-check, test]
+  - name: nightly
+    steps: [format-check, test]

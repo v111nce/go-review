@@ -63,6 +63,16 @@ That workflow is a framework regression guard, not the full consumer-project ado
 
 Consumer projects should later get their own reusable workflow/template that installs `go-review` and points at their project-specific `go-review.yaml`.
 
+## Consumer project adoption
+
+For another Go repository, start from:
+
+- [Consumer Project Adoption Guide](adoption/consumer-project.md)
+- [`examples/consumer-go-project/go-review.yaml`](../examples/consumer-go-project/go-review.yaml)
+- [`examples/consumer-go-project/.github/workflows/go-review.yml`](../examples/consumer-go-project/.github/workflows/go-review.yml)
+
+The example proves that `go-review` can be invoked from outside its own module by passing a consumer-owned config and `--workdir`.
+
 ## Traceability
 
 - Product: `docs/product/go-code-quality-governance.md#回归门禁`

@@ -1,0 +1,30 @@
+name: go-review
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  go-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Replace this with `go install <your-module>/cmd/go-review@<version>`
+      # after go-review is published as a module/release.
+      - name: Install go-review
+        run: go install github.com/OWNER/go-code-reviewer/cmd/go-review@v0.1.0
+
+      - name: Run go-review CI profile
+        run: go-review check --config go-review.yaml --profile ci --workdir .
