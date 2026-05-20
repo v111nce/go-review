@@ -406,16 +406,43 @@ func TestGoSemanticFixtureViaCLI(t *testing.T) {
 	root := filepath.Dir(filepath.Dir(filepath.Dir(currentFile(t))))
 	configPath := filepath.Join(root, "testdata/fixtures/regression-gates/configs/go-review.yaml")
 	workdir := filepath.Join(root, "testdata/fixtures/regression-gates/semantic-violating-project")
-	cmd := exec.Command("go", "run", "./cmd/go-review", "check", "--config", configPath, "--profile", "semantic", "--workdir", workdir)
-	cmd.Dir = root
-	out, err := cmd.CombinedOutput()
-	if err == nil {
-		t.Fatalf("semantic fixture should fail, output:\n%s", out)
+
+	commands := []struct {
+		name string
+		args []string
+	}{
+		{name: "go-run", args: []string{"go", "run", "./cmd/go-review"}},
 	}
-	for _, want := range []string{"semantic.no-direct-os-getenv", "main.go:", "fix_safety=review"} {
-		if !strings.Contains(string(out), want) {
-			t.Fatalf("semantic CLI output missing %q:\n%s", want, out)
+
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+		bin := filepath.Join(t.TempDir(), "go-review-trimpath")
+		build := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", bin, "./cmd/go-review")
+		build.Dir = root
+		if out, err := build.CombinedOutput(); err != nil {
+			t.Fatalf("build trimpath binary: %v\n%s", err, out)
 		}
+		commands = append(commands, struct {
+			name string
+			args []string
+		}{name: "trimpath-binary", args: []string{bin}})
+	}
+
+	for _, tc := range commands {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{}, tc.args...)
+			args = append(args, "check", "--config", configPath, "--profile", "semantic", "--workdir", workdir)
+			cmd := exec.Command(args[0], args[1:]...)
+			cmd.Dir = root
+			out, err := cmd.CombinedOutput()
+			if err == nil {
+				t.Fatalf("semantic fixture should fail, output:\n%s", out)
+			}
+			for _, want := range []string{"semantic.no-direct-os-getenv", "main.go:", "fix_safety=review"} {
+				if !strings.Contains(string(out), want) {
+					t.Fatalf("semantic CLI output missing %q:\n%s", want, out)
+				}
+			}
+		})
 	}
 }
 
