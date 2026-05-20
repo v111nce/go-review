@@ -1,0 +1,116 @@
+package integration_test
+
+import (
+	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"go-code-reviewer/internal/config"
+	"go-code-reviewer/internal/report"
+)
+
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Dir(wd)
+}
+
+func TestRegressionGateFixtureConfigProfiles(t *testing.T) {
+	root := repoRoot(t)
+	cfg, err := config.LoadFile(filepath.Join(root, "testdata/fixtures/regression-gates/configs/go-review.yaml"))
+	if err != nil {
+		t.Fatalf("LoadFile fixture config: %v", err)
+	}
+
+	cases := map[string][]string{
+		"local":   {"format-check", "test"},
+		"ci":      {"format-check", "test", "security-lite"},
+		"main":    {"format-check", "test", "security-lite"},
+		"nightly": {"format-check", "test", "security-lite", "full-security", "custom-long-rules"},
+	}
+	for profile, want := range cases {
+		t.Run(profile, func(t *testing.T) {
+			got, err := cfg.Profile(profile)
+			if err != nil {
+				t.Fatalf("Profile(%q): %v", profile, err)
+			}
+			if strings.Join(got.Steps, ",") != strings.Join(want, ",") {
+				t.Fatalf("steps = %v, want %v", got.Steps, want)
+			}
+		})
+	}
+
+	format, ok := cfg.Adapter("go.format")
+	if !ok {
+		t.Fatal("go.format adapter missing")
+	}
+	if format.FixSafety != config.FixSafe {
+		t.Fatalf("go.format fix safety = %q, want safe", format.FixSafety)
+	}
+}
+
+func TestRegressionGateFixtureProjects(t *testing.T) {
+	root := repoRoot(t)
+	compliant := filepath.Join(root, "testdata/fixtures/regression-gates/compliant-project")
+	if out, err := command("go", "test", "./...").WithDir(compliant).CombinedOutput(); err != nil {
+		t.Fatalf("compliant fixture should pass go test: %v\n%s", err, out)
+	}
+
+	violating := filepath.Join(root, "testdata/fixtures/regression-gates/violating-project")
+	if out, err := command("gofmt", "-l", "main.go").WithDir(violating).CombinedOutput(); err != nil != false || !strings.Contains(string(out), "main.go") {
+		t.Fatalf("violating fixture should be reported by gofmt -l, err=%v out=%q", err, out)
+	}
+	if out, err := command("go", "test", "./...").WithDir(violating).CombinedOutput(); err == nil || !strings.Contains(string(out), "intentional failure") {
+		t.Fatalf("violating fixture should fail go test with intentional failure, err=%v out=%s", err, out)
+	}
+}
+
+func TestGoldenReportContract(t *testing.T) {
+	r := report.RunReport{
+		Profile:    "local",
+		GateStatus: report.GatePass,
+		Steps: []report.Step{
+			{ID: "format-check", AdapterID: "go.format", Status: report.GatePass},
+			{ID: "test", AdapterID: "go.test", Status: report.GatePass},
+		},
+	}
+	var buf bytes.Buffer
+	if err := report.WriteTerminal(&buf, r); err != nil {
+		t.Fatalf("WriteTerminal: %v", err)
+	}
+	got := normalizeTerminal(buf.String())
+	wantBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "testdata/fixtures/regression-gates/expected-reports/local-pass.golden.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := normalizeTerminal(string(wantBytes))
+	if got != want {
+		t.Fatalf("terminal report mismatch\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func normalizeTerminal(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	for i, line := range lines {
+		line = strings.ReplaceAll(line, "[pass]", "PASS")
+		line = strings.ReplaceAll(line, "[fail]", "FAIL")
+		line = strings.ReplaceAll(line, " findings=0", "")
+		lines[i] = strings.TrimSpace(line)
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
+type dirCommand struct{ *exec.Cmd }
+
+func (c *dirCommand) WithDir(dir string) *exec.Cmd {
+	c.Cmd.Dir = dir
+	return c.Cmd
+}
+
+func command(name string, arg ...string) *dirCommand { return &dirCommand{exec.Command(name, arg...)} }

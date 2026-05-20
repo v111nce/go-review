@@ -1,0 +1,3 @@
+go-review profile=local gate=pass
+PASS format-check adapter=go.format
+PASS test adapter=go.test
