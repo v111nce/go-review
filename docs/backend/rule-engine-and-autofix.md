@@ -185,6 +185,8 @@ Diagnostic
 
 因此这类规则应该作为 `go.semantic` 自定义 adapter 示例，而不是产品内置固定规则。
 
+当前代码基线提供了一个最小 `go.semantic` 示例规则：`semantic.no-direct-os-getenv`。它通过 AST 定位直接 `os.Getenv` 调用，并把诊断映射为统一 violation，包含 adapter ID、step ID、rule ID、文件、行列、原因、建议和 `review` 修复安全级别。该规则用于证明自定义语义 adapter 可以进入 profile 并影响门禁；它不是动态加载不可信规则代码的插件市场。
+
 ## 失败和安全策略
 
 - adapter 启动失败时，按 step 的 `on_fail` 决定继续、跳过下游或失败。
@@ -193,6 +195,7 @@ Diagnostic
 - 同一文件存在多个互相重叠的 text edit 时，必须拒绝自动应用并转人工处理。
 - 豁免必须记录 adapter ID、规则 ID、原因和范围。
 - CI 环境默认只检查，不直接改写主分支代码。
+- `fix` 命令当前只会自动应用配置为 `safe` 且 step `allow_fix: true` 的 `go.format` 修复；随后运行依赖验证 step，验证失败时回滚已应用格式化修改并保留失败证据。
 
 ## 测试策略
 

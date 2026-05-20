@@ -45,11 +45,17 @@ adapters:
     capabilities: [check]
     timeout: 2m
     parser: text
+  - id: semantic.no-env
+    type: go.semantic
+    capabilities: [check]
+    timeout: 30s
+    parser: no-direct-os-getenv
+    fix_safety: review
 steps:
   - id: format-check
     adapter: go.format
     on_fail: stop
-    allow_fix: false
+    allow_fix: true
   - id: test
     adapter: go.test
     depends_on: [format-check]
@@ -65,6 +71,9 @@ steps:
     adapter: fixture.custom-long
     depends_on: [test]
     on_fail: continue
+  - id: semantic-no-env
+    adapter: semantic.no-env
+    on_fail: continue
 profiles:
   - name: local
     steps: [format-check, test]
@@ -73,4 +82,6 @@ profiles:
   - name: main
     steps: [format-check, test, security-lite]
   - name: nightly
-    steps: [format-check, test, security-lite, full-security, custom-long-rules]
+    steps: [format-check, test, security-lite, full-security, custom-long-rules, semantic-no-env]
+  - name: semantic
+    steps: [semantic-no-env]

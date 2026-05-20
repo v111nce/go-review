@@ -16,6 +16,8 @@ Traceability:
 | --- | --- | --- |
 | `compliant-project/` | Minimal Go module that should pass local/ci/nightly smoke profiles. | pass |
 | `violating-project/` | Minimal Go module with deterministic formatting and test failures. | fail |
+| `semantic-violating-project/` | Minimal Go module with direct `os.Getenv` usage for the `go.semantic` example rule. | fail |
+| `autofix-project/` | Minimal Go module with safe formatting drift and passing tests for `fix --profile local`. | pass after fix |
 | `configs/go-review.yaml` | Contract fixture for local, ci, main, and nightly profile selection. | profile-dependent |
 | `scripts/fake-tool.sh` | Deterministic fake external tool for `cmd` adapter tests. | pass/fail by args |
 | `expected-reports/*.golden.*` | Stable report artifacts for early terminal/JSON snapshot tests. | deterministic |
@@ -29,6 +31,10 @@ go test ./...
 go run ./cmd/go-review --help
 go run ./cmd/go-review check --config testdata/fixtures/regression-gates/configs/go-review.yaml --profile local --workdir testdata/fixtures/regression-gates/compliant-project
 go run ./cmd/go-review check --config testdata/fixtures/regression-gates/configs/go-review.yaml --profile ci --workdir testdata/fixtures/regression-gates/violating-project
+go run ./cmd/go-review check --config testdata/fixtures/regression-gates/configs/go-review.yaml --profile nightly --workdir testdata/fixtures/regression-gates/compliant-project
+go run ./cmd/go-review check --config testdata/fixtures/regression-gates/configs/go-review.yaml --profile semantic --workdir testdata/fixtures/regression-gates/semantic-violating-project
+go run ./cmd/go-review fix --config testdata/fixtures/regression-gates/configs/go-review.yaml --profile local --workdir testdata/fixtures/regression-gates/autofix-project
 ```
 
 The fixture uses `cmd` steps and `go.format` by adapter ID to preserve the platform boundary: concrete tools stay behind adapters and the pipeline core remains tool-agnostic.
+The `semantic` profile proves a custom semantic rule can affect the same gate contract; the `autofix-project` proves safe fixes are validated after application.
