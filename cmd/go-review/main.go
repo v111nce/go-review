@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/v111nce/go-review/internal/engine"
 )
@@ -77,5 +78,35 @@ Flags:
 }
 
 func printVersion() {
-	fmt.Fprintf(os.Stdout, "go-review version=%s commit=%s date=%s go=%s os=%s arch=%s\n", version, commit, date, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	versionValue, commitValue, dateValue := buildMetadata()
+	fmt.Fprintf(os.Stdout, "go-review version=%s commit=%s date=%s go=%s os=%s arch=%s\n", versionValue, commitValue, dateValue, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+}
+
+func buildMetadata() (string, string, string) {
+	versionValue := version
+	commitValue := commit
+	dateValue := date
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return versionValue, commitValue, dateValue
+	}
+
+	if versionValue == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		versionValue = info.Main.Version
+	}
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			if commitValue == "unknown" && setting.Value != "" {
+				commitValue = setting.Value
+			}
+		case "vcs.time":
+			if dateValue == "unknown" && setting.Value != "" {
+				dateValue = setting.Value
+			}
+		}
+	}
+
+	return versionValue, commitValue, dateValue
 }
