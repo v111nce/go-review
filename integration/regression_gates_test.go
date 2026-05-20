@@ -29,10 +29,11 @@ func TestRegressionGateFixtureConfigProfiles(t *testing.T) {
 	}
 
 	cases := map[string][]string{
-		"local":   {"format-check", "test"},
-		"ci":      {"format-check", "test", "security-lite"},
-		"main":    {"format-check", "test", "security-lite"},
-		"nightly": {"format-check", "test", "security-lite", "full-security", "custom-long-rules"},
+		"local":    {"format-check", "test"},
+		"ci":       {"format-check", "test", "security-lite"},
+		"main":     {"format-check", "test", "security-lite"},
+		"nightly":  {"format-check", "test", "security-lite", "full-security", "custom-long-rules", "semantic-no-env"},
+		"semantic": {"semantic-no-env"},
 	}
 	for profile, want := range cases {
 		t.Run(profile, func(t *testing.T) {
@@ -52,6 +53,29 @@ func TestRegressionGateFixtureConfigProfiles(t *testing.T) {
 	}
 	if format.FixSafety != config.FixSafe {
 		t.Fatalf("go.format fix safety = %q, want safe", format.FixSafety)
+	}
+}
+
+func TestRegressionGateSemanticAndAutofixFixtures(t *testing.T) {
+	root := repoRoot(t)
+	configPath := filepath.Join(root, "testdata/fixtures/regression-gates/configs/go-review.yaml")
+
+	semanticProject := filepath.Join(root, "testdata/fixtures/regression-gates/semantic-violating-project")
+	semantic := command("go", "run", "./cmd/go-review", "check", "--config", configPath, "--profile", "semantic", "--workdir", semanticProject).WithDir(root)
+	if out, err := semantic.CombinedOutput(); err == nil || !strings.Contains(string(out), "semantic.no-direct-os-getenv") {
+		t.Fatalf("semantic fixture should fail with normalized rule, err=%v out=%s", err, out)
+	}
+
+	autofixProject := filepath.Join(root, "testdata/fixtures/regression-gates/autofix-project")
+	fix := command("go", "run", "./cmd/go-review", "fix", "--config", configPath, "--profile", "local", "--workdir", autofixProject).WithDir(root)
+	if out, err := fix.CombinedOutput(); err != nil {
+		t.Fatalf("autofix fixture should pass after safe gofmt and validation: %v\n%s", err, out)
+	}
+	defer func() {
+		_ = os.WriteFile(filepath.Join(autofixProject, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main(){fmt.Println(Message())}\n\nfunc Message() string { return \"autofix fixture\" }\n"), 0o644)
+	}()
+	if out, err := command("gofmt", "-l", "main.go").WithDir(autofixProject).CombinedOutput(); err != nil || strings.TrimSpace(string(out)) != "" {
+		t.Fatalf("autofix fixture should be formatted, err=%v out=%q", err, out)
 	}
 }
 

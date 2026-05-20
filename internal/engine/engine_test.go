@@ -3,8 +3,10 @@ package engine
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,13 +50,17 @@ artifacts:
 	if len(summary.Results) != 2 {
 		t.Fatalf("results = %d", len(summary.Results))
 	}
-	if summary.Results[0].GateStatus != config.GatePass {
-		t.Fatalf("ok gate = %s", summary.Results[0].GateStatus)
+	byStep := map[string]Result{}
+	for _, result := range summary.Results {
+		byStep[result.StepID] = result
 	}
-	if summary.Results[1].GateStatus != config.GateFail {
-		t.Fatalf("fail gate = %s", summary.Results[1].GateStatus)
+	if byStep["ok-step"].GateStatus != config.GatePass {
+		t.Fatalf("ok result = %#v", byStep["ok-step"])
 	}
-	if summary.Results[0].Artifacts[0].Path == "" {
+	if byStep["fail-step"].GateStatus != config.GateFail {
+		t.Fatalf("fail result = %#v", byStep["fail-step"])
+	}
+	if byStep["ok-step"].Artifacts[0].Path == "" {
 		t.Fatal("expected stdout artifact path")
 	}
 }
@@ -153,6 +159,119 @@ profiles:
 	}
 }
 
+func TestGoFormatFixRequiresSafeAllowedStep(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "bad.go")
+	if err := os.WriteFile(file, []byte("package main\nfunc main(){\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: format
+    type: go.format
+    fix_safety: review
+steps:
+  - id: format-step
+    adapter: format
+    allow_fix: true
+profiles:
+  - name: local
+    steps: [format-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "local"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if summary.Results[0].GateStatus != config.GateFail || summary.Results[0].FixApplied {
+		t.Fatalf("non-safe fix should not apply: %#v", summary.Results[0])
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "main(){") {
+		t.Fatalf("non-safe fix changed file: %s", data)
+	}
+}
+
+func TestFixRollsBackWhenDependentValidationFails(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte("package main\nfunc main(){println(Message())}\nfunc Message() string { return \"wrong\" }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bad_test.go"), []byte("package main\nimport \"testing\"\nfunc TestMessage(t *testing.T) { if Message() != \"right\" { t.Fatal(\"validation failed\") } }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: format
+    type: go.format
+    fix_safety: safe
+  - id: test
+    type: cmd
+    command: go
+    args: [test, ./...]
+steps:
+  - id: format-step
+    adapter: format
+    allow_fix: true
+  - id: test-step
+    adapter: test
+    depends_on: [format-step]
+profiles:
+  - name: local
+    steps: [format-step, test-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "local"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if len(summary.Results) < 3 || summary.Results[len(summary.Results)-1].AdapterID != "fix.transaction" {
+		t.Fatalf("expected rollback evidence, results=%#v", summary.Results)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "bad.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "main(){println") {
+		t.Fatalf("rollback did not restore original formatting: %s", data)
+	}
+}
+
+func TestSemanticAdapterDetectsDirectOSGetenv(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: semantic.no-env
+    type: go.semantic
+    parser: no-direct-os-getenv
+    fix_safety: review
+steps:
+  - id: semantic-step
+    adapter: semantic.no-env
+profiles:
+  - name: local
+    steps: [semantic-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "main.go" || got.Line == 0 || got.Suggestion == "" {
+		t.Fatalf("semantic result = %#v", got)
+	}
+}
+
 func TestRunStopsOnFailure(t *testing.T) {
 	dir := t.TempDir()
 	cfg := writeConfig(t, dir, `schema_version: "1.0"
@@ -181,6 +300,37 @@ profiles:
 	}
 	if len(summary.Results) != 1 {
 		t.Fatalf("results = %d", len(summary.Results))
+	}
+}
+
+func TestRunOrdersProfileByDependencies(t *testing.T) {
+	dir := t.TempDir()
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+adapters:
+  - id: first
+    type: cmd
+    command: sh
+    args: [-c, "printf first"]
+  - id: second
+    type: cmd
+    command: sh
+    args: [-c, "printf second"]
+steps:
+  - id: second-step
+    adapter: second
+    depends_on: [first-step]
+  - id: first-step
+    adapter: first
+profiles:
+  - name: local
+    steps: [second-step, first-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if got := []string{summary.Results[0].StepID, summary.Results[1].StepID}; got[0] != "first-step" || got[1] != "second-step" {
+		t.Fatalf("execution order = %v", got)
 	}
 }
 
@@ -247,4 +397,33 @@ profiles:
 	if got := summary.Results[0].Message; got != "project" {
 		t.Fatalf("message = %q", got)
 	}
+}
+
+func TestGoSemanticFixtureViaCLI(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses go run shell path assumptions")
+	}
+	root := filepath.Dir(filepath.Dir(filepath.Dir(currentFile(t))))
+	configPath := filepath.Join(root, "testdata/fixtures/regression-gates/configs/go-review.yaml")
+	workdir := filepath.Join(root, "testdata/fixtures/regression-gates/semantic-violating-project")
+	cmd := exec.Command("go", "run", "./cmd/go-review", "check", "--config", configPath, "--profile", "semantic", "--workdir", workdir)
+	cmd.Dir = root
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("semantic fixture should fail, output:\n%s", out)
+	}
+	for _, want := range []string{"semantic.no-direct-os-getenv", "main.go:", "fix_safety=review"} {
+		if !strings.Contains(string(out), want) {
+			t.Fatalf("semantic CLI output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func currentFile(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	return file
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go-code-reviewer/internal/config"
+	"go-code-reviewer/internal/pipeline"
 )
 
 type Command string
@@ -42,9 +43,14 @@ type Result struct {
 	StepID       string
 	RuleID       string
 	Kind         ResultKind
+	File         string
+	Line         int
+	Column       int
 	Message      string
+	Suggestion   string
 	FixAvailable bool
 	FixSafety    config.FixSafety
+	FixApplied   bool
 	GateStatus   config.GateStatus
 	Artifacts    []Artifact
 }
@@ -110,6 +116,7 @@ func NewRegistry() *Registry {
 	r := &Registry{adapters: map[string]AdapterFactory{}}
 	r.Register("cmd", func(cfg config.Adapter) (Adapter, error) { return CommandAdapter{cfg: cfg}, nil })
 	r.Register("go.format", func(cfg config.Adapter) (Adapter, error) { return GoFormatAdapter{cfg: cfg}, nil })
+	r.Register("go.semantic", func(cfg config.Adapter) (Adapter, error) { return SemanticAdapter{cfg: cfg}, nil })
 	return r
 }
 
@@ -149,6 +156,10 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 	if err != nil {
 		return RunSummary{}, err
 	}
+	steps, err := orderedProfileSteps(cfg, profile, opts.Profile)
+	if err != nil {
+		return RunSummary{}, err
+	}
 	projectRoot := opts.Workdir
 	if projectRoot == "" {
 		projectRoot = cfg.Defaults.Workdir
@@ -158,11 +169,8 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 	}
 	projectRoot = resolveProjectRoot(opts.Config, projectRoot, opts.Workdir != "")
 	summary := RunSummary{Profile: profile.Name}
-	for _, stepID := range profile.Steps {
-		step, ok := cfg.Step(stepID)
-		if !ok {
-			return summary, fmt.Errorf("profile %q references unknown step %q", profile.Name, stepID)
-		}
+	transaction := newFixTransaction(opts.Command, projectRoot)
+	for _, step := range steps {
 		adapterCfg, ok := cfg.Adapter(step.AdapterID)
 		if !ok {
 			return summary, fmt.Errorf("step %q references unknown adapter %q", step.ID, step.AdapterID)
@@ -171,7 +179,12 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		if err != nil {
 			return summary, err
 		}
-		stepCtx := StepContext{Command: opts.Command, Step: *step, Adapter: *adapterCfg, Config: cfg, ProjectRoot: projectRoot}
+		stepCtx := StepContext{Command: opts.Command, Step: step, Adapter: *adapterCfg, Config: cfg, ProjectRoot: projectRoot}
+		if transaction.shouldProtect(stepCtx) {
+			if err := transaction.snapshotProject(); err != nil {
+				return summary, err
+			}
+		}
 		result, runErr := adapter.Run(ctx, stepCtx)
 		if runErr != nil && result.Message == "" {
 			result = Result{AdapterID: adapterCfg.ID, StepID: step.ID, RuleID: adapterCfg.ID, Kind: ResultViolation, Message: runErr.Error(), FixSafety: adapterCfg.FixSafety, GateStatus: config.GateFail}
@@ -188,12 +201,56 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		if result.Kind == "" {
 			result.Kind = ResultArtifact
 		}
+		if result.FixApplied {
+			transaction.markApplied()
+		}
 		summary.Results = append(summary.Results, result)
+		if result.GateStatus == config.GateFail {
+			if rollback := transaction.rollbackAfterFailure(result); rollback.Message != "" {
+				summary.Results = append(summary.Results, rollback)
+			}
+		}
 		if result.GateStatus == config.GateFail && step.OnFail == config.OnFailStop {
 			break
 		}
 	}
 	return summary, nil
+}
+
+func orderedProfileSteps(cfg *config.Config, profile *config.Profile, requested string) ([]config.Step, error) {
+	graphSteps := make([]pipeline.Step, 0, len(cfg.Steps))
+	for _, step := range cfg.Steps {
+		graphSteps = append(graphSteps, pipeline.Step{
+			ID:        step.ID,
+			AdapterID: step.AdapterID,
+			DependsOn: step.DependsOn,
+			OnFail:    pipeline.OnFailPolicy(step.OnFail),
+			AllowFix:  step.AllowFix,
+			Timeout:   step.Timeout,
+			Artifacts: step.Artifacts,
+		})
+	}
+	graph, err := pipeline.NewGraph(graphSteps)
+	if err != nil {
+		return nil, err
+	}
+	profiles := make([]pipeline.Profile, 0, len(cfg.Profiles))
+	for _, p := range cfg.Profiles {
+		profiles = append(profiles, pipeline.Profile{Name: p.Name, Steps: p.Steps})
+	}
+	selected, err := pipeline.SelectProfile(graph, profiles, requested)
+	if err != nil {
+		return nil, err
+	}
+	steps := make([]config.Step, 0, len(selected))
+	for _, selectedStep := range selected {
+		step, ok := cfg.Step(selectedStep.ID)
+		if !ok {
+			return nil, fmt.Errorf("profile %q references unknown step %q", profile.Name, selectedStep.ID)
+		}
+		steps = append(steps, *step)
+	}
+	return steps, nil
 }
 
 func PrintSummary(summary RunSummary, stdout *os.File) {
@@ -202,7 +259,20 @@ func PrintSummary(summary RunSummary, stdout *os.File) {
 	}
 	fmt.Fprintf(stdout, "profile=%s gate=%s\n", summary.Profile, summary.GateStatus())
 	for _, result := range summary.Results {
-		fmt.Fprintf(stdout, "step=%s adapter=%s gate=%s message=%s\n", result.StepID, result.AdapterID, result.GateStatus, result.Message)
+		fmt.Fprintf(stdout, "step=%s adapter=%s gate=%s", result.StepID, result.AdapterID, result.GateStatus)
+		if result.RuleID != "" {
+			fmt.Fprintf(stdout, " rule=%s", result.RuleID)
+		}
+		if result.File != "" {
+			fmt.Fprintf(stdout, " location=%s", formatLocation(result))
+		}
+		if result.FixAvailable || result.FixSafety != "" {
+			fmt.Fprintf(stdout, " fix_available=%t fix_safety=%s", result.FixAvailable, result.FixSafety)
+		}
+		if result.FixApplied {
+			fmt.Fprint(stdout, " fix_applied=true")
+		}
+		fmt.Fprintf(stdout, " message=%s\n", result.Message)
 		for _, artifact := range result.Artifacts {
 			if artifact.Path != "" {
 				fmt.Fprintf(stdout, "artifact=%s path=%s\n", artifact.Name, artifact.Path)
@@ -280,8 +350,9 @@ func (a GoFormatAdapter) Metadata() AdapterMetadata {
 
 func (a GoFormatAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, error) {
 	args := a.cfg.Args
+	fixMode := stepCtx.Command == CommandFix && stepCtx.Step.AllowFix && a.cfg.FixSafety == config.FixSafe
 	if len(args) == 0 {
-		if stepCtx.Command == CommandFix {
+		if fixMode {
 			args = []string{"-w", "."}
 		} else {
 			args = []string{"-l", "."}
@@ -293,8 +364,9 @@ func (a GoFormatAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, 
 	cmdCfg.Type = "cmd"
 	result, err := CommandAdapter{cfg: cmdCfg}.Run(ctx, stepCtx)
 	result.RuleID = "go.format"
-	result.FixAvailable = stepCtx.Command == CommandCheck
-	if stepCtx.Command == CommandCheck {
+	result.FixSafety = a.cfg.FixSafety
+	result.FixAvailable = a.cfg.FixSafety == config.FixSafe
+	if !fixMode {
 		for _, artifact := range result.Artifacts {
 			if artifact.Name == "stdout" && strings.TrimSpace(artifact.Content) != "" {
 				result.Kind = ResultViolation
@@ -308,8 +380,20 @@ func (a GoFormatAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, 
 		}
 	} else if result.GateStatus == config.GatePass {
 		result.Message = "gofmt applied"
+		result.FixApplied = true
 	}
 	return result, err
+}
+
+func formatLocation(result Result) string {
+	location := result.File
+	if result.Line > 0 {
+		location = fmt.Sprintf("%s:%d", location, result.Line)
+		if result.Column > 0 {
+			location = fmt.Sprintf("%s:%d", location, result.Column)
+		}
+	}
+	return location
 }
 
 func resolveProjectRoot(configPath, projectRoot string, explicit bool) string {

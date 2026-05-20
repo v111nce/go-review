@@ -4,16 +4,18 @@ This project implements a tool-agnostic Go code-review orchestration platform. T
 
 ## Current implementation slice
 
-The team is implementing Milestones 0-3 from `.omx/plans/ralplan-docs-implementation-20260519T091728Z.md`:
+The current executable slice implements the full first-story set from `.omx/plans/ralplan-docs-implementation-20260519T091728Z.md`:
 
 1. Go module and thin `go-review` CLI bootstrap.
 2. Config, adapter registry, command adapter, and minimal `go.format` wrapper.
 3. Normalized result/report artifacts.
 4. Pipeline DAG/profile execution for `local`, `ci`, `main`, and `nightly` gates.
+5. Example `go.semantic` custom rule adapter.
+6. Safe `go.format` autofix with validation rollback evidence.
 
 ## Fixture-backed commands
 
-After the code lanes expose `cmd/go-review`, use the Lane D fixtures for smoke checks:
+Use the regression fixtures for smoke checks:
 
 ```bash
 go test ./...
@@ -26,6 +28,18 @@ go run ./cmd/go-review check \
   --config testdata/fixtures/regression-gates/configs/go-review.yaml \
   --profile ci \
   --workdir testdata/fixtures/regression-gates/violating-project
+go run ./cmd/go-review check \
+  --config testdata/fixtures/regression-gates/configs/go-review.yaml \
+  --profile nightly \
+  --workdir testdata/fixtures/regression-gates/compliant-project
+go run ./cmd/go-review check \
+  --config testdata/fixtures/regression-gates/configs/go-review.yaml \
+  --profile semantic \
+  --workdir testdata/fixtures/regression-gates/semantic-violating-project
+go run ./cmd/go-review fix \
+  --config testdata/fixtures/regression-gates/configs/go-review.yaml \
+  --profile local \
+  --workdir testdata/fixtures/regression-gates/autofix-project
 ```
 
 Expected behavior:
@@ -33,6 +47,8 @@ Expected behavior:
 - `local` on `compliant-project` passes.
 - `ci` on `violating-project` fails and emits step, adapter, rule/location when available, reason, and artifact path.
 - `nightly` can add long-running steps without changing `local` or `ci` behavior.
+- `semantic` on `semantic-violating-project` fails with `semantic.no-direct-os-getenv`.
+- `fix --profile local` applies only `safe` fixes, reruns validation, and rolls back if a later validation step fails.
 
 ## Traceability
 
