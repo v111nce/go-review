@@ -52,3 +52,16 @@ func captureRun(args []string) (stdout string, stderr string, code int) {
 	_, _ = io.Copy(&errBuf, errR)
 	return outBuf.String(), errBuf.String(), code
 }
+
+func TestBuildMetadataPrefersLDFlags(t *testing.T) {
+	oldVersion, oldCommit, oldDate := version, commit, date
+	t.Cleanup(func() {
+		version, commit, date = oldVersion, oldCommit, oldDate
+	})
+
+	version, commit, date = "v-test", "commit-test", "date-test"
+	gotVersion, gotCommit, gotDate := buildMetadata()
+	if gotVersion != "v-test" || gotCommit != "commit-test" || gotDate != "date-test" {
+		t.Fatalf("buildMetadata() = %q, %q, %q", gotVersion, gotCommit, gotDate)
+	}
+}

@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for a dry-run build, for example v0.1.0-dev'
+        required: false
+        default: 'v0.0.0-dev'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests before packaging
+        run: go test ./...
+
+      - name: Build cross-platform archives
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          COMMIT="${GITHUB_SHA}"
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
+
+          mkdir -p dist
+
+          targets=(
+            "linux amd64"
+            "linux arm64"
+            "darwin amd64"
+            "darwin arm64"
+            "windows amd64"
+          )
+
+          for target in "${targets[@]}"; do
+            read -r GOOS GOARCH <<<"${target}"
+            name="go-review_${VERSION}_${GOOS}_${GOARCH}"
+            binary="go-review"
+            if [[ "${GOOS}" == "windows" ]]; then
+              binary="go-review.exe"
+            fi
+
+            echo "== building ${name} =="
+            GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED=0 \
+              go build -trimpath -ldflags "${LDFLAGS}" -o "dist/${name}/${binary}" ./cmd/go-review
+
+            cp docs/adoption/consumer-project.md "dist/${name}/ADOPTION.md"
+            cp docs/quickstart.md "dist/${name}/QUICKSTART.md"
+
+            if [[ "${GOOS}" == "windows" ]]; then
+              (cd dist && zip -qr "${name}.zip" "${name}")
+            else
+              tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+            fi
+            rm -rf "dist/${name}"
+          done
+
+          (cd dist && sha256sum go-review_${VERSION}_*) > "dist/checksums.txt"
+          cat "dist/checksums.txt"
+
+      - name: Verify packaged binary metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+
+          tar -C "$RUNNER_TEMP" -xzf "dist/go-review_${VERSION}_linux_amd64.tar.gz"
+          "$RUNNER_TEMP/go-review_${VERSION}_linux_amd64/go-review" version | tee "$RUNNER_TEMP/version.out"
+          grep -q "version=${VERSION}" "$RUNNER_TEMP/version.out"
+          grep -q "commit=${GITHUB_SHA}" "$RUNNER_TEMP/version.out"
+
+      - name: Upload dry-run artifacts
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-review-release-dry-run
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --verify-tag \
+            --title "go-review ${GITHUB_REF_NAME}" \
+            --notes "Release ${GITHUB_REF_NAME} for github.com/v111nce/go-review. Artifacts include cross-platform go-review binaries and checksums."

@@ -50,11 +50,11 @@ go install github.com/v111nce/go-review/cmd/go-review@v0.1.0
 ```
 
 Replace `v0.1.0` with the real release tag after publishing. Until then, projects can run the framework from a checked-out path or a private module path.
-The template also runs `go-review version` so CI logs record the exact tool build used for the gate.
+The template also runs `go-review version` so CI logs record the tool build used for the gate. Source installs expose module/build-info metadata when available; release binaries add explicit stamped metadata.
 
 ## Version metadata
 
-`go-review version` prints the tool version, commit, build date, Go runtime, OS, and architecture. Development builds default to `version=dev commit=unknown date=unknown`.
+`go-review version` prints the tool version, commit, build date, Go runtime, OS, and architecture. Development builds default to `version=dev commit=unknown date=unknown`, but source installs can fall back to Go build-info metadata when available.
 
 Release builds should stamp these variables:
 
@@ -64,7 +64,7 @@ go build \
   -o go-review ./cmd/go-review
 ```
 
-Consumer CI should pin a release tag instead of tracking an unversioned branch.
+Consumer CI should pin a release tag instead of tracking an unversioned branch. Downloaded release binaries are available from the tag workflow described in [Release Process](../release.md).
 
 ## Framework self-check vs consumer CI
 

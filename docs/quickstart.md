@@ -63,7 +63,11 @@ That workflow is a framework regression guard, not the full consumer-project ado
 - It copies `autofix-project` into the CI runner temp directory before `fix`, so the self-check proves fix behavior without mutating tracked fixtures.
 - It finishes with a clean-worktree assertion to catch accidental tracked fixture edits.
 
-Consumer projects should later get their own reusable workflow/template that installs `go-review` and points at their project-specific `go-review.yaml`.
+Consumer projects can start from the checked-in template under `examples/consumer-go-project/.github/workflows/go-review.yml`; each adopting repository should still own its project-specific `go-review.yaml`.
+
+## Release packaging
+
+The tag-based release workflow lives at `.github/workflows/release.yml`. It runs `go test ./...`, cross-compiles stamped `go-review` binaries for Linux, macOS, and Windows, writes `checksums.txt`, verifies packaged version metadata, and publishes GitHub Release assets for tags such as `v0.1.0`. See [Release Process](release.md).
 
 ## Consumer project adoption
 
