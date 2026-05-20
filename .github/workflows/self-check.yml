@@ -1,0 +1,109 @@
+name: Framework self-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  self-check:
+    name: go-review dogfooding matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Show Go version
+        run: go version
+
+      - name: Run unit and integration tests
+        run: go test ./...
+
+      - name: Verify CLI help
+        run: go run ./cmd/go-review --help
+
+      - name: Run go-review framework self-check matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ROOT="$PWD"
+          CONFIG="testdata/fixtures/regression-gates/configs/go-review.yaml"
+          COMPLIANT="$ROOT/testdata/fixtures/regression-gates/compliant-project"
+          VIOLATING="$ROOT/testdata/fixtures/regression-gates/violating-project"
+          SEMANTIC="$ROOT/testdata/fixtures/regression-gates/semantic-violating-project"
+          AUTOFIX="$RUNNER_TEMP/go-review-autofix-project"
+
+          echo "== local compliant profile should pass =="
+          go run ./cmd/go-review check \
+            --config "$CONFIG" \
+            --profile local \
+            --workdir "$COMPLIANT" | tee "$RUNNER_TEMP/local.out"
+          grep -q "profile=local gate=pass" "$RUNNER_TEMP/local.out"
+
+          echo "== ci violating profile should fail on go.format =="
+          if go run ./cmd/go-review check \
+            --config "$CONFIG" \
+            --profile ci \
+            --workdir "$VIOLATING" >"$RUNNER_TEMP/ci.out" 2>&1; then
+            cat "$RUNNER_TEMP/ci.out"
+            echo "expected ci profile to fail for violating fixture" >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/ci.out"
+          grep -q "profile=ci gate=fail" "$RUNNER_TEMP/ci.out"
+          grep -q "gofmt would change files" "$RUNNER_TEMP/ci.out"
+
+          echo "== nightly compliant profile should pass with slow/full lanes =="
+          go run ./cmd/go-review check \
+            --config "$CONFIG" \
+            --profile nightly \
+            --workdir "$COMPLIANT" | tee "$RUNNER_TEMP/nightly.out"
+          grep -q "profile=nightly gate=pass" "$RUNNER_TEMP/nightly.out"
+          grep -q "step=full-security" "$RUNNER_TEMP/nightly.out"
+          grep -q "step=custom-long-rules" "$RUNNER_TEMP/nightly.out"
+          grep -q "semantic no-direct-os-getenv passed" "$RUNNER_TEMP/nightly.out"
+
+          echo "== semantic profile should fail on direct os.Getenv fixture =="
+          if go run ./cmd/go-review check \
+            --config "$CONFIG" \
+            --profile semantic \
+            --workdir "$SEMANTIC" >"$RUNNER_TEMP/semantic.out" 2>&1; then
+            cat "$RUNNER_TEMP/semantic.out"
+            echo "expected semantic profile to fail for semantic fixture" >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/semantic.out"
+          grep -q "profile=semantic gate=fail" "$RUNNER_TEMP/semantic.out"
+          grep -q "semantic.no-direct-os-getenv" "$RUNNER_TEMP/semantic.out"
+          grep -q "location=main.go:" "$RUNNER_TEMP/semantic.out"
+
+          echo "== fix profile should apply only safe fixes and rerun validation =="
+          cp -R testdata/fixtures/regression-gates/autofix-project "$AUTOFIX"
+          go run ./cmd/go-review fix \
+            --config "$CONFIG" \
+            --profile local \
+            --workdir "$AUTOFIX" | tee "$RUNNER_TEMP/fix.out"
+          grep -q "profile=local gate=pass" "$RUNNER_TEMP/fix.out"
+          grep -q "fix_applied=true" "$RUNNER_TEMP/fix.out"
+
+      - name: Ensure self-check did not modify tracked files
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(git status --short --ignored=no)"
+          if [[ -n "$status" ]]; then
+            echo "$status"
+            exit 1
+          fi

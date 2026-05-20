@@ -50,6 +50,19 @@ Expected behavior:
 - `semantic` on `semantic-violating-project` fails with `semantic.no-direct-os-getenv`.
 - `fix --profile local` applies only `safe` fixes, reruns validation, and rolls back if a later validation step fails.
 
+## Framework self-check CI
+
+This repository dogfoods `go-review` through `.github/workflows/self-check.yml`.
+That workflow is a framework regression guard, not the full consumer-project adoption story:
+
+- It runs `go test ./...` to protect the framework implementation.
+- It runs CLI help to protect the user-facing command surface.
+- It runs the same fixture-backed local, ci, nightly, semantic, and fix smoke matrix documented above.
+- It copies `autofix-project` into the CI runner temp directory before `fix`, so the self-check proves fix behavior without mutating tracked fixtures.
+- It finishes with a clean-worktree assertion to catch accidental tracked fixture edits.
+
+Consumer projects should later get their own reusable workflow/template that installs `go-review` and points at their project-specific `go-review.yaml`.
+
 ## Traceability
 
 - Product: `docs/product/go-code-quality-governance.md#回归门禁`
