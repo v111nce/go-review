@@ -77,6 +77,7 @@ func (a SemanticAdapter) runNoDirectOSGetenv(stepCtx StepContext) (Result, error
 
 	var findings []Result
 	for _, parsed := range parsedFiles {
+		osNames := importedNames(parsed, "os")
 		ast.Inspect(parsed, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
 			if !ok {
@@ -86,8 +87,7 @@ func (a SemanticAdapter) runNoDirectOSGetenv(stepCtx StepContext) (Result, error
 			if !ok || sel.Sel == nil || sel.Sel.Name != "Getenv" {
 				return true
 			}
-			obj := info.Uses[sel.Sel]
-			if obj == nil || obj.Pkg() == nil || obj.Pkg().Path() != "os" || obj.Name() != "Getenv" {
+			if !isOSGetenvSelector(info, osNames, sel) {
 				return true
 			}
 			pos := fset.Position(call.Pos())
@@ -120,6 +120,37 @@ func (a SemanticAdapter) runNoDirectOSGetenv(stepCtx StepContext) (Result, error
 		}, nil
 	}
 	return findings[0], nil
+}
+
+func isOSGetenvSelector(info *types.Info, osNames map[string]struct{}, sel *ast.SelectorExpr) bool {
+	obj := info.Uses[sel.Sel]
+	if obj != nil && obj.Pkg() != nil {
+		return obj.Pkg().Path() == "os" && obj.Name() == "Getenv"
+	}
+	ident, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	_, ok = osNames[ident.Name]
+	return ok
+}
+
+func importedNames(file *ast.File, importPath string) map[string]struct{} {
+	names := map[string]struct{}{}
+	for _, spec := range file.Imports {
+		if strings.Trim(spec.Path.Value, "\"") != importPath {
+			continue
+		}
+		if spec.Name != nil {
+			if spec.Name.Name == "." || spec.Name.Name == "_" {
+				continue
+			}
+			names[spec.Name.Name] = struct{}{}
+			continue
+		}
+		names[importPath] = struct{}{}
+	}
+	return names
 }
 
 func goFiles(root string) ([]string, error) {
