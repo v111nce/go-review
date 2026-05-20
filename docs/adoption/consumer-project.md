@@ -27,7 +27,7 @@ go-review check --config go-review.yaml --profile nightly --workdir .
 Before the tool is published, a local checkout of this framework can run the same config with:
 
 ```bash
-go run /path/to/go-code-reviewer/cmd/go-review check --config go-review.yaml --profile ci --workdir .
+go run /path/to/go-review/cmd/go-review check --config go-review.yaml --profile ci --workdir .
 ```
 
 ## Minimal `go-review.yaml`
@@ -43,13 +43,13 @@ See [`../../examples/consumer-go-project/go-review.yaml`](../../examples/consume
 
 See [`../../examples/consumer-go-project/.github/workflows/go-review.yml`](../../examples/consumer-go-project/.github/workflows/go-review.yml).
 
-The template intentionally has a placeholder install line:
+The template now uses the chosen public module path with a placeholder release tag:
 
 ```bash
-go install github.com/OWNER/go-code-reviewer/cmd/go-review@v0.1.0
+go install github.com/v111nce/go-review/cmd/go-review@v0.1.0
 ```
 
-Replace it with the real module path and release tag after publishing. Until then, projects can run the framework from a checked-out path or a private module path.
+Replace `v0.1.0` with the real release tag after publishing. Until then, projects can run the framework from a checked-out path or a private module path.
 The template also runs `go-review version` so CI logs record the exact tool build used for the gate.
 
 ## Version metadata
@@ -77,5 +77,5 @@ The self-check should remain deterministic and fixture-backed. Consumer CI shoul
 
 ## Next adoption hardening steps
 
-- Publish a real module path and versioned install command.
+- Publish a real release tag and keep the versioned install command pinned.
 - Add richer reporter artifacts such as SARIF/GitHub Checks when PR annotation becomes required.

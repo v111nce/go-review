@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"go-code-reviewer/internal/config"
-	"go-code-reviewer/internal/report"
+	"github.com/v111nce/go-review/internal/config"
+	"github.com/v111nce/go-review/internal/report"
 )
 
 func repoRoot(t *testing.T) string {

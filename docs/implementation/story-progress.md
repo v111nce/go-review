@@ -39,6 +39,6 @@ Status legend:
 ## Remaining known gaps
 
 - Framework self-check CI is checked in at `.github/workflows/self-check.yml` and dogfoods `go test ./...`, CLI help/version, and the local/ci/nightly/semantic/fix fixture matrix.
-- A GitHub Actions consumer adoption template is checked in at `examples/consumer-go-project/.github/workflows/go-review.yml`; its install command intentionally uses a placeholder module path/tag until a real public module path and release exist.
+- A GitHub Actions consumer adoption template is checked in at `examples/consumer-go-project/.github/workflows/go-review.yml`; its install command uses the chosen public module path and keeps `v0.1.0` as a placeholder until the first release tag exists.
 - The semantic adapter is an in-repo example bridge, not a dynamic third-party plugin loader.
 - SARIF/GitHub reporter depth remains a later enhancement beyond the verified portable terminal/JSON/Markdown report writers.

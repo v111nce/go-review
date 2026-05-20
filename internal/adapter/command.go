@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"go-code-reviewer/internal/result"
+	"github.com/v111nce/go-review/internal/result"
 )
 
 const (

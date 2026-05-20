@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"go-code-reviewer/internal/config"
-	"go-code-reviewer/internal/pipeline"
+	"github.com/v111nce/go-review/internal/config"
+	"github.com/v111nce/go-review/internal/pipeline"
 )
 
 type Command string

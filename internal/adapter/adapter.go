@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"go-code-reviewer/internal/result"
+	"github.com/v111nce/go-review/internal/result"
 )
 
 // Capability declares what an adapter can do.

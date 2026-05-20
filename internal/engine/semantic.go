@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strings"
 
-	"go-code-reviewer/internal/config"
+	"github.com/v111nce/go-review/internal/config"
 )
 
 const noDirectEnvRuleID = "semantic.no-direct-os-getenv"

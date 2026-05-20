@@ -5,8 +5,8 @@ import (
 
 	"errors"
 	"fmt"
-	"go-code-reviewer/internal/adapter"
-	"go-code-reviewer/internal/result"
+	"github.com/v111nce/go-review/internal/adapter"
+	"github.com/v111nce/go-review/internal/result"
 	"io"
 	"os"
 	"path/filepath"
