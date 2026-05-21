@@ -193,11 +193,15 @@ profiles:
 func defaultSemanticConfig() string {
 	return `rules:
   - no-direct-os-getenv
+exclude:
+  - vendor
+  - testdata
 `
 }
 
 func customSemanticConfig() string {
 	return `rules:
+exclude:
 `
 }
 

@@ -33,7 +33,7 @@ func (tx *fixTransaction) snapshotProject() error {
 	if tx.protected {
 		return nil
 	}
-	files, err := goFiles(tx.root)
+	files, err := goFiles(tx.root, nil)
 	if err != nil {
 		return err
 	}

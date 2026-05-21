@@ -59,6 +59,31 @@ Every `check` and `fix` run writes deterministic reports. By default, reports ar
 
 `go-review check` is read-only. `go-review fix --profile fast` is allowed to edit files only when a step opts in with `allow_fix: true` and the adapter declares `fix_safety: safe`; the default example uses this for formatting/gofmt. Review-only semantic rules report suggestions but do not rewrite code.
 
+
+## Semantic rule defaults
+
+Running `go-review init` creates:
+
+```text
+.go-review/
+  go-review.yaml
+  semantic/
+    default.yaml  # built-in/default semantic rules
+    custom.yaml   # team-owned semantic rules
+```
+
+`default.yaml` and `custom.yaml` both support `rules` and coarse project-level `exclude` lists. Example:
+
+```yaml
+rules:
+  - no-direct-os-getenv
+exclude:
+  - vendor
+  - testdata
+```
+
+Keep one `semantic` step in `go-review.yaml`; use `exclude` to skip packages or directories that should not be scanned.
+
 ## GitHub Actions template
 
 See [`../../examples/consumer-go-project/.github/workflows/go-review.yml`](../../examples/consumer-go-project/.github/workflows/go-review.yml).

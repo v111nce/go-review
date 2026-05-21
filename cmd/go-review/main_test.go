@@ -69,9 +69,10 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 			t.Fatalf("auto init output missing %q:\n%s", want, stdout)
 		}
 	}
+	semanticDefault := filepath.Join(dir, ".go-review", "semantic", "default.yaml")
 	for _, path := range []string{
 		filepath.Join(dir, ".go-review", "go-review.yaml"),
-		filepath.Join(dir, ".go-review", "semantic", "default.yaml"),
+		semanticDefault,
 		filepath.Join(dir, ".go-review", "semantic", "custom.yaml"),
 		filepath.Join(dir, ".go-review", "reports", "latest.md"),
 		filepath.Join(dir, ".go-review", "reports", "latest.llm.md"),
@@ -79,6 +80,15 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected generated path %s: %v", path, err)
+		}
+	}
+	semanticConfig, err := os.ReadFile(semanticDefault)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"rules:", "no-direct-os-getenv", "exclude:", "testdata"} {
+		if !strings.Contains(string(semanticConfig), want) {
+			t.Fatalf("semantic default config missing %q:\n%s", want, semanticConfig)
 		}
 	}
 }

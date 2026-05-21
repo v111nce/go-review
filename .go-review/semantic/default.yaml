@@ -1,2 +1,5 @@
 rules:
   - no-direct-os-getenv
+exclude:
+  - vendor
+  - testdata
