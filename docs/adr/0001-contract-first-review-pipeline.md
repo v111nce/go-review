@@ -11,7 +11,7 @@ Sources:
 
 - `docs/README.md` platform boundary: adapter access, config loading, orchestration, result normalization, fix transactions, reports, and gates.
 - `docs/backend/rule-engine-and-autofix.md` adapter, pipeline DAG, normalized result, and safe-fix contracts.
-- `docs/quality/go-code-quality-baseline.md` local, PR/CI, main, and nightly gate layering.
+- `docs/quality/go-code-quality-baseline.md` fast, PR/CI, main, and nightly gate layering.
 - `.omx/plans/ralplan-docs-implementation-20260519T091728Z.md` recommends Option B: contract-first vertical core, then grouped capability lanes.
 
 ## Decision
@@ -20,7 +20,7 @@ Implement the first executable surface as a contract-first vertical core:
 
 1. Keep the CLI thin and delegate orchestration to engine/config/pipeline packages.
 2. Treat built-ins such as `go.format` as adapters, not as pipeline-core branches.
-3. Use one fixture YAML contract for local, ci, main, and nightly profiles so local and CI gates cannot drift silently.
+3. Use one fixture YAML contract for fast, ci, main, and nightly profiles so developer and CI gates cannot drift silently.
 4. Store fixture projects and golden reports under `testdata/fixtures/regression-gates/` for early smoke/integration tests.
 5. Defer provider-specific CI and PR-comment integrations until the report artifact contract is stable.
 

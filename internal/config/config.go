@@ -282,7 +282,7 @@ func (cfg *Config) Validate() error {
 
 func (cfg *Config) Profile(name string) (*Profile, error) {
 	if name == "" {
-		name = "local"
+		name = "fast"
 	}
 	for i := range cfg.Profiles {
 		if cfg.Profiles[i].Name == name {

@@ -8,18 +8,18 @@ A consumer project keeps three things in its own repository:
 
 1. A project-local `go-review.yaml` that declares adapters, steps, profiles, and artifacts.
 2. A CI workflow that installs `go-review` and runs the `ci` profile.
-3. Optional local developer commands for `local` check/fix before pushing.
+3. Optional developer commands for `fast` check/fix before pushing.
 
 The framework does not need to know the consumer repository layout beyond `--workdir` and the config file.
 
-## Minimal local commands
+## Minimal developer commands
 
 From a consumer repository root:
 
 ```bash
 go-review version
-go-review check --config go-review.yaml --profile local --workdir .
-go-review fix --config go-review.yaml --profile local --workdir .
+go-review check --config go-review.yaml --profile fast --workdir .
+go-review fix --config go-review.yaml --profile fast --workdir .
 go-review check --config go-review.yaml --profile ci --workdir .
 go-review check --config go-review.yaml --profile nightly --workdir .
 ```
@@ -36,8 +36,12 @@ See [`../../examples/consumer-go-project/go-review.yaml`](../../examples/consume
 
 - `go.format` as a safe local fixer/checker.
 - `go.test` through the generic `cmd` adapter.
-- `local`, `ci`, and `nightly` profiles.
+- `fast`, `ci`, and `nightly` profiles.
 - artifact output under `artifacts/go-review`.
+
+## Safe fix behavior
+
+`go-review check` is read-only. `go-review fix --profile fast` is allowed to edit files only when a step opts in with `allow_fix: true` and the adapter declares `fix_safety: safe`; the default example uses this for formatting/gofmt. Review-only semantic rules report suggestions but do not rewrite code.
 
 ## GitHub Actions template
 

@@ -72,7 +72,7 @@ Go 项目长期维护时，质量退化通常不是单点 bug，而是目录边�
 flowchart LR
   user[Go 项目维护者] --> config[定义 go-review.yaml]
   config --> adapters[接入检查/测试/安全/报告工具]
-  adapters --> pipeline[编排 local / ci / nightly pipeline]
+  adapters --> pipeline[编排 fast / ci / nightly pipeline]
   pipeline --> findings[统一违规、测试和 artifact 结果]
   findings --> policy{是否安全自动修复?}
   policy -->|safe| fix[应用修复并重跑验证]
@@ -135,7 +135,7 @@ Pipeline 需要支持：
 示例语义：
 
 ```text
-local:
+fast:
   format -> lint-fast -> test-affected
 
 ci:
@@ -150,7 +150,7 @@ nightly:
 | Story Key | 用户价值 | 范围 | 验收信号 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | `review-pipeline-dag-execution` | 用户可以定义工具先后顺序和依赖关系 | 支持顺序、并行、依赖和失败策略 | 配置能表达 `format -> lint -> test` 和并行安全扫描 | Backend / Quality | ready |
-| `review-pipeline-profiles` | 用户可以按场景使用不同检查强度 | 提供 `local`、`ci`、`main`、`nightly` profile | 不同 profile 能运行不同 steps 和失败策略 | Backend / Quality | ready |
+| `review-pipeline-profiles` | 用户可以按场景使用不同检查强度 | 提供 `fast`、`ci`、`main`、`nightly` profile | 不同 profile 能运行不同 steps 和失败策略 | Backend / Quality | ready |
 
 ## 自定义规约 Adapter
 

@@ -24,8 +24,8 @@
 
 | 场景 | 目标 | 推荐命令 |
 | --- | --- | --- |
-| 本地快速修复 | 提交前自动整理机械问题 | `go-review fix --profile local` |
-| 本地快速检查 | 开发者提交前发现明显违规 | `go-review check --profile local` |
+| 本地快速修复 | 提交前自动整理机械问题 | `go-review fix --profile fast` |
+| 本地快速检查 | 开发者提交前发现明显违规 | `go-review check --profile fast` |
 | PR 检查 | 合入前阻断质量退化 | `go-review check --profile ci` |
 | 定时全量 | 发现慢速、全量和并发问题 | `go-review check --profile nightly` |
 

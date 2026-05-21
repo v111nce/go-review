@@ -29,7 +29,7 @@ func TestRegressionGateFixtureConfigProfiles(t *testing.T) {
 	}
 
 	cases := map[string][]string{
-		"local":    {"format-check", "test"},
+		"fast":     {"format-check", "test"},
 		"ci":       {"format-check", "test", "security-lite"},
 		"main":     {"format-check", "test", "security-lite"},
 		"nightly":  {"format-check", "test", "security-lite", "full-security", "custom-long-rules", "semantic-no-env"},
@@ -67,7 +67,7 @@ func TestRegressionGateSemanticAndAutofixFixtures(t *testing.T) {
 	}
 
 	autofixProject := filepath.Join(root, "testdata/fixtures/regression-gates/autofix-project")
-	fix := command("go", "run", "./cmd/go-review", "fix", "--config", configPath, "--profile", "local", "--workdir", autofixProject).WithDir(root)
+	fix := command("go", "run", "./cmd/go-review", "fix", "--config", configPath, "--profile", "fast", "--workdir", autofixProject).WithDir(root)
 	if out, err := fix.CombinedOutput(); err != nil {
 		t.Fatalf("autofix fixture should pass after safe gofmt and validation: %v\n%s", err, out)
 	}
@@ -97,7 +97,7 @@ func TestRegressionGateFixtureProjects(t *testing.T) {
 
 func TestGoldenReportContract(t *testing.T) {
 	r := report.RunReport{
-		Profile:    "local",
+		Profile:    "fast",
 		GateStatus: report.GatePass,
 		Steps: []report.Step{
 			{ID: "format-check", AdapterID: "go.format", Status: report.GatePass},
@@ -109,7 +109,7 @@ func TestGoldenReportContract(t *testing.T) {
 		t.Fatalf("WriteTerminal: %v", err)
 	}
 	got := normalizeTerminal(buf.String())
-	wantBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "testdata/fixtures/regression-gates/expected-reports/local-pass.golden.txt"))
+	wantBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "testdata/fixtures/regression-gates/expected-reports/fast-pass.golden.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}

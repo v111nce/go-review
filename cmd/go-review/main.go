@@ -44,7 +44,7 @@ func runCommand(command string, args []string) int {
 	fs := flag.NewFlagSet(command, flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	configPath := fs.String("config", "", "path to go-review YAML config")
-	profile := fs.String("profile", "local", "profile to run")
+	profile := fs.String("profile", "fast", "profile to run")
 	workdir := fs.String("workdir", "", "project working directory override")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -62,18 +62,18 @@ func printHelp() {
 	fmt.Fprintln(os.Stdout, `go-review runs configured Go code-review quality gates.
 
 Usage:
-  go-review check --config <path> [--profile local]
-  go-review fix   --config <path> [--profile local]
+  go-review check --config <path> [--profile fast]
+  go-review fix   --config <path> [--profile fast]
   go-review version
 
 Commands:
   check   run configured adapters without applying edits
-  fix     run configured adapters in fix mode when adapters support safe local fixes
+  fix     run configured adapters in fix mode when adapters support safe fixes such as gofmt
   version print build version metadata
 
 Flags:
   --config   path to go-review YAML config with schema_version
-  --profile  profile name, defaults to local
+  --profile  profile name, defaults to fast
   --workdir  project working directory override`)
 }
 

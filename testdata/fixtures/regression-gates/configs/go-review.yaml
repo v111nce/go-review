@@ -75,7 +75,7 @@ steps:
     adapter: semantic.no-env
     on_fail: continue
 profiles:
-  - name: local
+  - name: fast
     steps: [format-check, test]
   - name: ci
     steps: [format-check, test, security-lite]

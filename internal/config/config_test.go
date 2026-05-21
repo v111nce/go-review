@@ -30,7 +30,7 @@ steps:
     adapter: echo
     on_fail: continue
 profiles:
-  - name: local
+  - name: fast
     steps: [echo-step]
 artifacts:
   dir: .go-review/artifacts
@@ -48,7 +48,7 @@ artifacts:
 	if !ok || adapter.Command != "sh" || adapter.Env["REVIEW_ENV"] != "test" {
 		t.Fatalf("adapter not parsed: %#v", adapter)
 	}
-	profile, err := cfg.Profile("local")
+	profile, err := cfg.Profile("fast")
 	if err != nil {
 		t.Fatalf("Profile() error = %v", err)
 	}
@@ -100,7 +100,7 @@ steps:
   - id: known
     adapter: echo
 profiles:
-  - name: local
+  - name: fast
     steps: [missing]
 `))
 	if err == nil {

@@ -10,7 +10,7 @@ flowchart TD
   config[项目 go-review.yaml]
   platform[go-review 编排平台]
 
-  maintainer -->|选择检查强度| profiles[local / ci / nightly profiles]
+  maintainer -->|选择检查强度| profiles[fast / ci / nightly profiles]
   maintainer -->|维护配置| config
   config --> platform
   profiles --> platform

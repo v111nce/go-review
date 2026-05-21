@@ -32,7 +32,7 @@ steps:
     depends_on: [format-check]
     on_fail: stop
 profiles:
-  - name: local
+  - name: fast
     steps: [format-check, test]
   - name: ci
     steps: [format-check, test]

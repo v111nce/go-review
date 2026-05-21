@@ -80,7 +80,7 @@ func TestSelectProfileRequiresIncludedDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewGraph() error = %v", err)
 	}
-	steps, err := SelectProfile(g, []Profile{{Name: "local", Steps: []string{"format", "lint"}}}, "local")
+	steps, err := SelectProfile(g, []Profile{{Name: "fast", Steps: []string{"format", "lint"}}}, "fast")
 	if err != nil {
 		t.Fatalf("SelectProfile() error = %v", err)
 	}

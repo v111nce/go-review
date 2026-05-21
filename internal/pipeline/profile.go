@@ -12,7 +12,7 @@ type Profile struct {
 // SelectProfile resolves a profile and returns its steps in graph order.
 func SelectProfile(g *Graph, profiles []Profile, name string) ([]Step, error) {
 	if name == "" {
-		name = "local"
+		name = "fast"
 	}
 	var selected *Profile
 	for i := range profiles {

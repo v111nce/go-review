@@ -48,7 +48,7 @@
 - `nightly` profile 可以运行全量和长耗时 steps。
 - full security 可以与 full test 分离配置。
 - 失败报告包含失败 step、原因和 artifact 路径。
-- nightly 配置不影响 local 和 ci profile。
+- nightly 配置不影响 fast 和 ci profile。
 
 ## 测试
 

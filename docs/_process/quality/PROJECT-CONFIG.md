@@ -29,8 +29,8 @@ Go code-review 编排平台。
 
 本次 Milestones 0-3 实现使用 `testdata/fixtures/regression-gates/` 作为第一批 CLI / adapter / pipeline 质量证据：
 
-- `configs/go-review.yaml` 复用同一配置定义 `local`、`ci`、`main`、`nightly` profile，避免本地和 CI 漂移。
-- `compliant-project/` 是正例，目标用于 local/nightly pass smoke。
+- `configs/go-review.yaml` 复用同一配置定义 `fast`、`ci`、`main`、`nightly` profile，避免本地和 CI 漂移。
+- `compliant-project/` 是正例，目标用于 fast/nightly pass smoke。
 - `violating-project/` 是反例，目标用于 CI gate fail smoke。
 - `scripts/fake-tool.sh` 是可预测外部命令 fixture，用于 `cmd` adapter 成功、失败和超时测试。
 - `expected-reports/` 保存终端/JSON report golden。

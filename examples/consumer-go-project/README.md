@@ -12,8 +12,8 @@ It is intentionally small: the goal is to show project-local configuration and C
 ## Local adoption flow from this framework repository
 
 ```bash
-go run ../../cmd/go-review check --config go-review.yaml --profile local --workdir .
-go run ../../cmd/go-review fix --config go-review.yaml --profile local --workdir .
+go run ../../cmd/go-review check --config go-review.yaml --profile fast --workdir .
+go run ../../cmd/go-review fix --config go-review.yaml --profile fast --workdir .
 ```
 
 ## Consumer repository flow after release

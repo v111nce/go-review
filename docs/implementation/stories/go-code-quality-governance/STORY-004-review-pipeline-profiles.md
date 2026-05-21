@@ -16,7 +16,7 @@
 
 包含：
 
-- `local` profile。
+- `fast` profile。
 - `ci` profile。
 - `main` profile。
 - `nightly` profile。
@@ -43,7 +43,7 @@
 
 ## 验收标准
 
-- `go-review check --profile local` 只运行本地快速 steps。
+- `go-review check --profile fast` 只运行本地快速 steps。
 - `go-review check --profile ci` 运行 PR 门禁 steps。
 - `go-review check --profile nightly` 可以包含全量和长耗时 steps。
 - 未定义 profile 时返回可理解错误。

@@ -1,6 +1,6 @@
 # Quickstart: Go Review Pipeline
 
-This project implements a tool-agnostic Go code-review orchestration platform. The first delivery slice focuses on a runnable local/CI/nightly review pipeline with fixtures and stable evidence.
+This project implements a tool-agnostic Go code-review orchestration platform. The first delivery slice focuses on a runnable fast/CI/nightly review pipeline with fixtures and stable evidence.
 
 ## Current implementation slice
 
@@ -9,7 +9,7 @@ The current executable slice implements the full first-story set from `.omx/plan
 1. Go module and thin `go-review` CLI bootstrap.
 2. Config, adapter registry, command adapter, and minimal `go.format` wrapper.
 3. Normalized result/report artifacts.
-4. Pipeline DAG/profile execution for `local`, `ci`, `main`, and `nightly` gates.
+4. Pipeline DAG/profile execution for `fast`, `ci`, `main`, and `nightly` gates.
 5. Example `go.semantic` custom rule adapter.
 6. Safe `go.format` autofix with validation rollback evidence.
 
@@ -23,7 +23,7 @@ go run ./cmd/go-review --help
 go run ./cmd/go-review version
 go run ./cmd/go-review check \
   --config testdata/fixtures/regression-gates/configs/go-review.yaml \
-  --profile local \
+  --profile fast \
   --workdir testdata/fixtures/regression-gates/compliant-project
 go run ./cmd/go-review check \
   --config testdata/fixtures/regression-gates/configs/go-review.yaml \
@@ -39,17 +39,21 @@ go run ./cmd/go-review check \
   --workdir testdata/fixtures/regression-gates/semantic-violating-project
 go run ./cmd/go-review fix \
   --config testdata/fixtures/regression-gates/configs/go-review.yaml \
-  --profile local \
+  --profile fast \
   --workdir testdata/fixtures/regression-gates/autofix-project
 ```
 
 Expected behavior:
 
-- `local` on `compliant-project` passes.
+- `fast` on `compliant-project` passes.
 - `ci` on `violating-project` fails and emits step, adapter, rule/location when available, reason, and artifact path.
-- `nightly` can add long-running steps without changing `local` or `ci` behavior.
+- `nightly` can add long-running steps without changing `fast` or `ci` behavior.
 - `semantic` on `semantic-violating-project` fails with `semantic.no-direct-os-getenv`.
-- `fix --profile local` applies only `safe` fixes, reruns validation, and rolls back if a later validation step fails.
+- `fix --profile fast` applies only `safe` fixes, reruns validation, and rolls back if a later validation step fails.
+
+## Safe fixes
+
+`check` never modifies files. `fix --profile fast` may modify files, but only for steps marked `allow_fix: true` whose adapter declares `fix_safety: safe`; the current default safe fixer is `go.format`/gofmt. After applying a safe fix, `go-review` reruns dependent validation steps and rolls back the edit if validation fails.
 
 ## Framework self-check CI
 
@@ -59,7 +63,7 @@ That workflow is a framework regression guard, not the full consumer-project ado
 - It runs `go test ./...` to protect the framework implementation.
 - It runs CLI help to protect the user-facing command surface.
 - It runs CLI version output so release/debug metadata stays available.
-- It runs the same fixture-backed local, ci, nightly, semantic, and fix smoke matrix documented above.
+- It runs the same fixture-backed fast, ci, nightly, semantic, and fix smoke matrix documented above.
 - It copies `autofix-project` into the CI runner temp directory before `fix`, so the self-check proves fix behavior without mutating tracked fixtures.
 - It finishes with a clean-worktree assertion to catch accidental tracked fixture edits.
 

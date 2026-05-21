@@ -38,12 +38,12 @@ steps:
     adapter: fail
     on_fail: continue
 profiles:
-  - name: local
+  - name: fast
     steps: [ok-step, fail-step]
 artifacts:
   dir: artifacts
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -83,10 +83,10 @@ steps:
   - id: slow-step
     adapter: slow
 profiles:
-  - name: local
+  - name: fast
     steps: [slow-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -115,10 +115,10 @@ steps:
   - id: env-step
     adapter: env
 profiles:
-  - name: local
+  - name: fast
     steps: [env-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -144,10 +144,10 @@ steps:
   - id: format-step
     adapter: format
 profiles:
-  - name: local
+  - name: fast
     steps: [format-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -177,10 +177,10 @@ steps:
     adapter: format
     allow_fix: true
 profiles:
-  - name: local
+  - name: fast
     steps: [format-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -223,10 +223,10 @@ steps:
     adapter: test
     depends_on: [format-step]
 profiles:
-  - name: local
+  - name: fast
     steps: [format-step, test-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -259,10 +259,10 @@ steps:
   - id: semantic-step
     adapter: semantic.no-env
 profiles:
-  - name: local
+  - name: fast
     steps: [semantic-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -291,10 +291,10 @@ steps:
   - id: ok-step
     adapter: ok
 profiles:
-  - name: local
+  - name: fast
     steps: [fail-step, ok-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -322,10 +322,10 @@ steps:
   - id: first-step
     adapter: first
 profiles:
-  - name: local
+  - name: fast
     steps: [second-step, first-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local"})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
@@ -387,10 +387,10 @@ steps:
   - id: pwd-step
     adapter: pwd
 profiles:
-  - name: local
+  - name: fast
     steps: [pwd-step]
 `)
-	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "local", Workdir: project})
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast", Workdir: project})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}

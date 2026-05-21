@@ -48,12 +48,12 @@ jobs:
           SEMANTIC="$ROOT/testdata/fixtures/regression-gates/semantic-violating-project"
           AUTOFIX="$RUNNER_TEMP/go-review-autofix-project"
 
-          echo "== local compliant profile should pass =="
+          echo "== fast compliant profile should pass =="
           go run ./cmd/go-review check \
             --config "$CONFIG" \
-            --profile local \
-            --workdir "$COMPLIANT" | tee "$RUNNER_TEMP/local.out"
-          grep -q "profile=local gate=pass" "$RUNNER_TEMP/local.out"
+            --profile fast \
+            --workdir "$COMPLIANT" | tee "$RUNNER_TEMP/fast.out"
+          grep -q "profile=fast gate=pass" "$RUNNER_TEMP/fast.out"
 
           echo "== ci violating profile should fail on go.format =="
           if go run ./cmd/go-review check \
@@ -96,9 +96,9 @@ jobs:
           cp -R testdata/fixtures/regression-gates/autofix-project "$AUTOFIX"
           go run ./cmd/go-review fix \
             --config "$CONFIG" \
-            --profile local \
+            --profile fast \
             --workdir "$AUTOFIX" | tee "$RUNNER_TEMP/fix.out"
-          grep -q "profile=local gate=pass" "$RUNNER_TEMP/fix.out"
+          grep -q "profile=fast gate=pass" "$RUNNER_TEMP/fix.out"
           grep -q "fix_applied=true" "$RUNNER_TEMP/fix.out"
 
       - name: Ensure self-check did not modify tracked files

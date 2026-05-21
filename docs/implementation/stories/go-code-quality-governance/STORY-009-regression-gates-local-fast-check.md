@@ -16,7 +16,7 @@
 
 包含：
 
-- `local` profile。
+- `fast` profile。
 - 快速 format。
 - fast lint。
 - 受影响测试占位。
@@ -35,9 +35,9 @@
 
 ## 任务
 
-- 定义 `local` profile 示例。
-- 支持 `go-review check --profile local`。
-- 支持 `go-review fix --profile local`。
+- 定义 `fast` profile 示例。
+- 支持 `go-review check --profile fast`。
+- 支持 `go-review fix --profile fast`。
 - 输出本地可读摘要。
 - 失败时返回非零退出码。
 
@@ -49,7 +49,7 @@
 
 ## 测试
 
-- 使用 fixture 验证 local profile。
+- 使用 fixture 验证 fast profile。
 - 验证 check 和 fix 命令行为。
 
 ## 完成定义
