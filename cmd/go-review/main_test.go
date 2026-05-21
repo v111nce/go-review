@@ -48,7 +48,7 @@ func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("default check code=%d stderr=%q stdout=%q", code, stderr, stdout)
 	}
-	if !strings.Contains(stdout, "PASS profile=fast") {
+	if !strings.Contains(stdout, "SUCCESS profile=fast") {
 		t.Fatalf("default check output missing pass summary:\n%s", stdout)
 	}
 	if _, err := os.Stat(filepath.Join(reportDir, "latest.llm.md")); err != nil {
@@ -64,7 +64,7 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("auto init check code=%d stderr=%q stdout=%q", code, stderr, stdout)
 	}
-	for _, want := range []string{"initialized config=", "PASS profile=fast"} {
+	for _, want := range []string{"initialized config=", "SUCCESS profile=fast"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("auto init output missing %q:\n%s", want, stdout)
 		}

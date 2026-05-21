@@ -338,23 +338,27 @@ func PrintSummary(summary RunSummary, stdout *os.File) {
 	if stdout == nil {
 		stdout = os.Stdout
 	}
-	status := summary.GateStatus()
-	if status == config.GatePass {
-		fmt.Fprintf(stdout, "PASS profile=%s\n", summary.Profile)
-		if reportPath := latestReportPath(summary); reportPath != "" {
-			fmt.Fprintf(stdout, "report=%s\n", reportPath)
+	fmt.Fprintf(stdout, "START profile=%s command=%s\n", summary.Profile, summary.Command)
+	for _, result := range summary.Results {
+		if result.AdapterID == "fix.transaction" {
+			continue
 		}
-		return
-	}
-	fmt.Fprintf(stdout, "FAIL profile=%s\n", summary.Profile)
-	if failed := firstFailedResult(summary); failed != nil {
-		fmt.Fprintf(stdout, "reason=%s\n", conciseReason(*failed))
-		if artifact := firstArtifactPath(*failed); artifact != "" {
-			fmt.Fprintf(stdout, "details=%s\n", artifact)
-		}
+		fmt.Fprintf(stdout, "START step=%s\n", result.StepID)
+		fmt.Fprintf(stdout, "END step=%s status=%s\n", result.StepID, result.GateStatus)
 	}
 	if rollback := rollbackResult(summary); rollback != nil {
-		fmt.Fprintf(stdout, "rollback=%s\n", rollback.Message)
+		fmt.Fprintf(stdout, "ROLLBACK reason=%s\n", rollback.Message)
+	}
+	if summary.GateStatus() == config.GatePass {
+		fmt.Fprintf(stdout, "SUCCESS profile=%s\n", summary.Profile)
+	} else {
+		fmt.Fprintf(stdout, "FAILED profile=%s\n", summary.Profile)
+		if failed := firstFailedResult(summary); failed != nil {
+			fmt.Fprintf(stdout, "reason=%s\n", conciseReason(*failed))
+			if artifact := firstArtifactPath(*failed); artifact != "" {
+				fmt.Fprintf(stdout, "details=%s\n", artifact)
+			}
+		}
 	}
 	if reportPath := latestReportPath(summary); reportPath != "" {
 		fmt.Fprintf(stdout, "report=%s\n", reportPath)

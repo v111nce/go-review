@@ -53,7 +53,7 @@ jobs:
             --config "$CONFIG" \
             --profile fast \
             --workdir "$COMPLIANT" | tee "$RUNNER_TEMP/fast.out"
-          grep -q "PASS profile=fast" "$RUNNER_TEMP/fast.out"
+          grep -q "SUCCESS profile=fast" "$RUNNER_TEMP/fast.out"
 
           echo "== ci violating profile should fail on go.format =="
           if go run ./cmd/go-review check \
@@ -65,7 +65,7 @@ jobs:
             exit 1
           fi
           cat "$RUNNER_TEMP/ci.out"
-          grep -q "FAIL profile=ci" "$RUNNER_TEMP/ci.out"
+          grep -q "FAILED profile=ci" "$RUNNER_TEMP/ci.out"
           grep -q "gofmt would change files" "$RUNNER_TEMP/ci.out"
 
           echo "== nightly compliant profile should pass with slow/full lanes =="
@@ -73,7 +73,7 @@ jobs:
             --config "$CONFIG" \
             --profile nightly \
             --workdir "$COMPLIANT" | tee "$RUNNER_TEMP/nightly.out"
-          grep -q "PASS profile=nightly" "$RUNNER_TEMP/nightly.out"
+          grep -q "SUCCESS profile=nightly" "$RUNNER_TEMP/nightly.out"
           grep -q "report=" "$RUNNER_TEMP/nightly.out"
 
           echo "== semantic profile should fail on direct os.Getenv fixture =="
@@ -86,7 +86,7 @@ jobs:
             exit 1
           fi
           cat "$RUNNER_TEMP/semantic.out"
-          grep -q "FAIL profile=semantic" "$RUNNER_TEMP/semantic.out"
+          grep -q "FAILED profile=semantic" "$RUNNER_TEMP/semantic.out"
           grep -q "semantic.no-direct-os-getenv" "$RUNNER_TEMP/semantic.out"
           grep -q "main.go:" "$RUNNER_TEMP/semantic.out"
 
@@ -96,7 +96,7 @@ jobs:
             --config "$CONFIG" \
             --profile fast \
             --workdir "$AUTOFIX" | tee "$RUNNER_TEMP/fix.out"
-          grep -q "PASS profile=fast" "$RUNNER_TEMP/fix.out"
+          grep -q "SUCCESS profile=fast" "$RUNNER_TEMP/fix.out"
           grep -q "report=" "$RUNNER_TEMP/fix.out"
 
       - name: Ensure self-check did not modify tracked files
