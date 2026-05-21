@@ -5,13 +5,14 @@ It is intentionally small: the goal is to show project-local configuration and C
 
 ## Files
 
-- `go-review.yaml` — project-owned pipeline config.
+- `go-review.yaml` — project-owned pipeline config. New projects can run `go-review init` to create `.go-review/go-review.yaml` instead.
 - `.github/workflows/go-review.yml` — copyable GitHub Actions workflow for a consumer repository.
 - `cmd/app` and `internal/app` — tiny Go module used by the example.
 
 ## Local adoption flow from this framework repository
 
 ```bash
+go run ../../cmd/go-review init --workdir .
 go run ../../cmd/go-review --profile fast --workdir .
 go run ../../cmd/go-review fix --profile fast --workdir .
 ```

@@ -31,7 +31,7 @@ func TestRunHelpMentionsDefaultCheck(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("help code=%d stderr=%q", code, stderr)
 	}
-	for _, want := range []string{"go-review [check]", "check    run configured adapters without applying edits (default)", "version"} {
+	for _, want := range []string{"go-review [check]", "check    run configured adapters without applying edits (default; initializes missing config)", "version"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help output missing %q:\n%s", want, stdout)
 		}
@@ -53,6 +53,88 @@ func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(reportDir, "latest.llm.md")); err != nil {
 		t.Fatalf("expected LLM report: %v", err)
+	}
+}
+
+func TestRunAutoInitializesMissingConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/auto-init\n")
+	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
+	stdout, stderr, code := captureRun([]string{"--workdir", dir})
+	if code != 0 {
+		t.Fatalf("auto init check code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	for _, want := range []string{"initialized config=", "profile=fast gate=pass"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("auto init output missing %q:\n%s", want, stdout)
+		}
+	}
+	for _, path := range []string{
+		filepath.Join(dir, ".go-review", "go-review.yaml"),
+		filepath.Join(dir, ".go-review", "reports", "latest.md"),
+		filepath.Join(dir, ".go-review", "reports", "latest.llm.md"),
+		filepath.Join(dir, ".go-review", "artifacts", "latest", "format-check-stdout.txt"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected generated path %s: %v", path, err)
+		}
+	}
+}
+
+func TestRunBareAutoInitializesFromProjectRoot(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/bare-auto-init\n")
+	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldWD) })
+	stdout, stderr, code := captureRun(nil)
+	if code != 0 {
+		t.Fatalf("bare auto init code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	if strings.Contains(stdout, ".go-review/.go-review") {
+		t.Fatalf("generated config should resolve artifacts from project root, stdout=%s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports", "latest.llm.md")); err != nil {
+		t.Fatalf("expected report under project .go-review: %v", err)
+	}
+}
+
+func TestRunInitCreatesConfigOnly(t *testing.T) {
+	dir := t.TempDir()
+	stdout, stderr, code := captureRun([]string{"init", "--workdir", dir})
+	if code != 0 {
+		t.Fatalf("init code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	if !strings.Contains(stdout, "initialized config=") {
+		t.Fatalf("init output missing initialized config: %s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "go-review.yaml")); err != nil {
+		t.Fatalf("expected config: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports")); !os.IsNotExist(err) {
+		t.Fatalf("init should not create reports before running checks, err=%v", err)
+	}
+}
+
+func TestRunInitKeepsExistingConfig(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(dir, ".go-review", "go-review.yaml")
+	writeFile(t, configPath, minimalConfig())
+	stdout, stderr, code := captureRun([]string{"init", "--workdir", dir})
+	if code != 0 {
+		t.Fatalf("init existing code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	if !strings.Contains(stdout, configPath) {
+		t.Fatalf("init existing output = %s, want %s", stdout, configPath)
 	}
 }
 

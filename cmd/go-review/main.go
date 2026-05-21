@@ -33,6 +33,8 @@ func run(args []string) int {
 			return 0
 		case "check", "fix":
 			return runCommand(args[0], args[1:])
+		case "init":
+			return runInit(args[1:])
 		}
 		if len(args[0]) > 0 && args[0][0] != '-' {
 			fmt.Fprintf(os.Stderr, "unknown command %q\n\n", args[0])
@@ -57,8 +59,13 @@ func runCommand(command string, args []string) int {
 	if resolvedConfigPath == "" {
 		discovered, err := discoverConfig(*workdir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "go-review %s: %v\n", command, err)
-			return 2
+			created, initErr := initProject(*workdir)
+			if initErr != nil {
+				fmt.Fprintf(os.Stderr, "go-review %s: %v\n", command, err)
+				return 2
+			}
+			fmt.Fprintf(os.Stdout, "initialized config=%s\n", created)
+			discovered = created
 		}
 		resolvedConfigPath = discovered
 	}
@@ -73,6 +80,84 @@ func runCommand(command string, args []string) int {
 	}
 	engine.PrintSummary(summary, os.Stdout)
 	return summary.ExitCode()
+}
+
+func runInit(args []string) int {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	workdir := fs.String("workdir", "", "project working directory override")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	created, err := initProject(*workdir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review init: %v\n", err)
+		return 2
+	}
+	fmt.Fprintf(os.Stdout, "initialized config=%s\n", created)
+	return 0
+}
+
+func initProject(workdir string) (string, error) {
+	base := workdir
+	if base == "" {
+		base = "."
+	}
+	if discovered, err := discoverConfig(base); err == nil {
+		return discovered, nil
+	}
+	configPath := filepath.Join(base, ".go-review", "go-review.yaml")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(configPath, []byte(defaultConfig()), 0o644); err != nil {
+		return "", err
+	}
+	return configPath, nil
+}
+
+func defaultConfig() string {
+	return `schema_version: "1.0"
+tools:
+  go_review: "generated"
+  adapters:
+    go.format: "system-gofmt"
+    go.test: "go"
+defaults:
+  timeout: 30s
+  workdir: ..
+artifacts:
+  dir: ".go-review/artifacts/latest"
+adapters:
+  - id: go.format
+    type: go.format
+    capabilities: [check, fix]
+    timeout: 30s
+    fix_safety: safe
+  - id: go.test
+    type: cmd
+    command: go
+    args: [test, ./...]
+    capabilities: [test]
+    timeout: 2m
+    parser: go-test
+steps:
+  - id: format-check
+    adapter: go.format
+    on_fail: stop
+    allow_fix: true
+  - id: test
+    adapter: go.test
+    depends_on: [format-check]
+    on_fail: stop
+profiles:
+  - name: fast
+    steps: [format-check, test]
+  - name: ci
+    steps: [format-check, test]
+  - name: nightly
+    steps: [format-check, test]
+`
 }
 
 func discoverConfig(workdir string) (string, error) {
@@ -110,11 +195,13 @@ func printHelp() {
 Usage:
   go-review [check] [--config <path>] [--profile fast]
   go-review fix [--config <path>] [--profile fast]
+  go-review init [--workdir <dir>]
   go-review version
 
 Commands:
-  check    run configured adapters without applying edits (default)
+  check    run configured adapters without applying edits (default; initializes missing config)
   fix      run configured adapters in fix mode when adapters support safe fixes such as gofmt
+  init     create .go-review/go-review.yaml without running checks
   version  print build version metadata
 
 Flags:

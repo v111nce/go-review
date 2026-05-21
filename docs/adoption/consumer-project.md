@@ -6,7 +6,7 @@ This guide explains how another Go repository adopts `go-review`. The framework 
 
 A consumer project keeps three things in its own repository:
 
-1. A project-local `go-review.yaml` that declares adapters, steps, profiles, and artifacts.
+1. A project-local `.go-review/go-review.yaml` that declares adapters, steps, profiles, and artifacts. `go-review init` creates this file, and bare `go-review` auto-creates it when missing.
 2. A CI workflow that installs `go-review` and runs the `ci` profile.
 3. Optional developer commands for `fast` check/fix before pushing.
 
@@ -18,7 +18,8 @@ From a consumer repository root:
 
 ```bash
 go-review version
-go-review              # defaults to check --profile fast and discovers go-review.yaml
+go-review init         # optional; bare go-review also initializes missing config
+go-review              # defaults to check --profile fast
 go-review fix          # applies only safe allowed fixes
 go-review --profile ci
 go-review --profile nightly
@@ -30,9 +31,9 @@ Before the tool is published, a local checkout of this framework can run the sam
 go run /path/to/go-review/cmd/go-review --profile ci --workdir .
 ```
 
-## Minimal `go-review.yaml`
+## Minimal config
 
-See [`../../examples/consumer-go-project/go-review.yaml`](../../examples/consumer-go-project/go-review.yaml) for a copyable starter config. It includes:
+The default location is `.go-review/go-review.yaml`; root-level `go-review.yaml` remains supported as a fallback for older examples. See [`../../examples/consumer-go-project/go-review.yaml`](../../examples/consumer-go-project/go-review.yaml) for a copyable starter config. It includes:
 
 - `go.format` as a safe local fixer/checker.
 - `go.test` through the generic `cmd` adapter.
