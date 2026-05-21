@@ -16,6 +16,9 @@ tools:
 defaults:
   timeout: 2s
   workdir: .
+exclude:
+  - vendor
+  - testdata
 adapters:
   - id: echo
     type: cmd
@@ -43,6 +46,9 @@ artifacts:
 	}
 	if cfg.Defaults.Timeout != 2*time.Second {
 		t.Fatalf("timeout = %v", cfg.Defaults.Timeout)
+	}
+	if got := strings.Join(cfg.Exclude, ","); got != "vendor,testdata" {
+		t.Fatalf("exclude = %q", got)
 	}
 	adapter, ok := cfg.Adapter("echo")
 	if !ok || adapter.Command != "sh" || adapter.Env["REVIEW_ENV"] != "test" {

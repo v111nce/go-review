@@ -483,10 +483,10 @@ profiles:
   - name: fast
     steps: [semantic-step]
 `)
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n  - no-direct-os-getenv\nexclude:\n  - ignored\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n  - no-direct-os-getenv\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte("rules:\nexclude:\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte("rules:\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
@@ -499,7 +499,7 @@ profiles:
 	}
 }
 
-func TestSemanticAdapterExcludesConfiguredProjectPaths(t *testing.T) {
+func TestProjectExcludeAppliesToSemanticAdapter(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-exclude\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -520,6 +520,7 @@ func TestSemanticAdapterExcludesConfiguredProjectPaths(t *testing.T) {
 	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
 defaults:
   workdir: ..
+exclude: [fixtures]
 adapters:
   - id: semantic.rules
     type: go.semantic
@@ -531,10 +532,10 @@ profiles:
   - name: fast
     steps: [semantic-step]
 `)
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules: [no-direct-os-getenv]\nexclude: [fixtures]\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules: [no-direct-os-getenv]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte("rules:\nexclude:\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte("rules:\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
@@ -544,5 +545,43 @@ profiles:
 	got := summary.Results[0]
 	if got.GateStatus != config.GatePass {
 		t.Fatalf("semantic exclude result = %#v", got)
+	}
+}
+
+func TestProjectExcludeAppliesToGoFormatAdapter(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/format-exclude\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	generated := filepath.Join(dir, "generated")
+	if err := os.Mkdir(generated, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(generated, "bad.go"), []byte("package generated\nfunc Bad(){println(\"skip\")}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+exclude:
+  - generated
+adapters:
+  - id: format
+    type: go.format
+    fix_safety: safe
+steps:
+  - id: format-check
+    adapter: format
+profiles:
+  - name: fast
+    steps: [format-check]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GatePass {
+		t.Fatalf("format exclude result = %#v", got)
 	}
 }

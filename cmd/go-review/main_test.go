@@ -86,9 +86,21 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"rules:", "no-direct-os-getenv", "exclude:", "testdata"} {
+	for _, want := range []string{"rules:", "no-direct-os-getenv"} {
 		if !strings.Contains(string(semanticConfig), want) {
 			t.Fatalf("semantic default config missing %q:\n%s", want, semanticConfig)
+		}
+	}
+	if strings.Contains(string(semanticConfig), "exclude:") {
+		t.Fatalf("semantic config should not own project exclude:\n%s", semanticConfig)
+	}
+	projectConfig, err := os.ReadFile(filepath.Join(dir, ".go-review", "go-review.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"exclude:", "vendor", "testdata"} {
+		if !strings.Contains(string(projectConfig), want) {
+			t.Fatalf("project config missing %q:\n%s", want, projectConfig)
 		}
 	}
 }

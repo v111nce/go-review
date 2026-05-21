@@ -147,6 +147,9 @@ tools:
 defaults:
   timeout: 30s
   workdir: ..
+exclude:
+  - vendor
+  - testdata
 artifacts:
   dir: ".go-review/artifacts/latest"
 adapters:
@@ -193,15 +196,11 @@ profiles:
 func defaultSemanticConfig() string {
 	return `rules:
   - no-direct-os-getenv
-exclude:
-  - vendor
-  - testdata
 `
 }
 
 func customSemanticConfig() string {
 	return `rules:
-exclude:
 `
 }
 

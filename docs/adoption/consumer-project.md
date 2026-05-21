@@ -72,17 +72,23 @@ Running `go-review init` creates:
     custom.yaml   # team-owned semantic rules
 ```
 
-`default.yaml` and `custom.yaml` both support `rules` and coarse project-level `exclude` lists. Example:
+Project-wide `exclude` belongs in `.go-review/go-review.yaml`, not in semantic rule files. Once configured, every built-in project scanner that honors project excludes skips those paths, including `go.format` and `go.semantic`. Example:
+
+```yaml
+exclude:
+  - vendor
+  - testdata
+  - generated
+```
+
+`default.yaml` and `custom.yaml` only list semantic rules:
 
 ```yaml
 rules:
   - no-direct-os-getenv
-exclude:
-  - vendor
-  - testdata
 ```
 
-Keep one `semantic` step in `go-review.yaml`; use `exclude` to skip packages or directories that should not be scanned.
+Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
 
 ## GitHub Actions template
 

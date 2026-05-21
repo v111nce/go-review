@@ -37,7 +37,7 @@ func (a SemanticAdapter) Run(_ context.Context, stepCtx StepContext) (Result, er
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.config", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
 	for _, rule := range cfg.Rules {
-		result, err := a.runRule(rule, cfg.Exclude, stepCtx)
+		result, err := a.runRule(rule, stepCtx)
 		if err != nil || result.GateStatus == config.GateFail {
 			return result, err
 		}
@@ -53,10 +53,10 @@ func (a SemanticAdapter) Run(_ context.Context, stepCtx StepContext) (Result, er
 	}, nil
 }
 
-func (a SemanticAdapter) runRule(rule string, excludes []string, stepCtx StepContext) (Result, error) {
+func (a SemanticAdapter) runRule(rule string, stepCtx StepContext) (Result, error) {
 	switch rule {
 	case "", "no-direct-os-getenv":
-		return a.runNoDirectOSGetenv(excludes, stepCtx)
+		return a.runNoDirectOSGetenv(stepCtx)
 	default:
 		return Result{
 			AdapterID:  a.cfg.ID,
@@ -71,13 +71,12 @@ func (a SemanticAdapter) runRule(rule string, excludes []string, stepCtx StepCon
 }
 
 type semanticConfig struct {
-	Rules   []string
-	Exclude []string
+	Rules []string
 }
 
 func (a SemanticAdapter) semanticConfig(stepCtx StepContext) (semanticConfig, error) {
 	if strings.TrimSpace(a.cfg.Parser) != "" {
-		return semanticConfig{Rules: []string{strings.TrimSpace(a.cfg.Parser)}, Exclude: defaultSemanticExcludes()}, nil
+		return semanticConfig{Rules: []string{strings.TrimSpace(a.cfg.Parser)}}, nil
 	}
 	paths := []string{
 		filepath.Join(filepath.Dir(stepCtx.ConfigPath), "semantic", "default.yaml"),
@@ -90,17 +89,11 @@ func (a SemanticAdapter) semanticConfig(stepCtx StepContext) (semanticConfig, er
 			return semanticConfig{}, err
 		}
 		merged.Rules = append(merged.Rules, loaded.Rules...)
-		merged.Exclude = append(merged.Exclude, loaded.Exclude...)
 	}
 	if len(merged.Rules) == 0 {
 		merged.Rules = []string{"no-direct-os-getenv"}
 	}
-	merged.Exclude = normalizeSemanticExcludes(append(defaultSemanticExcludes(), merged.Exclude...))
 	return merged, nil
-}
-
-func defaultSemanticExcludes() []string {
-	return []string{".git", ".go-review", "artifacts", "vendor"}
 }
 
 func loadSemanticConfig(path string) (semanticConfig, error) {
@@ -124,8 +117,6 @@ func loadSemanticConfig(path string) (semanticConfig, error) {
 			switch key {
 			case "rules":
 				cfg.Rules = append(cfg.Rules, values...)
-			case "exclude":
-				cfg.Exclude = append(cfg.Exclude, values...)
 			default:
 				return semanticConfig{}, fmt.Errorf("%s:%d: unsupported semantic config field %q", path, lineNo+1, key)
 			}
@@ -139,16 +130,13 @@ func loadSemanticConfig(path string) (semanticConfig, error) {
 			switch section {
 			case "rules":
 				cfg.Rules = append(cfg.Rules, value)
-			case "exclude":
-				cfg.Exclude = append(cfg.Exclude, value)
 			default:
-				return semanticConfig{}, fmt.Errorf("%s:%d: list item must be under rules or exclude", path, lineNo+1)
+				return semanticConfig{}, fmt.Errorf("%s:%d: list item must be under rules", path, lineNo+1)
 			}
 			continue
 		}
-		return semanticConfig{}, fmt.Errorf("%s:%d: expected rules/exclude list item", path, lineNo+1)
+		return semanticConfig{}, fmt.Errorf("%s:%d: expected rules list item", path, lineNo+1)
 	}
-	cfg.Exclude = normalizeSemanticExcludes(cfg.Exclude)
 	return cfg, nil
 }
 
@@ -186,7 +174,18 @@ func cleanSemanticValue(value string) string {
 	return strings.Trim(strings.TrimSpace(value), "\"'")
 }
 
-func normalizeSemanticExcludes(values []string) []string {
+func defaultProjectExcludes() []string {
+	return []string{".git", ".go-review", "artifacts", "vendor"}
+}
+
+func projectExcludes(cfg *config.Config) []string {
+	if cfg == nil {
+		return defaultProjectExcludes()
+	}
+	return append(defaultProjectExcludes(), cfg.Exclude...)
+}
+
+func normalizeProjectExcludes(values []string) []string {
 	seen := map[string]struct{}{}
 	var normalized []string
 	for _, value := range values {
@@ -225,8 +224,8 @@ func stripSemanticComment(s string) string {
 	return s
 }
 
-func (a SemanticAdapter) runNoDirectOSGetenv(excludes []string, stepCtx StepContext) (Result, error) {
-	files, err := goFiles(resolveWorkdir(stepCtx.ProjectRoot, a.cfg.Workdir), excludes)
+func (a SemanticAdapter) runNoDirectOSGetenv(stepCtx StepContext) (Result, error) {
+	files, err := goFiles(resolveWorkdir(stepCtx.ProjectRoot, a.cfg.Workdir), projectExcludes(stepCtx.Config))
 	if err != nil {
 		return Result{}, err
 	}
@@ -333,18 +332,18 @@ func importedNames(file *ast.File, importPath string) map[string]struct{} {
 
 func goFiles(root string, excludes []string) ([]string, error) {
 	var files []string
-	excludes = normalizeSemanticExcludes(append(defaultSemanticExcludes(), excludes...))
+	excludes = normalizeProjectExcludes(append(defaultProjectExcludes(), excludes...))
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() {
-			if semanticPathExcluded(root, path, entry.Name(), excludes) {
+			if projectPathExcluded(root, path, entry.Name(), excludes) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if strings.HasSuffix(entry.Name(), ".go") && !semanticPathExcluded(root, path, entry.Name(), excludes) {
+		if strings.HasSuffix(entry.Name(), ".go") && !projectPathExcluded(root, path, entry.Name(), excludes) {
 			files = append(files, path)
 		}
 		return nil
@@ -353,7 +352,7 @@ func goFiles(root string, excludes []string) ([]string, error) {
 	return files, err
 }
 
-func semanticPathExcluded(root, path, name string, excludes []string) bool {
+func projectPathExcluded(root, path, name string, excludes []string) bool {
 	rel, err := filepath.Rel(root, path)
 	if err != nil {
 		return false

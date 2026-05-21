@@ -8,6 +8,9 @@ tools:
 defaults:
   timeout: 30s
   workdir: ..
+exclude:
+  - vendor
+  - testdata
 artifacts:
   dir: ".go-review/artifacts/latest"
 adapters:

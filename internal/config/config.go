@@ -79,6 +79,7 @@ type Config struct {
 	SchemaVersion string
 	Tools         ToolVersions
 	Defaults      Defaults
+	Exclude       []string
 	Adapters      []Adapter
 	Steps         []Step
 	Profiles      []Profile
@@ -175,6 +176,13 @@ func Load(r io.Reader) (*Config, error) {
 				return nil, err
 			}
 			cfg.Defaults = defaults
+			i = next - 1
+		case "exclude":
+			values, next, err := parseStringListValueOrBlock(val, lines, i+1, line.indent)
+			if err != nil {
+				return nil, err
+			}
+			cfg.Exclude = values
 			i = next - 1
 		case "adapters":
 			adapters, next, err := parseAdapters(lines, i+1, line.indent)
@@ -667,6 +675,26 @@ func parseStringMap(lines []yamlLine, start, parentIndent int) (map[string]strin
 		i++
 	}
 	return m, i, nil
+}
+
+func parseStringListValueOrBlock(value string, lines []yamlLine, start, parentIndent int) ([]string, int, error) {
+	if strings.TrimSpace(value) != "" {
+		return parseStringListInline(value), start, nil
+	}
+	var out []string
+	i := start
+	for i < len(lines) && lines[i].indent > parentIndent {
+		line := lines[i]
+		if !strings.HasPrefix(line.text, "- ") {
+			return out, i, line.err("expected list item")
+		}
+		value := unquote(strings.TrimSpace(strings.TrimPrefix(line.text, "- ")))
+		if value != "" {
+			out = append(out, value)
+		}
+		i++
+	}
+	return out, i, nil
 }
 
 func parseStringListInline(value string) []string {
