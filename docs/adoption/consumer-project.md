@@ -39,6 +39,21 @@ See [`../../examples/consumer-go-project/go-review.yaml`](../../examples/consume
 - `fast`, `ci`, and `nightly` profiles.
 - artifact output under `artifacts/go-review`.
 
+## Reports
+
+Every `check` and `fix` run writes deterministic reports. By default, reports are written next to the config under `.go-review/reports/`; use `--report-dir <dir>` to override the location.
+
+```txt
+.go-review/
+  reports/
+    latest.md        # human-readable summary
+    latest.llm.md    # repair context designed to paste into an LLM
+    latest.json      # machine-readable result contract
+    runs/            # timestamped copies of each run
+```
+
+`latest.md` answers "did it pass, what failed, can it auto-fix, and what do I do next?". `latest.llm.md` repeats the same deterministic results in a repair-oriented prompt shape with file/line/column, rule, message, suggestion, fix safety, and artifact paths. No LLM is required to generate either report.
+
 ## Safe fix behavior
 
 `go-review check` is read-only. `go-review fix --profile fast` is allowed to edit files only when a step opts in with `allow_fix: true` and the adapter declares `fix_safety: safe`; the default example uses this for formatting/gofmt. Review-only semantic rules report suggestions but do not rewrite code.

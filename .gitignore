@@ -12,3 +12,7 @@ artifacts/
 
 # Local release packaging output
 dist/
+
+# go-review local reports
+.go-review/
+**/.go-review/

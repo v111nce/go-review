@@ -35,6 +35,20 @@ func TestRunHelpMentionsVersion(t *testing.T) {
 	}
 }
 
+func TestDefaultReportDir(t *testing.T) {
+	cases := map[string]string{
+		"go-review.yaml":            ".go-review/reports",
+		"configs/go-review.yaml":    "configs/.go-review/reports",
+		".go-review/go-review.yaml": ".go-review/reports",
+		"":                          "",
+	}
+	for input, want := range cases {
+		if got := defaultReportDir(input); got != want {
+			t.Fatalf("defaultReportDir(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 func captureRun(args []string) (stdout string, stderr string, code int) {
 	oldStdout := os.Stdout
 	oldStderr := os.Stderr

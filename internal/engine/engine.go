@@ -13,6 +13,7 @@ import (
 
 	"github.com/v111nce/go-review/internal/config"
 	"github.com/v111nce/go-review/internal/pipeline"
+	"github.com/v111nce/go-review/internal/report"
 )
 
 type Command string
@@ -23,12 +24,13 @@ const (
 )
 
 type Options struct {
-	Command Command
-	Config  string
-	Profile string
-	Workdir string
-	Stdout  *os.File
-	Stderr  *os.File
+	Command   Command
+	Config    string
+	Profile   string
+	Workdir   string
+	ReportDir string
+	Stdout    *os.File
+	Stderr    *os.File
 }
 
 type ResultKind string
@@ -62,8 +64,13 @@ type Artifact struct {
 }
 
 type RunSummary struct {
-	Profile string
-	Results []Result
+	Command    Command
+	ConfigPath string
+	Profile    string
+	Workdir    string
+	StartedAt  time.Time
+	EndedAt    time.Time
+	Results    []Result
 }
 
 func (s RunSummary) GateStatus() config.GateStatus {
@@ -145,6 +152,7 @@ func NewRunner() Runner {
 }
 
 func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
+	startedAt := time.Now()
 	if opts.Config == "" {
 		return RunSummary{}, errors.New("--config is required")
 	}
@@ -168,7 +176,7 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		projectRoot = "."
 	}
 	projectRoot = resolveProjectRoot(opts.Config, projectRoot, opts.Workdir != "")
-	summary := RunSummary{Profile: profile.Name}
+	summary := RunSummary{Command: opts.Command, ConfigPath: opts.Config, Profile: profile.Name, Workdir: projectRoot, StartedAt: startedAt}
 	transaction := newFixTransaction(opts.Command, projectRoot)
 	for _, step := range steps {
 		adapterCfg, ok := cfg.Adapter(step.AdapterID)
@@ -214,7 +222,80 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 			break
 		}
 	}
+	summary.EndedAt = time.Now()
+	if opts.ReportDir != "" {
+		if err := report.WriteFiles(opts.ReportDir, summary.Report()); err != nil {
+			return summary, err
+		}
+	}
 	return summary, nil
+}
+
+func (s RunSummary) Report() report.RunReport {
+	reportSteps := make([]report.Step, 0, len(s.Results))
+	findings := make([]report.Finding, 0, len(s.Results))
+	artifacts := make([]report.ArtifactRef, 0)
+	for _, result := range s.Results {
+		step := report.Step{
+			ID:            result.StepID,
+			AdapterID:     result.AdapterID,
+			Status:        report.GateStatus(result.GateStatus),
+			Message:       result.Message,
+			FixAvailable:  result.FixAvailable,
+			FixSafety:     string(result.FixSafety),
+			FixApplied:    result.FixApplied,
+			ArtifactPaths: artifactPaths(result.Artifacts),
+		}
+		if result.GateStatus == config.GateFail {
+			step.FailureReason = result.Message
+		}
+		reportSteps = append(reportSteps, step)
+		for _, artifact := range result.Artifacts {
+			if artifact.Path != "" {
+				artifacts = append(artifacts, report.ArtifactRef{StepID: result.StepID, Name: artifact.Name, Path: artifact.Path})
+			}
+		}
+		if result.GateStatus == config.GatePass || result.Kind == ResultArtifact {
+			continue
+		}
+		findings = append(findings, report.Finding{
+			AdapterID:    result.AdapterID,
+			StepID:       result.StepID,
+			RuleID:       result.RuleID,
+			Kind:         string(result.Kind),
+			File:         result.File,
+			Line:         result.Line,
+			Column:       result.Column,
+			Message:      result.Message,
+			Suggestion:   result.Suggestion,
+			FixAvailable: result.FixAvailable,
+			FixSafety:    string(result.FixSafety),
+			FixApplied:   result.FixApplied,
+			GateStatus:   report.GateStatus(result.GateStatus),
+		})
+	}
+	return report.RunReport{
+		Command:    string(s.Command),
+		Profile:    s.Profile,
+		GateStatus: report.GateStatus(s.GateStatus()),
+		Workdir:    s.Workdir,
+		ConfigPath: s.ConfigPath,
+		StartedAt:  s.StartedAt,
+		EndedAt:    s.EndedAt,
+		Steps:      reportSteps,
+		Findings:   findings,
+		Artifacts:  artifacts,
+	}
+}
+
+func artifactPaths(artifacts []Artifact) []string {
+	paths := make([]string, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		if artifact.Path != "" {
+			paths = append(paths, artifact.Path)
+		}
+	}
+	return paths
 }
 
 func orderedProfileSteps(cfg *config.Config, profile *config.Profile, requested string) ([]config.Step, error) {

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 
@@ -46,16 +47,32 @@ func runCommand(command string, args []string) int {
 	configPath := fs.String("config", "", "path to go-review YAML config")
 	profile := fs.String("profile", "fast", "profile to run")
 	workdir := fs.String("workdir", "", "project working directory override")
+	reportDir := fs.String("report-dir", "", "directory for latest.md, latest.llm.md, and latest.json reports")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	summary, err := engine.NewRunner().Run(context.Background(), engine.Options{Command: engine.Command(command), Config: *configPath, Profile: *profile, Workdir: *workdir, Stdout: os.Stdout, Stderr: os.Stderr})
+	resolvedReportDir := *reportDir
+	if resolvedReportDir == "" {
+		resolvedReportDir = defaultReportDir(*configPath)
+	}
+	summary, err := engine.NewRunner().Run(context.Background(), engine.Options{Command: engine.Command(command), Config: *configPath, Profile: *profile, Workdir: *workdir, ReportDir: resolvedReportDir, Stdout: os.Stdout, Stderr: os.Stderr})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "go-review %s: %v\n", command, err)
 		return 2
 	}
 	engine.PrintSummary(summary, os.Stdout)
 	return summary.ExitCode()
+}
+
+func defaultReportDir(configPath string) string {
+	if configPath == "" {
+		return ""
+	}
+	dir := filepath.Dir(configPath)
+	if filepath.Base(dir) == ".go-review" {
+		return filepath.Join(dir, "reports")
+	}
+	return filepath.Join(dir, ".go-review", "reports")
 }
 
 func printHelp() {
@@ -74,7 +91,8 @@ Commands:
 Flags:
   --config   path to go-review YAML config with schema_version
   --profile  profile name, defaults to fast
-  --workdir  project working directory override`)
+  --workdir     project working directory override
+  --report-dir  directory for latest.md, latest.llm.md, and latest.json reports`)
 }
 
 func printVersion() {
