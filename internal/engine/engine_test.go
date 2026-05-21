@@ -437,7 +437,7 @@ func TestGoSemanticFixtureViaCLI(t *testing.T) {
 			if err == nil {
 				t.Fatalf("semantic fixture should fail, output:\n%s", out)
 			}
-			for _, want := range []string{"semantic.no-direct-os-getenv", "main.go:", "fix_safety=review"} {
+			for _, want := range []string{"FAIL profile=semantic", "semantic.no-direct-os-getenv", "main.go:", "report="} {
 				if !strings.Contains(string(out), want) {
 					t.Fatalf("semantic CLI output missing %q:\n%s", want, out)
 				}

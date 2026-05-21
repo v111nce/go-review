@@ -338,28 +338,83 @@ func PrintSummary(summary RunSummary, stdout *os.File) {
 	if stdout == nil {
 		stdout = os.Stdout
 	}
-	fmt.Fprintf(stdout, "profile=%s gate=%s\n", summary.Profile, summary.GateStatus())
-	for _, result := range summary.Results {
-		fmt.Fprintf(stdout, "step=%s adapter=%s gate=%s", result.StepID, result.AdapterID, result.GateStatus)
-		if result.RuleID != "" {
-			fmt.Fprintf(stdout, " rule=%s", result.RuleID)
+	status := summary.GateStatus()
+	if status == config.GatePass {
+		fmt.Fprintf(stdout, "PASS profile=%s\n", summary.Profile)
+		if reportPath := latestReportPath(summary); reportPath != "" {
+			fmt.Fprintf(stdout, "report=%s\n", reportPath)
 		}
-		if result.File != "" {
-			fmt.Fprintf(stdout, " location=%s", formatLocation(result))
-		}
-		if result.FixAvailable || result.FixSafety != "" {
-			fmt.Fprintf(stdout, " fix_available=%t fix_safety=%s", result.FixAvailable, result.FixSafety)
-		}
-		if result.FixApplied {
-			fmt.Fprint(stdout, " fix_applied=true")
-		}
-		fmt.Fprintf(stdout, " message=%s\n", result.Message)
-		for _, artifact := range result.Artifacts {
-			if artifact.Path != "" {
-				fmt.Fprintf(stdout, "artifact=%s path=%s\n", artifact.Name, artifact.Path)
-			}
+		return
+	}
+	fmt.Fprintf(stdout, "FAIL profile=%s\n", summary.Profile)
+	if failed := firstFailedResult(summary); failed != nil {
+		fmt.Fprintf(stdout, "reason=%s\n", conciseReason(*failed))
+		if artifact := firstArtifactPath(*failed); artifact != "" {
+			fmt.Fprintf(stdout, "details=%s\n", artifact)
 		}
 	}
+	if rollback := rollbackResult(summary); rollback != nil {
+		fmt.Fprintf(stdout, "rollback=%s\n", rollback.Message)
+	}
+	if reportPath := latestReportPath(summary); reportPath != "" {
+		fmt.Fprintf(stdout, "report=%s\n", reportPath)
+	}
+}
+
+func firstFailedResult(summary RunSummary) *Result {
+	for i := range summary.Results {
+		if summary.Results[i].GateStatus == config.GateFail && summary.Results[i].AdapterID != "fix.transaction" {
+			return &summary.Results[i]
+		}
+	}
+	return nil
+}
+
+func rollbackResult(summary RunSummary) *Result {
+	for i := range summary.Results {
+		if summary.Results[i].AdapterID == "fix.transaction" {
+			return &summary.Results[i]
+		}
+	}
+	return nil
+}
+
+func conciseReason(result Result) string {
+	var b strings.Builder
+	if result.StepID != "" {
+		b.WriteString(result.StepID)
+		b.WriteString(": ")
+	}
+	if result.File != "" {
+		b.WriteString(formatLocation(result))
+		b.WriteString(": ")
+	}
+	if result.RuleID != "" {
+		b.WriteString(result.RuleID)
+		b.WriteString(": ")
+	}
+	b.WriteString(result.Message)
+	return b.String()
+}
+
+func firstArtifactPath(result Result) string {
+	for _, artifact := range result.Artifacts {
+		if artifact.Path != "" {
+			return artifact.Path
+		}
+	}
+	return ""
+}
+
+func latestReportPath(summary RunSummary) string {
+	if summary.ConfigPath == "" {
+		return ""
+	}
+	dir := filepath.Dir(summary.ConfigPath)
+	if filepath.Base(dir) == ".go-review" {
+		return filepath.Join(dir, "reports", "latest.md")
+	}
+	return filepath.Join(dir, ".go-review", "reports", "latest.md")
 }
 
 type CommandAdapter struct {

@@ -1,0 +1,41 @@
+schema_version: "1.0"
+tools:
+  go_review: "repo-local"
+  adapters:
+    go.format: "system-gofmt"
+    go.test: "go"
+defaults:
+  timeout: 30s
+  workdir: ..
+artifacts:
+  dir: ".go-review/artifacts/latest"
+adapters:
+  - id: repo.format
+    type: go.format
+    args: [-l, cmd, internal, integration]
+    capabilities: [check]
+    timeout: 30s
+    fix_safety: none
+  - id: repo.test
+    type: cmd
+    command: go
+    args: [test, ./...]
+    capabilities: [test]
+    timeout: 2m
+    parser: go-test
+steps:
+  - id: format-check
+    adapter: repo.format
+    on_fail: stop
+    allow_fix: false
+  - id: test
+    adapter: repo.test
+    depends_on: [format-check]
+    on_fail: stop
+profiles:
+  - name: fast
+    steps: [format-check, test]
+  - name: ci
+    steps: [format-check, test]
+  - name: nightly
+    steps: [format-check, test]
