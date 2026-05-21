@@ -18,16 +18,16 @@ From a consumer repository root:
 
 ```bash
 go-review version
-go-review check --config go-review.yaml --profile fast --workdir .
-go-review fix --config go-review.yaml --profile fast --workdir .
-go-review check --config go-review.yaml --profile ci --workdir .
-go-review check --config go-review.yaml --profile nightly --workdir .
+go-review              # defaults to check --profile fast and discovers go-review.yaml
+go-review fix          # applies only safe allowed fixes
+go-review --profile ci
+go-review --profile nightly
 ```
 
 Before the tool is published, a local checkout of this framework can run the same config with:
 
 ```bash
-go run /path/to/go-review/cmd/go-review check --config go-review.yaml --profile ci --workdir .
+go run /path/to/go-review/cmd/go-review --profile ci --workdir .
 ```
 
 ## Minimal `go-review.yaml`

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -25,13 +26,57 @@ func TestRunVersionCommands(t *testing.T) {
 	}
 }
 
-func TestRunHelpMentionsVersion(t *testing.T) {
+func TestRunHelpMentionsDefaultCheck(t *testing.T) {
 	stdout, stderr, code := captureRun([]string{"--help"})
 	if code != 0 {
 		t.Fatalf("help code=%d stderr=%q", code, stderr)
 	}
-	if !strings.Contains(stdout, "version") {
-		t.Fatalf("help output missing version command:\n%s", stdout)
+	for _, want := range []string{"go-review [check]", "check    run configured adapters without applying edits (default)", "version"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("help output missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/default-check\n")
+	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
+	writeFile(t, filepath.Join(dir, "go-review.yaml"), minimalConfig())
+	reportDir := filepath.Join(dir, "reports")
+	stdout, stderr, code := captureRun([]string{"--workdir", dir, "--report-dir", reportDir})
+	if code != 0 {
+		t.Fatalf("default check code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	if !strings.Contains(stdout, "profile=fast gate=pass") {
+		t.Fatalf("default check output missing pass summary:\n%s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(reportDir, "latest.llm.md")); err != nil {
+		t.Fatalf("expected LLM report: %v", err)
+	}
+}
+
+func TestDiscoverConfigPrefersDotGoReview(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(dir, "go-review.yaml"), minimalConfig())
+	writeFile(t, filepath.Join(dir, ".go-review", "go-review.yaml"), minimalConfig())
+	got, err := discoverConfig(dir)
+	if err != nil {
+		t.Fatalf("discoverConfig: %v", err)
+	}
+	want := filepath.Join(dir, ".go-review", "go-review.yaml")
+	if got != want {
+		t.Fatalf("discoverConfig = %q, want %q", got, want)
+	}
+}
+
+func TestDiscoverConfigMissing(t *testing.T) {
+	_, err := discoverConfig(t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "no config found") {
+		t.Fatalf("discoverConfig missing err = %v", err)
 	}
 }
 
@@ -78,4 +123,29 @@ func TestBuildMetadataPrefersLDFlags(t *testing.T) {
 	if gotVersion != "v-test" || gotCommit != "commit-test" || gotDate != "date-test" {
 		t.Fatalf("buildMetadata() = %q, %q, %q", gotVersion, gotCommit, gotDate)
 	}
+}
+
+func writeFile(t *testing.T, path string, data string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func minimalConfig() string {
+	return `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: go.format
+    type: go.format
+    fix_safety: safe
+steps:
+  - id: format-check
+    adapter: go.format
+    allow_fix: true
+profiles:
+  - name: fast
+    steps: [format-check]
+`
 }

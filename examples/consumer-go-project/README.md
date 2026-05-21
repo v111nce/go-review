@@ -12,15 +12,15 @@ It is intentionally small: the goal is to show project-local configuration and C
 ## Local adoption flow from this framework repository
 
 ```bash
-go run ../../cmd/go-review check --config go-review.yaml --profile fast --workdir .
-go run ../../cmd/go-review fix --config go-review.yaml --profile fast --workdir .
+go run ../../cmd/go-review --profile fast --workdir .
+go run ../../cmd/go-review fix --profile fast --workdir .
 ```
 
 ## Consumer repository flow after release
 
 ```bash
 go install github.com/v111nce/go-review/cmd/go-review@v0.1.0
-go-review check --config go-review.yaml --profile ci --workdir .
+go-review --profile ci
 ```
 
 Replace `v0.1.0` with the real release tag once published.
