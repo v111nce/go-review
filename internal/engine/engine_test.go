@@ -454,3 +454,47 @@ func currentFile(t *testing.T) string {
 	}
 	return file
 }
+
+func TestSemanticAdapterLoadsDefaultAndCustomRuleFiles(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-config\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+    fix_safety: review
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n  - no-direct-os-getenv\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte("rules:\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "main.go" {
+		t.Fatalf("semantic config result = %#v", got)
+	}
+}

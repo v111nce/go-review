@@ -113,7 +113,27 @@ func initProject(workdir string) (string, error) {
 	if err := os.WriteFile(configPath, []byte(defaultConfig()), 0o644); err != nil {
 		return "", err
 	}
+	if err := writeDefaultSemanticConfig(filepath.Dir(configPath)); err != nil {
+		return "", err
+	}
 	return configPath, nil
+}
+
+func writeDefaultSemanticConfig(configDir string) error {
+	semanticDir := filepath.Join(configDir, "semantic")
+	if err := os.MkdirAll(semanticDir, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(semanticDir, "default.yaml"), []byte(defaultSemanticConfig()), 0o644); err != nil {
+		return err
+	}
+	customPath := filepath.Join(semanticDir, "custom.yaml")
+	if _, err := os.Stat(customPath); os.IsNotExist(err) {
+		return os.WriteFile(customPath, []byte(customSemanticConfig()), 0o644)
+	} else if err != nil {
+		return err
+	}
+	return nil
 }
 
 func defaultConfig() string {
@@ -123,6 +143,7 @@ tools:
   adapters:
     go.format: "system-gofmt"
     go.test: "go"
+    go.semantic: "builtin"
 defaults:
   timeout: 30s
   workdir: ..
@@ -141,6 +162,11 @@ adapters:
     capabilities: [test]
     timeout: 2m
     parser: go-test
+  - id: go.semantic
+    type: go.semantic
+    capabilities: [check]
+    timeout: 30s
+    fix_safety: review
 steps:
   - id: format-check
     adapter: go.format
@@ -150,13 +176,28 @@ steps:
     adapter: go.test
     depends_on: [format-check]
     on_fail: stop
+  - id: semantic
+    adapter: go.semantic
+    depends_on: [test]
+    on_fail: stop
 profiles:
   - name: fast
     steps: [format-check, test]
   - name: ci
-    steps: [format-check, test]
+    steps: [format-check, test, semantic]
   - name: nightly
-    steps: [format-check, test]
+    steps: [format-check, test, semantic]
+`
+}
+
+func defaultSemanticConfig() string {
+	return `rules:
+  - no-direct-os-getenv
+`
+}
+
+func customSemanticConfig() string {
+	return `rules:
 `
 }
 

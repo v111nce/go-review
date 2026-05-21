@@ -116,6 +116,7 @@ type StepContext struct {
 	Step        config.Step
 	Adapter     config.Adapter
 	Config      *config.Config
+	ConfigPath  string
 	ProjectRoot string
 }
 
@@ -187,7 +188,7 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		if err != nil {
 			return summary, err
 		}
-		stepCtx := StepContext{Command: opts.Command, Step: step, Adapter: *adapterCfg, Config: cfg, ProjectRoot: projectRoot}
+		stepCtx := StepContext{Command: opts.Command, Step: step, Adapter: *adapterCfg, Config: cfg, ConfigPath: opts.Config, ProjectRoot: projectRoot}
 		if transaction.shouldProtect(stepCtx) {
 			if err := transaction.snapshotProject(); err != nil {
 				return summary, err

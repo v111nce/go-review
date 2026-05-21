@@ -71,6 +71,8 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	}
 	for _, path := range []string{
 		filepath.Join(dir, ".go-review", "go-review.yaml"),
+		filepath.Join(dir, ".go-review", "semantic", "default.yaml"),
+		filepath.Join(dir, ".go-review", "semantic", "custom.yaml"),
 		filepath.Join(dir, ".go-review", "reports", "latest.md"),
 		filepath.Join(dir, ".go-review", "reports", "latest.llm.md"),
 		filepath.Join(dir, ".go-review", "artifacts", "latest", "format-check-stdout.txt"),
@@ -116,6 +118,9 @@ func TestRunInitCreatesConfigOnly(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "go-review.yaml")); err != nil {
 		t.Fatalf("expected config: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "semantic", "default.yaml")); err != nil {
+		t.Fatalf("expected semantic default config: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports")); !os.IsNotExist(err) {
 		t.Fatalf("init should not create reports before running checks, err=%v", err)

@@ -32,19 +32,112 @@ func (a SemanticAdapter) Metadata() AdapterMetadata {
 }
 
 func (a SemanticAdapter) Run(_ context.Context, stepCtx StepContext) (Result, error) {
-	rule := strings.TrimSpace(a.cfg.Parser)
-	if rule == "" || rule == "no-direct-os-getenv" {
-		return a.runNoDirectOSGetenv(stepCtx)
+	rules, err := a.rules(stepCtx)
+	if err != nil {
+		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.config", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
+	}
+	for _, rule := range rules {
+		result, err := a.runRule(rule, stepCtx)
+		if err != nil || result.GateStatus == config.GateFail {
+			return result, err
+		}
 	}
 	return Result{
 		AdapterID:  a.cfg.ID,
 		StepID:     stepCtx.Step.ID,
-		RuleID:     rule,
-		Kind:       ResultViolation,
-		Message:    fmt.Sprintf("unsupported semantic rule %q", rule),
-		FixSafety:  config.FixNone,
-		GateStatus: config.GateFail,
+		RuleID:     "semantic.rules",
+		Kind:       ResultArtifact,
+		Message:    fmt.Sprintf("semantic rules passed (%d)", len(rules)),
+		FixSafety:  a.cfg.FixSafety,
+		GateStatus: config.GatePass,
 	}, nil
+}
+
+func (a SemanticAdapter) runRule(rule string, stepCtx StepContext) (Result, error) {
+	switch rule {
+	case "", "no-direct-os-getenv":
+		return a.runNoDirectOSGetenv(stepCtx)
+	default:
+		return Result{
+			AdapterID:  a.cfg.ID,
+			StepID:     stepCtx.Step.ID,
+			RuleID:     rule,
+			Kind:       ResultViolation,
+			Message:    fmt.Sprintf("unsupported semantic rule %q", rule),
+			FixSafety:  config.FixNone,
+			GateStatus: config.GateFail,
+		}, nil
+	}
+}
+
+func (a SemanticAdapter) rules(stepCtx StepContext) ([]string, error) {
+	if strings.TrimSpace(a.cfg.Parser) != "" {
+		return []string{strings.TrimSpace(a.cfg.Parser)}, nil
+	}
+	paths := []string{
+		filepath.Join(filepath.Dir(stepCtx.ConfigPath), "semantic", "default.yaml"),
+		filepath.Join(filepath.Dir(stepCtx.ConfigPath), "semantic", "custom.yaml"),
+	}
+	var rules []string
+	for _, path := range paths {
+		loaded, err := loadSemanticRules(path)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, loaded...)
+	}
+	if len(rules) == 0 {
+		return []string{"no-direct-os-getenv"}, nil
+	}
+	return rules, nil
+}
+
+func loadSemanticRules(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var rules []string
+	for lineNo, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(stripSemanticComment(raw))
+		if line == "" || line == "rules:" {
+			continue
+		}
+		if strings.HasPrefix(line, "- ") {
+			rule := strings.TrimSpace(strings.TrimPrefix(line, "- "))
+			rule = strings.Trim(rule, "\"'")
+			if rule != "" {
+				rules = append(rules, rule)
+			}
+			continue
+		}
+		return nil, fmt.Errorf("%s:%d: expected rules list item", path, lineNo+1)
+	}
+	return rules, nil
+}
+
+func stripSemanticComment(s string) string {
+	inSingle, inDouble := false, false
+	for i, r := range s {
+		switch r {
+		case '\'':
+			if !inDouble {
+				inSingle = !inSingle
+			}
+		case '"':
+			if !inSingle {
+				inDouble = !inDouble
+			}
+		case '#':
+			if !inSingle && !inDouble {
+				return s[:i]
+			}
+		}
+	}
+	return s
 }
 
 func (a SemanticAdapter) runNoDirectOSGetenv(stepCtx StepContext) (Result, error) {

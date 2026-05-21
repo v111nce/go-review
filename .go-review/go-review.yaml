@@ -4,6 +4,7 @@ tools:
   adapters:
     go.format: "system-gofmt"
     go.test: "go"
+    go.semantic: "builtin"
 defaults:
   timeout: 30s
   workdir: ..
@@ -23,6 +24,24 @@ adapters:
     capabilities: [test]
     timeout: 2m
     parser: go-test
+  - id: repo.semantic-cmd
+    type: go.semantic
+    workdir: cmd
+    capabilities: [check]
+    timeout: 30s
+    fix_safety: review
+  - id: repo.semantic-internal
+    type: go.semantic
+    workdir: internal
+    capabilities: [check]
+    timeout: 30s
+    fix_safety: review
+  - id: repo.semantic-integration
+    type: go.semantic
+    workdir: integration
+    capabilities: [check]
+    timeout: 30s
+    fix_safety: review
 steps:
   - id: format-check
     adapter: repo.format
@@ -32,10 +51,22 @@ steps:
     adapter: repo.test
     depends_on: [format-check]
     on_fail: stop
+  - id: semantic-cmd
+    adapter: repo.semantic-cmd
+    depends_on: [test]
+    on_fail: stop
+  - id: semantic-internal
+    adapter: repo.semantic-internal
+    depends_on: [test]
+    on_fail: stop
+  - id: semantic-integration
+    adapter: repo.semantic-integration
+    depends_on: [test]
+    on_fail: stop
 profiles:
   - name: fast
     steps: [format-check, test]
   - name: ci
-    steps: [format-check, test]
+    steps: [format-check, test, semantic-cmd, semantic-internal, semantic-integration]
   - name: nightly
-    steps: [format-check, test]
+    steps: [format-check, test, semantic-cmd, semantic-internal, semantic-integration]
