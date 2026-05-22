@@ -98,7 +98,7 @@ rules:
   - no-direct-os-getenv
 ```
 
-Team-owned semantic rules go under `custom_rules:`. The first supported custom rule kind is `no-direct-call`; it matches direct calls to an imported package function, including aliased imports such as `import f "fmt"` followed by `f.Println(...)`:
+Team-owned semantic rules go under `custom_rules:`. Supported custom rule kinds include `no-direct-call` and `max-params`. `no-direct-call` matches direct calls to an imported package function, including aliased imports such as `import f "fmt"` followed by `f.Println(...)`:
 
 ```yaml
 rules:
@@ -111,7 +111,18 @@ rules:
 #     suggestion: "改用注入的 logger"
 ```
 
-When enabled, the report rule ID is prefixed with `semantic.`, for example `semantic.no-direct-fmt-println`. This configuration is intentionally limited: it is a supported rule kind, not a general-purpose semantic DSL. The adapter `parser` field is only a backward-compatible built-in rule selector, not a parser plugin mechanism. A semantic step currently reports the first failing finding for the step, not a full multi-diagnostic stream, and review-only semantic rules do not auto-fix code. Rules such as maximum function parameters, return counts, body length, context ordering, or import boundaries need additional implementation: add new `go/analysis` analyzers to `go.semantic`, or use external tools via `cmd`. Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
+For function parameter limits, use `max-params` with `max`:
+
+```yaml
+custom_rules:
+  - id: max-four-params
+    kind: max-params
+    max: 4
+    message: "方法入参不能超过 4 个"
+    suggestion: "拆分参数对象或引入配置结构"
+```
+
+When enabled, the report rule ID is prefixed with `semantic.`, for example `semantic.no-direct-fmt-println` or `semantic.max-four-params`. This configuration is intentionally limited: it is a supported rule kind, not a general-purpose semantic DSL. The adapter `parser` field is only a backward-compatible built-in rule selector, not a parser plugin mechanism. A semantic step currently reports the first failing finding for the step, not a full multi-diagnostic stream, and review-only semantic rules do not auto-fix code. Rules such as return counts, body length, context ordering, or import boundaries need additional implementation: add new `go/analysis` analyzers to `go.semantic`, or use external tools via `cmd`. Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
 
 ## GitHub Actions template
 

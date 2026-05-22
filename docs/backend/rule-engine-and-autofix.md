@@ -217,7 +217,7 @@ Diagnostic
 
 当前代码基线提供了一个最小 `go.semantic` 示例规则：`semantic.no-direct-os-getenv`。它通过 `go/analysis` analyzer 基于 AST/type info 定位直接 `os.Getenv` 调用，并把诊断映射为统一 violation，包含 adapter ID、step ID、rule ID、文件、行列、原因、建议和 `review` 修复安全级别。该规则用于证明语义检查可以进入 profile 并影响门禁；它不是完整的任意规则 DSL，也不是动态加载不可信规则代码的插件市场，也不提供 semantic 自动修复。当前 adapter 仍遵循 step-level 单 `Result` 契约：同一次 semantic step 只报告首个 failing finding，不承诺输出多 diagnostics。
 
-默认项目初始化会生成 `.go-review/semantic/default.yaml` 和 `.go-review/semantic/custom.yaml`：`default.yaml` 放框架自带规则，`custom.yaml` 留给团队配置已实现的语义规则。当前配置式 custom rule 只覆盖有限的 `no-direct-call` analyzer kind；函数参数数量、返回值数量、函数体行数、架构边界等规则需要新增 `go/analysis` analyzer 或通过外部工具接入。adapter 配置里的 `parser` 仅是兼容的内置规则选择入口，不是 parser 插件机制。忽略目录不放在 semantic 文件里，而是放在 `.go-review/go-review.yaml` 顶层 `exclude`，例如 `exclude: [vendor, testdata]`；这是项目级配置，配置后所有内置扫描类步骤都应跳过这些路径。主配置只需要一个 `go.semantic` adapter 和一个 `semantic` step，不需要按 `cmd/internal/integration` 拆成多个 semantic step。
+默认项目初始化会生成 `.go-review/semantic/default.yaml` 和 `.go-review/semantic/custom.yaml`：`default.yaml` 放框架自带规则，`custom.yaml` 留给团队配置已实现的语义规则。当前配置式 custom rule 覆盖有限的 analyzer kind：`no-direct-call` 和 `max-params`。返回值数量、函数体行数、架构边界等规则需要新增 `go/analysis` analyzer 或通过外部工具接入。adapter 配置里的 `parser` 仅是兼容的内置规则选择入口，不是 parser 插件机制。忽略目录不放在 semantic 文件里，而是放在 `.go-review/go-review.yaml` 顶层 `exclude`，例如 `exclude: [vendor, testdata]`；这是项目级配置，配置后所有内置扫描类步骤都应跳过这些路径。主配置只需要一个 `go.semantic` adapter 和一个 `semantic` step，不需要按 `cmd/internal/integration` 拆成多个 semantic step。
 
 ## 失败和安全策略
 

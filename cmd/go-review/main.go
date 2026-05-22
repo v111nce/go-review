@@ -262,8 +262,9 @@ func customSemanticConfig() string {
 #   - no-direct-os-getenv
 
 # User-defined semantic rules supported by go.semantic.
-# Currently supported kind: no-direct-call.
-# It reports calls to an imported package function, including aliased imports.
+# Currently supported kinds:
+# - no-direct-call: reports calls to an imported package function, including aliased imports.
+# - max-params: reports functions/methods whose parameter count is greater than max.
 # Example: ban direct fmt.Println and require injected logging instead.
 # custom_rules:
 #   - id: no-direct-fmt-println
@@ -272,6 +273,11 @@ func customSemanticConfig() string {
 #     function: Println
 #     message: "不要直接使用 fmt.Println"
 #     suggestion: "改用注入的 logger"
+#   - id: max-four-params
+#     kind: max-params
+#     max: 4
+#     message: "方法入参不能超过 4 个"
+#     suggestion: "拆分参数对象或引入配置结构"
 `
 }
 

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -71,6 +72,16 @@ var semanticCustomAnalyzers = map[string]semanticCustomAnalyzerFactory{
 		rule.Message = message
 		return noDirectCallAnalyzer(rule, analyzerName(rule.ID)), meta
 	},
+	"max-params": func(rule semanticCustomRule) (*analysis.Analyzer, semanticRuleMeta) {
+		meta := semanticRuleMeta{
+			RuleID:      semanticRuleID(rule.ID),
+			PassMessage: fmt.Sprintf("semantic custom rule %s passed", rule.ID),
+			SuggestionFor: func(analysis.Diagnostic) string {
+				return rule.Suggestion
+			},
+		}
+		return maxParamsAnalyzer(rule, analyzerName(rule.ID)), meta
+	},
 }
 
 func (a SemanticAdapter) Metadata() AdapterMetadata {
@@ -125,6 +136,54 @@ func (a SemanticAdapter) customAnalyzer(rule semanticCustomRule) (*analysis.Anal
 	rule.Kind = kind
 	analyzer, meta := factory(rule)
 	return analyzer, meta, nil
+}
+
+func maxParamsAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              fmt.Sprintf("reports functions with more than %d parameters", rule.Max),
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				ast.Inspect(file, func(node ast.Node) bool {
+					decl, ok := node.(*ast.FuncDecl)
+					if !ok || decl.Type == nil {
+						return true
+					}
+					count := fieldListNameCount(decl.Type.Params)
+					if count <= rule.Max {
+						return false
+					}
+					message := rule.Message
+					if message == "" {
+						message = fmt.Sprintf("function %s has %d parameters, maximum is %d", decl.Name.Name, count, rule.Max)
+					}
+					diagnostic := analysis.Diagnostic{Pos: decl.Pos(), Category: semanticRuleID(rule.ID), Message: message}
+					if rule.Suggestion != "" {
+						diagnostic.SuggestedFixes = []analysis.SuggestedFix{{Message: rule.Suggestion}}
+					}
+					pass.Report(diagnostic)
+					return false
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
+func fieldListNameCount(fields *ast.FieldList) int {
+	if fields == nil {
+		return 0
+	}
+	count := 0
+	for _, field := range fields.List {
+		if len(field.Names) == 0 {
+			count++
+			continue
+		}
+		count += len(field.Names)
+	}
+	return count
 }
 
 func noDirectCallAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
@@ -256,6 +315,7 @@ type semanticCustomRule struct {
 	Kind       string
 	Package    string
 	Function   string
+	Max        int
 	Message    string
 	Suggestion string
 }
@@ -421,6 +481,12 @@ func parseSemanticCustomRuleItem(path string, lines []semanticConfigLine, start 
 			rule.Package = cleanSemanticValue(val)
 		case "function", "func":
 			rule.Function = cleanSemanticValue(val)
+		case "max":
+			parsed, err := parseSemanticPositiveInt(val)
+			if err != nil {
+				return i, fmt.Errorf("%s:%d: max must be a positive integer", path, field.num)
+			}
+			rule.Max = parsed
 		case "message":
 			rule.Message = cleanSemanticValue(val)
 		case "suggestion":
@@ -440,10 +506,26 @@ func validateSemanticCustomRule(path string, lineNo int, rule semanticCustomRule
 	if _, ok := semanticCustomAnalyzers[kind]; !ok {
 		return fmt.Errorf("%s:%d: unsupported custom rule kind %q", path, lineNo, kind)
 	}
-	if strings.TrimSpace(rule.Package) == "" || strings.TrimSpace(rule.Function) == "" {
-		return fmt.Errorf("%s:%d: custom no-direct-call rule requires package and function", path, lineNo)
+	switch kind {
+	case "no-direct-call":
+		if strings.TrimSpace(rule.Package) == "" || strings.TrimSpace(rule.Function) == "" {
+			return fmt.Errorf("%s:%d: custom no-direct-call rule requires package and function", path, lineNo)
+		}
+	case "max-params":
+		if rule.Max <= 0 {
+			return fmt.Errorf("%s:%d: custom max-params rule requires positive max", path, lineNo)
+		}
 	}
 	return nil
+}
+
+func parseSemanticPositiveInt(value string) (int, error) {
+	value = cleanSemanticValue(value)
+	n, err := strconv.Atoi(value)
+	if err != nil || n <= 0 {
+		return 0, fmt.Errorf("invalid positive integer %q", value)
+	}
+	return n, nil
 }
 
 func parseSemanticField(text string) (string, string, bool) {

@@ -739,6 +739,102 @@ profiles:
 	}
 }
 
+// 验证 custom_rules 的 max-params 规则能用 go/analysis 检测函数/方法参数数量上限。
+func TestSemanticAdapterLoadsCustomMaxParamsRule(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-max-params\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\ntype service struct{}\nfunc ok(a, b int, c string, d bool) {}\nfunc tooMany(a, b int, c string, d bool, e error) {}\nfunc (service) method(a, b, c, d, e int) {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+    fix_safety: review
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+  - id: max-four-params
+    kind: max-params
+    max: 4
+    message: 方法入参不能超过 4 个
+    suggestion: 拆分参数对象或引入配置结构
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.max-four-params" || got.File != "main.go" || got.Line == 0 {
+		t.Fatalf("semantic max-params result = %#v", got)
+	}
+	if !strings.Contains(got.Message, "不能超过 4") || got.Suggestion != "拆分参数对象或引入配置结构" {
+		t.Fatalf("semantic max-params message/suggestion = %#v", got)
+	}
+}
+
+// 验证 max-params 规则在未超限时通过。
+func TestSemanticAdapterCustomMaxParamsRulePassesAtBoundary(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-max-params-pass\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc ok(a, b int, c string, d bool) {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+  - id: max-four-params
+    kind: max-params
+    max: 4
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GatePass || got.RuleID != "semantic.rules" {
+		t.Fatalf("semantic max-params boundary result = %#v", got)
+	}
+}
+
 // 验证 semantic 配置解析错误统一归入 semantic.config。
 func TestSemanticAdapterConfigValidationErrors(t *testing.T) {
 	tests := []struct {
@@ -748,6 +844,8 @@ func TestSemanticAdapterConfigValidationErrors(t *testing.T) {
 	}{
 		{name: "unsupported top-level field", content: "unknown: true\n", want: "unsupported semantic config field"},
 		{name: "unsupported custom field", content: "custom_rules:\n  - id: bad\n    package: fmt\n    function: Println\n    severity: high\n", want: "unsupported custom rule field"},
+		{name: "missing max", content: "custom_rules:\n  - id: max-params\n    kind: max-params\n", want: "requires positive max"},
+		{name: "invalid max", content: "custom_rules:\n  - id: max-params\n    kind: max-params\n    max: nope\n", want: "max must be a positive integer"},
 		{name: "missing id", content: "custom_rules:\n  - package: fmt\n    function: Println\n", want: "custom rule missing id"},
 		{name: "missing package", content: "custom_rules:\n  - id: missing-package\n    function: Println\n", want: "requires package and function"},
 		{name: "unsupported custom kind", content: "custom_rules:\n  - id: bad-kind\n    kind: unknown\n    package: fmt\n    function: Println\n", want: "unsupported custom rule kind"},
