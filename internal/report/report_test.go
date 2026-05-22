@@ -54,7 +54,7 @@ func TestWriteMarkdown(t *testing.T) {
 		t.Fatalf("WriteMarkdown() error = %v", err)
 	}
 	out := buf.String()
-	for _, want := range []string{"# go-review Report", "## Failed Findings", "| lint | SA1000 | main.go:3 | bad thing | review |", "- Re-run `go-review check --profile ci`."} {
+	for _, want := range []string{"# go-review 报告", "## 失败项", "| lint | SA1000 | main.go:3 | bad thing | review |", "- 重新运行 `go-review check --profile ci`。"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("markdown output missing %q:\n%s", want, out)
 		}
@@ -67,7 +67,7 @@ func TestWriteLLMMarkdown(t *testing.T) {
 		t.Fatalf("WriteLLMMarkdown() error = %v", err)
 	}
 	out := buf.String()
-	for _, want := range []string{"# go-review LLM Repair Context", "## Important Constraints", "### Finding 1", "Rule: SA1000", "Expected Completion Criteria"} {
+	for _, want := range []string{"# go-review LLM 修复上下文", "## 重要约束", "### 失败项 1", "规则：SA1000", "预期完成标准"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("llm markdown output missing %q:\n%s", want, out)
 		}

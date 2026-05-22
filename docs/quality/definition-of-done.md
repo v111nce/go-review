@@ -13,9 +13,10 @@
 
 ## 检测能力
 
-- 通用 Go 规则可通过 `go.format` 和 `go.lint` adapter 执行。
-- 架构依赖规则能阻断违规 import。
-- 自定义语义规则能通过 `go.semantic` 基于 AST 和类型信息定位违规。
+- 通用 Go 规则可通过 `go.lint` adapter 复用 `golangci-lint`，格式/import 修复可由内置 `go.format` 或 `golangci-lint` formatters 执行。
+- 架构依赖规则能阻断违规 import，并可由 `depguard`、依赖图检查或自研 `go/analysis` analyzer 承载。
+- 自定义语义规则能通过 `go.semantic` 运行 `go/analysis` analyzer，基于 AST 和类型信息定位违规。
+- 测试回归通过独立 `go.test` step 执行，不依赖 linter runner。
 - 每个违规报告包含 adapter ID、step ID、规则 ID、位置、原因和建议。
 
 ## 自动修复能力

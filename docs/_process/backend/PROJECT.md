@@ -8,8 +8,8 @@ Go 规约治理需要把产品层的规则目录、违规检测和自动修复�
 
 - Adapter 运行时和统一结果模型。
 - Pipeline DAG 调度。
-- 通用工具链 adapter 集成。
-- 架构依赖约束 adapter。
+- 通用工具链 adapter 集成，尤其是以 `golangci-lint` 作为 lint/format runner 底座。
+- 架构依赖约束 adapter，可复用 `depguard` 或自研 `go/analysis` analyzer。
 - 自定义 `go/analysis` 语义 adapter。
 - 自动修复安全策略。
 - 报告输出 adapter。

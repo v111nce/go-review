@@ -33,6 +33,7 @@ flowchart TD
 
 | 能力文档 | 定位 | 状态 |
 | --- | --- | --- |
+| [why-go-review.md](why-go-review.md) | 为什么需要 go-review，以及它与 `golangci-lint` / `go/analysis` 的分工 | draft |
 | [go-code-quality-governance.md](go-code-quality-governance.md) | Go 代码质量规约治理能力源 | draft |
 
 ## Module Key 索引
@@ -47,7 +48,8 @@ flowchart TD
 
 ## 阅读顺序
 
-1. [go-code-quality-governance.md](go-code-quality-governance.md)
-2. [../backend/rule-engine-and-autofix.md](../backend/rule-engine-and-autofix.md)
-3. [../quality/go-code-quality-baseline.md](../quality/go-code-quality-baseline.md)
-4. [../quality/definition-of-done.md](../quality/definition-of-done.md)
+1. [why-go-review.md](why-go-review.md)
+2. [go-code-quality-governance.md](go-code-quality-governance.md)
+3. [../backend/rule-engine-and-autofix.md](../backend/rule-engine-and-autofix.md)
+4. [../quality/go-code-quality-baseline.md](../quality/go-code-quality-baseline.md)
+5. [../quality/definition-of-done.md](../quality/definition-of-done.md)

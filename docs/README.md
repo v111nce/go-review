@@ -19,6 +19,7 @@
 
 - 核心系统只负责工具接入、配置读取、执行编排、结果归一、修复事务、报告生成和门禁输出。
 - 工具接入是开放的：`golangci-lint`、`go test`、`gosec`、`govulncheck`、自研 analyzer 或任意外部命令都只是 adapter。
+- 通用 lint/format 优先复用 `golangci-lint`；团队语义规约优先用 `go/analysis` analyzer；`go test` 和报告输出继续作为独立 step 编排。
 - 用户可以通过 pipeline 配置定义工具的先后顺序、并行关系、依赖关系、失败后是否继续和不同场景的 profile。
 - 第一版提供常用 Go 工具 adapter，但它们不是平台边界。
 - 自动修复只覆盖语义安全的子集；不能证明安全的违规只报告，不自动改。

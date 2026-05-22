@@ -13,6 +13,6 @@ Go code-review 编排平台：通过常用 adapter、通用 `cmd` adapter 和团
 - 先文档化产品能力和质量基线。
 - 工具化规约优先于 AI agent。
 - 核心能力升级为工具无关 adapter 和 review pipeline 编排。
-- 通用规则通过常用 adapter 复用成熟工具。
-- 团队特定规则通过自定义 adapter 承载。
+- 通用规则通过常用 adapter 复用成熟工具，lint/format 优先复用 `golangci-lint`。
+- 团队特定规则通过自定义 adapter 承载，Go 语义规则优先用 `go/analysis` analyzer。
 - 自动修复只覆盖语义安全子集。

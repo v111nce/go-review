@@ -17,9 +17,9 @@
 包含：
 
 - `fast` profile。
-- 快速 format。
-- fast lint。
-- 受影响测试占位。
+- 快速 format，可由内置 `go.format` 或 `golangci-lint` formatter 承载。
+- fast lint，优先通过 `golangci-lint` adapter 承载。
+- 受影响测试占位，测试仍由独立 `go.test` step 承载。
 - 可安全自动修复。
 
 不包含：

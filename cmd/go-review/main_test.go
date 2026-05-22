@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/v111nce/go-review/internal/config"
 )
 
 func TestRunVersionCommands(t *testing.T) {
@@ -86,19 +88,47 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	semanticCustom, err := os.ReadFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, want := range []string{"rules:", "no-direct-os-getenv"} {
 		if !strings.Contains(string(semanticConfig), want) {
 			t.Fatalf("semantic default config missing %q:\n%s", want, semanticConfig)
 		}
 	}
+	for _, want := range []string{"custom_rules:", "no-direct-call", "no-direct-fmt-println"} {
+		if !strings.Contains(string(semanticCustom), want) {
+			t.Fatalf("semantic custom config missing %q:\n%s", want, semanticCustom)
+		}
+	}
 	if strings.Contains(string(semanticConfig), "exclude:") {
 		t.Fatalf("semantic config should not own project exclude:\n%s", semanticConfig)
+	}
+	if strings.Contains(string(semanticCustom), "exclude:") {
+		t.Fatalf("semantic custom config should not own project exclude:\n%s", semanticCustom)
 	}
 	projectConfig, err := os.ReadFile(filepath.Join(dir, ".go-review", "go-review.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"exclude:", "vendor", "testdata"} {
+	for _, line := range strings.Split(string(projectConfig), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if trimmed == "exclude:" || trimmed == "- vendor" || trimmed == "- testdata" {
+			t.Fatalf("project config should not enable default exclude line %q:\n%s", trimmed, projectConfig)
+		}
+	}
+	for _, want := range []string{
+		"# exclude:",
+		"# Optional: staticcheck. Install first:",
+		"go install honnef.co/go/tools/cmd/staticcheck@latest",
+		"go install golang.org/x/vuln/cmd/govulncheck@latest",
+		"go install github.com/securego/gosec/v2/cmd/gosec@latest",
+		"on_fail: continue",
+	} {
 		if !strings.Contains(string(projectConfig), want) {
 			t.Fatalf("project config missing %q:\n%s", want, projectConfig)
 		}
@@ -126,6 +156,21 @@ func TestRunBareAutoInitializesFromProjectRoot(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports", "latest.llm.md")); err != nil {
 		t.Fatalf("expected report under project .go-review: %v", err)
+	}
+}
+
+func TestDefaultConfigKeepsReviewAreasIndependent(t *testing.T) {
+	cfg, err := config.Load(strings.NewReader(defaultConfig()))
+	if err != nil {
+		t.Fatalf("Load(defaultConfig): %v", err)
+	}
+	if len(cfg.Exclude) != 0 {
+		t.Fatalf("default config should not enable project excludes: %#v", cfg.Exclude)
+	}
+	for _, step := range cfg.Steps {
+		if step.OnFail != config.OnFailContinue {
+			t.Fatalf("step %s on_fail = %q, want continue", step.ID, step.OnFail)
+		}
 	}
 }
 

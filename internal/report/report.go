@@ -176,57 +176,57 @@ func WriteTerminal(w io.Writer, r RunReport) error {
 // WriteMarkdown writes the human-facing review report.
 func WriteMarkdown(w io.Writer, r RunReport) error {
 	r.Normalize()
-	const tpl = `# go-review Report
+	const tpl = `# go-review 报告
 
-## Summary
+## 摘要
 
-| Field | Value |
+| 字段 | 值 |
 | --- | --- |
-| Status | {{.GateStatus}} |
-| Command | {{dash .Command}} |
+| 状态 | {{.GateStatus}} |
+| 命令 | {{dash .Command}} |
 | Profile | {{dash .Profile}} |
-| Workdir | {{dash .Workdir}} |
-| Config | {{dash .ConfigPath}} |
-| Started At | {{time .StartedAt}} |
-| Duration | {{duration .Duration}} |
+| 工作目录 | {{dash .Workdir}} |
+| 配置 | {{dash .ConfigPath}} |
+| 开始时间 | {{time .StartedAt}} |
+| 耗时 | {{duration .Duration}} |
 
-## Result
+## 结果
 
 {{resultSentence .}}
 
-{{.Summary.StepsPassed}} steps passed, {{.Summary.StepsFailed}} steps failed, {{.Summary.StepsWarned}} steps warned.
+{{.Summary.StepsPassed}} 个步骤通过，{{.Summary.StepsFailed}} 个步骤失败，{{.Summary.StepsWarned}} 个步骤告警。
 
-## Failed Findings
+## 失败项
 
-{{if .Findings}}| Step | Rule | Location | Message | Auto Fix |
+{{if .Findings}}| 步骤 | 规则 | 位置 | 信息 | 自动修复 |
 | --- | --- | --- | --- | --- |
 {{- range .Findings}}
 | {{md .StepID}} | {{md (dash .RuleID)}} | {{md (location .)}} | {{md .Message}} | {{md (fix .)}} |
 {{- end}}
-{{else}}No failed findings.{{end}}
+{{else}}没有失败项。{{end}}
 
-## Steps
+## 步骤
 
-| Step | Adapter | Status | Message | Fix |
+| 步骤 | Adapter | 状态 | 信息 | 修复 |
 | --- | --- | --- | --- | --- |
 {{- range .Steps}}
 | {{md .ID}} | {{md (dash .AdapterID)}} | {{.Status}} | {{md (dash .Message)}} | {{md (stepFix .)}} |
 {{- end}}
 
-## Fixes Applied
+## 已应用修复
 
 {{fixesApplied .}}
 
-## Artifacts
+## 产物
 
-{{if .Artifacts}}| Step | Name | Path |
+{{if .Artifacts}}| 步骤 | 名称 | 路径 |
 | --- | --- | --- |
 {{- range .Artifacts}}
 | {{md .StepID}} | {{md .Name}} | {{md .Path}} |
 {{- end}}
-{{else}}No artifacts were written.{{end}}
+{{else}}没有写入产物。{{end}}
 
-## Next Actions
+## 下一步
 
 {{nextActions .}}
 `
@@ -236,75 +236,75 @@ func WriteMarkdown(w io.Writer, r RunReport) error {
 // WriteLLMMarkdown writes deterministic repair context intended to be pasted into an LLM.
 func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 	r.Normalize()
-	const tpl = `# go-review LLM Repair Context
+	const tpl = `# go-review LLM 修复上下文
 
-You are helping fix a Go project based on deterministic go-review results.
+你正在根据确定性的 go-review 结果修复 Go 项目。
 
-## Task
+## 任务
 
-Fix the failed review findings below while preserving existing behavior.
+在保持现有行为的前提下，修复下面的失败 review 项。
 
-## Project Context
+## 项目上下文
 
-- Workdir: {{dash .Workdir}}
-- Command: go-review {{dash .Command}}
-- Profile: {{dash .Profile}}
-- Config: {{dash .ConfigPath}}
-- Overall status: {{.GateStatus}}
+- 工作目录：{{dash .Workdir}}
+- 命令：go-review {{dash .Command}}
+- Profile：{{dash .Profile}}
+- 配置：{{dash .ConfigPath}}
+- 整体状态：{{.GateStatus}}
 
-## Important Constraints
+## 重要约束
 
-- Do not change generated artifacts under .go-review/artifacts/ or artifacts/go-review/.
-- Do not silence rules unless explicitly justified.
-- Prefer small, behavior-preserving fixes.
-- go-review check is read-only and should not modify source files.
-- If a rule has fix_safety: safe, it may be auto-fixed by go-review fix.
-- If a rule has fix_safety: review, modify code carefully and explain the change.
+- 不要修改 .go-review/artifacts/ 或 artifacts/go-review/ 下的生成产物。
+- 除非有明确理由，不要通过关闭规则来规避问题。
+- 优先做小而保持行为不变的修改。
+- go-review check 是只读命令，不应修改源码。
+- 如果规则的 fix_safety 是 safe，可以优先用 go-review fix 自动修复。
+- 如果规则的 fix_safety 是 review，需要谨慎手改并说明原因。
 
-## Failed Findings
+## 失败项
 
-{{if .Findings}}{{range $i, $f := .Findings}}### Finding {{inc $i}}
+{{if .Findings}}{{range $i, $f := .Findings}}### 失败项 {{inc $i}}
 
-- Step: {{$f.StepID}}
-- Adapter: {{$f.AdapterID}}
-- Rule: {{dash $f.RuleID}}
-- Severity: {{dash $f.Severity}}
-- File: {{dash $f.File}}
-- Line: {{$f.Line}}
-- Column: {{$f.Column}}
-- Message: {{$f.Message}}
-- Suggestion: {{dash $f.Suggestion}}
-- Auto fix available: {{$f.FixAvailable}}
-- Fix safety: {{dash $f.FixSafety}}
-- Fix applied: {{$f.FixApplied}}
+- 步骤：{{$f.StepID}}
+- Adapter：{{$f.AdapterID}}
+- 规则：{{dash $f.RuleID}}
+- 严重级别：{{dash $f.Severity}}
+- 文件：{{dash $f.File}}
+- 行：{{$f.Line}}
+- 列：{{$f.Column}}
+- 信息：{{$f.Message}}
+- 建议：{{dash $f.Suggestion}}
+- 可自动修复：{{$f.FixAvailable}}
+- 修复安全级别：{{dash $f.FixSafety}}
+- 已应用修复：{{$f.FixApplied}}
 
-Recommended direction:
+建议方向：
 
 {{recommendation $f}}
 
-{{end}}{{else}}No failed findings were reported. If the status is pass, no repair is needed.{{end}}
+{{end}}{{else}}没有报告失败项。如果状态是 pass，则不需要修复。{{end}}
 
-## Relevant Command Output
+## 相关命令输出
 
-{{if .Artifacts}}Artifact paths:
+{{if .Artifacts}}产物路径：
 {{range .Artifacts}}
-- {{.StepID}} / {{.Name}}: {{.Path}}{{end}}
-{{else}}No external artifact paths were reported.{{end}}
+- {{.StepID}} / {{.Name}}：{{.Path}}{{end}}
+{{else}}没有报告外部产物路径。{{end}}
 
-## Expected Completion Criteria
+## 预期完成标准
 
-After fixing, this command should pass:
+修复后，下面命令应通过：
 
     go-review {{commandOrCheck .Command}} --profile {{dash .Profile}}
 
-If only semantic validation is needed, run the relevant semantic profile from the project config.
+如果只需要验证语义规则，请运行项目配置里对应的 semantic profile。
 
-## Repair Priority
+## 修复优先级
 
-1. Fix findings with exact file locations first.
-2. Apply only safe automatic fixes with go-review fix when appropriate.
-3. Re-run go-review check --profile {{dash .Profile}}.
-4. Keep generated reports and artifacts out of source edits.
+1. 优先修复带有明确文件位置的失败项。
+2. 只对标记为 safe 的项使用 go-review fix 自动修复。
+3. 重新运行 go-review check --profile {{dash .Profile}}。
+4. 不要把生成报告和产物纳入源码修改。
 `
 	return executeTemplate(w, "llm-markdown", tpl, r)
 }
@@ -414,26 +414,26 @@ func findingLocation(f Finding) string {
 
 func markdownFix(f Finding) string {
 	if f.FixApplied {
-		return "applied"
+		return "已应用"
 	}
 	if !f.FixAvailable {
-		return "no"
+		return "否"
 	}
 	if f.FixSafety == "" {
-		return "available"
+		return "可用"
 	}
 	return f.FixSafety
 }
 
 func stepFix(s Step) string {
 	if s.FixApplied {
-		return "applied"
+		return "已应用"
 	}
 	if !s.FixAvailable {
 		return "-"
 	}
 	if s.FixSafety == "" {
-		return "available"
+		return "可用"
 	}
 	return s.FixSafety
 }
@@ -441,52 +441,52 @@ func stepFix(s Step) string {
 func resultSentence(r RunReport) string {
 	switch r.GateStatus {
 	case GatePass:
-		return "✅ Review passed."
+		return "✅ Review 通过。"
 	case GateWarn:
-		return "⚠️ Review completed with warnings."
+		return "⚠️ Review 完成，但存在告警。"
 	case GateFail:
-		return "❌ Review failed."
+		return "❌ Review 失败。"
 	default:
-		return fmt.Sprintf("Review completed with status `%s`.", r.GateStatus)
+		return fmt.Sprintf("Review 完成，状态为 `%s`。", r.GateStatus)
 	}
 }
 
 func fixesApplied(r RunReport) string {
 	if r.Summary.FixesApplied == 0 {
 		if r.Command == "check" {
-			return "No fixes were applied. `check` is read-only. Run `go-review fix --profile " + emptyDash(r.Profile) + "` to apply safe fixes."
+			return "没有应用修复。`check` 是只读命令；如需应用安全修复，请运行 `go-review fix --profile " + emptyDash(r.Profile) + "`。"
 		}
-		return "No fixes were applied."
+		return "没有应用修复。"
 	}
 	var lines []string
 	for _, step := range r.Steps {
 		if step.FixApplied {
-			lines = append(lines, fmt.Sprintf("- `%s` applied safe fix `%s`.", step.ID, stepFix(step)))
+			lines = append(lines, fmt.Sprintf("- `%s` 已应用安全修复 `%s`。", step.ID, stepFix(step)))
 		}
 	}
 	if len(lines) == 0 {
-		return fmt.Sprintf("%d fixes were applied.", r.Summary.FixesApplied)
+		return fmt.Sprintf("已应用 %d 个修复。", r.Summary.FixesApplied)
 	}
 	return strings.Join(lines, "\n")
 }
 
 func nextActions(r RunReport) string {
 	if r.GateStatus == GatePass {
-		return "No action required. Keep this report as CI/local verification evidence."
+		return "无需操作。请保留此报告作为 CI/本地验证证据。"
 	}
 	var lines []string
 	for _, finding := range r.Findings {
 		loc := findingLocation(finding)
 		if loc == "-" {
-			lines = append(lines, fmt.Sprintf("- Fix `%s`: %s", emptyDash(finding.RuleID), finding.Message))
+			lines = append(lines, fmt.Sprintf("- 修复 `%s`：%s", emptyDash(finding.RuleID), finding.Message))
 			continue
 		}
-		lines = append(lines, fmt.Sprintf("- Fix `%s` at `%s`: %s", emptyDash(finding.RuleID), loc, finding.Message))
+		lines = append(lines, fmt.Sprintf("- 修复 `%s`，位置 `%s`：%s", emptyDash(finding.RuleID), loc, finding.Message))
 	}
 	if len(lines) == 0 {
-		lines = append(lines, "- Inspect failed steps and artifact output listed above.")
+		lines = append(lines, "- 检查上方失败步骤和产物输出。")
 	}
-	lines = append(lines, fmt.Sprintf("- Re-run `go-review check --profile %s`.", emptyDash(r.Profile)))
+	lines = append(lines, fmt.Sprintf("- 重新运行 `go-review check --profile %s`。", emptyDash(r.Profile)))
 	return strings.Join(lines, "\n")
 }
 
@@ -495,9 +495,9 @@ func recommendation(f Finding) string {
 		return f.Suggestion
 	}
 	if f.FixAvailable && f.FixSafety == "safe" {
-		return "This finding is marked safe to auto-fix. Prefer running `go-review fix` before manual edits."
+		return "该失败项标记为可安全自动修复。手动修改前，优先运行 `go-review fix`。"
 	}
-	return "Use the rule, message, location, and artifacts above to make the smallest behavior-preserving change."
+	return "根据上方规则、信息、位置和产物，做最小且保持行为不变的修改。"
 }
 
 func formatTime(t time.Time) string {

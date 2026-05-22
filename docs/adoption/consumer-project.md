@@ -12,6 +12,15 @@ A consumer project keeps three things in its own repository:
 
 The framework does not need to know the consumer repository layout beyond `--workdir` and the config file.
 
+## Tooling model
+
+`go-review` is the orchestrator, not a replacement for mature Go tools:
+
+- Use `golangci-lint` as the preferred runner for common lint and formatter checks when a project wants broad lint coverage.
+- Use the currently supported semantic rule kind for simple direct-call bans; plan `go/analysis` analyzers or external tools for project-specific semantic rules that need deeper AST and type information.
+- Keep `go test` as an independent step; `golangci-lint` does not replace test execution, coverage, or race checks.
+- Keep `go-review` responsible for profiles, `on_fail` behavior, artifacts, reports, safe fix transactions, and LLM repair context.
+
 ## Minimal developer commands
 
 From a consumer repository root:
@@ -35,10 +44,13 @@ go run /path/to/go-review/cmd/go-review --profile ci --workdir .
 
 The default location is `.go-review/go-review.yaml`; root-level `go-review.yaml` remains supported as a fallback for older examples. See [`../../examples/consumer-go-project/go-review.yaml`](../../examples/consumer-go-project/go-review.yaml) for a copyable starter config. It includes:
 
-- `go.format` as a safe local fixer/checker.
-- `go.test` through the generic `cmd` adapter.
+- `go.format` as a safe local fixer/checker for the current minimal default.
+- `go.test` through the generic `cmd` adapter; keep it separate from lint.
 - `fast`, `ci`, and `nightly` profiles.
 - artifact output under `artifacts/go-review`.
+- optional commented adapters for `staticcheck`, `govulncheck`, and `gosec`, with install commands next to each disabled block.
+- future-ready path to replace scattered lint/format commands with a `golangci-lint` adapter while keeping `go-review` as the orchestrator.
+- `on_fail: continue` on generated steps so formatting, tests, semantic checks, and any enabled optional scanners all run independently and report together.
 
 ## Reports
 
@@ -57,8 +69,7 @@ Every `check` and `fix` run writes deterministic reports. By default, reports ar
 
 ## Safe fix behavior
 
-`go-review check` is read-only. `go-review fix --profile fast` is allowed to edit files only when a step opts in with `allow_fix: true` and the adapter declares `fix_safety: safe`; the default example uses this for formatting/gofmt. Review-only semantic rules report suggestions but do not rewrite code.
-
+`go-review check` is read-only. `go-review fix --profile fast` is allowed to edit files only when a step opts in with `allow_fix: true` and the adapter declares `fix_safety: safe`; the current minimal default uses this for formatting/gofmt. As lint/format coverage moves to `golangci-lint`, equivalent safe fixes should run through an explicit adapter command such as `golangci-lint run --fix` and still be governed by `allow_fix` plus `fix_safety`. Review-only semantic rules report suggestions but do not rewrite code.
 
 ## Semantic rule defaults
 
@@ -72,23 +83,35 @@ Running `go-review init` creates:
     custom.yaml   # team-owned semantic rules
 ```
 
-Project-wide `exclude` belongs in `.go-review/go-review.yaml`, not in semantic rule files. Once configured, every built-in project scanner that honors project excludes skips those paths, including `go.format` and `go.semantic`. Example:
+Project-wide `exclude` belongs in `.go-review/go-review.yaml`, not in semantic rule files. The generated config does **not** enable project excludes by default; it only includes a commented example. Add paths only when the repository owner intentionally wants them skipped. Once configured, every built-in project scanner that honors project excludes skips those paths, including `go.format` and `go.semantic`. Example:
 
 ```yaml
 exclude:
-  - vendor
-  - testdata
   - generated
+  - third_party
 ```
 
-`default.yaml` and `custom.yaml` only list semantic rules:
+`default.yaml` and `custom.yaml` only list semantic rules. Built-in rules go under `rules:`:
 
 ```yaml
 rules:
   - no-direct-os-getenv
 ```
 
-Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
+Team-owned semantic rules go under `custom_rules:`. The first supported custom rule kind is `no-direct-call`; it matches direct calls to an imported package function, including aliased imports such as `import f "fmt"` followed by `f.Println(...)`:
+
+```yaml
+rules:
+# custom_rules:
+#   - id: no-direct-fmt-println
+#     kind: no-direct-call
+#     package: fmt
+#     function: Println
+#     message: "不要直接使用 fmt.Println"
+#     suggestion: "改用注入的 logger"
+```
+
+When enabled, the report rule ID is prefixed with `semantic.`, for example `semantic.no-direct-fmt-println`. This configuration is intentionally limited: it is a supported rule kind, not a general-purpose semantic DSL. The adapter `parser` field is only a backward-compatible built-in rule selector, not a parser plugin mechanism. A semantic step currently reports the first failing finding for the step, not a full multi-diagnostic stream, and review-only semantic rules do not auto-fix code. Rules such as maximum function parameters, return counts, body length, context ordering, or import boundaries need additional implementation: use external tools via `cmd` today, or implement `go/analysis` analyzers once the semantic analyzer runtime exists. Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
 
 ## GitHub Actions template
 

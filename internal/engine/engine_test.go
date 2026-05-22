@@ -13,6 +13,7 @@ import (
 	"github.com/v111nce/go-review/internal/config"
 )
 
+// 验证 cmd adapter 正常执行时返回 pass，执行失败时返回 fail，并且产出 artifact 文件路径。
 func TestCommandAdapterSuccessFailureAndArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	cfg := writeConfig(t, dir, `schema_version: "1.0"
@@ -65,6 +66,7 @@ artifacts:
 	}
 }
 
+// 验证 cmd adapter 超时后返回 fail，不会一直阻塞。
 func TestCommandAdapterTimeout(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell fixture uses sh")
@@ -95,6 +97,7 @@ profiles:
 	}
 }
 
+// 验证 cmd adapter 能正确注入环境变量，并在指定 workdir 下执行。
 func TestCommandAdapterEnvAndWorkdir(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
@@ -127,6 +130,7 @@ profiles:
 	}
 }
 
+// 验证 go.format adapter 在 check 模式下发现未格式化文件时返回 fail，并标记 fix 可用。
 func TestGoFormatCheckDetectsUnformattedFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte("package main\nfunc main(){\n}\n"), 0o644); err != nil {
@@ -159,6 +163,7 @@ profiles:
 	}
 }
 
+// 验证 fix_safety=review 的 adapter 在 fix 模式下不会自动应用修改，文件保持原样。
 func TestGoFormatFixRequiresSafeAllowedStep(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "bad.go")
@@ -196,6 +201,7 @@ profiles:
 	}
 }
 
+// 验证 fix 应用后若后续校验（如测试）失败，会自动回滚文件到修改前的状态。
 func TestFixRollsBackWhenDependentValidationFails(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte("package main\nfunc main(){println(Message())}\nfunc Message() string { return \"wrong\" }\n"), 0o644); err != nil {
@@ -242,6 +248,7 @@ profiles:
 	}
 }
 
+// 验证内置规则 no-direct-os-getenv 能检测到直接调用 os.Getenv，并报告正确的文件、行号和修复建议。
 func TestSemanticAdapterDetectsDirectOSGetenv(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
@@ -272,6 +279,7 @@ profiles:
 	}
 }
 
+// 验证 on_fail: stop 时第一个 step 失败后不再继续执行后续 step。
 func TestRunStopsOnFailure(t *testing.T) {
 	dir := t.TempDir()
 	cfg := writeConfig(t, dir, `schema_version: "1.0"
@@ -303,6 +311,7 @@ profiles:
 	}
 }
 
+// 验证 depends_on 依赖关系能正确排序执行顺序，即使 profile 里 step 顺序写反了。
 func TestRunOrdersProfileByDependencies(t *testing.T) {
 	dir := t.TempDir()
 	cfg := writeConfig(t, dir, `schema_version: "1.0"
@@ -343,6 +352,7 @@ func writeConfig(t *testing.T, dir, body string) string {
 	return path
 }
 
+// 验证 exit code：warn 不影响退出码，fail 返回非零退出码。
 func TestSummaryExitCode(t *testing.T) {
 	s := RunSummary{Results: []Result{{GateStatus: config.GateWarn}}}
 	if s.ExitCode() != 0 {
@@ -354,6 +364,7 @@ func TestSummaryExitCode(t *testing.T) {
 	}
 }
 
+// 验证 Registry 解析不存在的 adapter type 时返回错误。
 func TestRegistryRejectsUnknownAdapter(t *testing.T) {
 	_, err := NewRegistry().Resolve(config.Adapter{ID: "x", Type: "missing"})
 	if err == nil {
@@ -361,6 +372,7 @@ func TestRegistryRejectsUnknownAdapter(t *testing.T) {
 	}
 }
 
+// 验证 step 级别的 timeout 优先级高于 adapter 级别的 timeout。
 func TestTimeoutFromStepOverridesAdapter(t *testing.T) {
 	r := CommandAdapter{cfg: config.Adapter{ID: "slow", Command: "sh", Args: []string{"-c", "sleep 1"}, Timeout: time.Second}}
 	result, _ := r.Run(context.Background(), StepContext{Step: config.Step{ID: "s", Timeout: time.Millisecond}, Adapter: config.Adapter{ID: "slow"}, Config: &config.Config{}, ProjectRoot: "."})
@@ -369,6 +381,7 @@ func TestTimeoutFromStepOverridesAdapter(t *testing.T) {
 	}
 }
 
+// 验证显式传入 --workdir 时路径相对于调用目录解析，而非配置文件目录。
 func TestExplicitWorkdirIsRelativeToInvocationDirectory(t *testing.T) {
 	dir := t.TempDir()
 	project := filepath.Join(dir, "project")
@@ -399,6 +412,7 @@ profiles:
 	}
 }
 
+// 验证完整 CLI 流程：用真实 fixture 项目跑 semantic 检测，输出包含 FAILED、规则ID、文件名和报告路径。
 func TestGoSemanticFixtureViaCLI(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("uses go run shell path assumptions")
@@ -455,6 +469,7 @@ func currentFile(t *testing.T) string {
 	return file
 }
 
+// 验证 go.semantic adapter 能同时加载 default.yaml 和 custom.yaml，合并后的规则正确执行。
 func TestSemanticAdapterLoadsDefaultAndCustomRuleFiles(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-config\n"), 0o644); err != nil {
@@ -466,7 +481,7 @@ func TestSemanticAdapterLoadsDefaultAndCustomRuleFiles(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
@@ -499,6 +514,326 @@ profiles:
 	}
 }
 
+// 验证 custom_rules 的 no-direct-call 规则能识别别名 import（如 import f "fmt"）并正确报告违规。
+func TestSemanticAdapterLoadsCustomNoDirectCallRule(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-custom\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport f \"fmt\"\nfunc main() { f.Println(\"debug\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+    fix_safety: review
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
+custom_rules:
+  - id: no-direct-fmt-println
+    kind: no-direct-call
+    package: fmt
+    function: Println
+    message: 不要直接使用 fmt.Println
+    suggestion: 改用注入的 logger
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.no-direct-fmt-println" || got.File != "main.go" || got.Line == 0 {
+		t.Fatalf("semantic custom rule result = %#v", got)
+	}
+	if !strings.Contains(got.Message, "不要直接使用") || got.Suggestion != "改用注入的 logger" {
+		t.Fatalf("semantic custom rule message/suggestion = %#v", got)
+	}
+}
+
+// 验证 custom_rules 配置了不支持的 kind 时，返回 fail 并提示 "unsupported custom rule kind"。
+func TestSemanticAdapterCustomRuleConfigError(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-custom-error\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+  - id: unsupported
+    kind: unknown
+    package: fmt
+    function: Println
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.config" || !strings.Contains(got.Message, "unsupported custom rule kind") {
+		t.Fatalf("semantic custom config error = %#v", got)
+	}
+}
+
+// 验证 parser 只是内置规则选择入口，不支持未知 parser/规则名。
+func TestSemanticAdapterUnsupportedParserRuleIsConfigError(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+    parser: unknown-rule
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.config" || !strings.Contains(got.Message, `unsupported semantic rule "unknown-rule"`) {
+		t.Fatalf("unsupported parser rule result = %#v", got)
+	}
+}
+
+// 验证 semantic rules 目前只报告首个 finding，避免误以为单 step 会输出多 diagnostics。
+func TestSemanticAdapterReportsFirstFindingOnly(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-first\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("package main\nimport \"os\"\nfunc A() string { return os.Getenv(\"A\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("package main\nimport \"os\"\nfunc B() string { return os.Getenv(\"B\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+    parser: no-direct-os-getenv
+    fix_safety: review
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if len(summary.Results) != 1 {
+		t.Fatalf("semantic results = %d", len(summary.Results))
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.File != "a.go" || got.RuleID != noDirectEnvRuleID {
+		t.Fatalf("first semantic finding = %#v", got)
+	}
+}
+
+// 验证 rules 支持 scalar 与 custom_rules 的 pkg/func 字段别名。
+func TestSemanticAdapterRuleScalarAndCustomPkgFuncAliases(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-alias-fields\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport log \"log\"\nfunc main() { log.Fatal(\"stop\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules: no-direct-os-getenv\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+  - id: no-log-fatal
+    pkg: log
+    func: Fatal
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.no-log-fatal" || got.File != "main.go" {
+		t.Fatalf("custom pkg/func alias result = %#v", got)
+	}
+}
+
+// 验证 semantic 配置解析错误统一归入 semantic.config。
+func TestSemanticAdapterConfigValidationErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{name: "unsupported top-level field", content: "unknown: true\n", want: "unsupported semantic config field"},
+		{name: "unsupported custom field", content: "custom_rules:\n  - id: bad\n    package: fmt\n    function: Println\n    severity: high\n", want: "unsupported custom rule field"},
+		{name: "missing id", content: "custom_rules:\n  - package: fmt\n    function: Println\n", want: "custom rule missing id"},
+		{name: "missing package", content: "custom_rules:\n  - id: missing-package\n    function: Println\n", want: "requires package and function"},
+		{name: "unsupported custom kind", content: "custom_rules:\n  - id: bad-kind\n    kind: unknown\n    package: fmt\n    function: Println\n", want: "unsupported custom rule kind"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-config-error\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+			if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(tt.content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+			got := summary.Results[0]
+			if got.GateStatus != config.GateFail || got.RuleID != "semantic.config" || !strings.Contains(got.Message, tt.want) {
+				t.Fatalf("semantic config validation result = %#v, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// 验证 type-check 失败时 semantic 规则降级到 import alias 匹配，不直接把 type-check error 作为 gate fail。
+func TestSemanticAdapterTypeCheckErrorFallsBackToImportAlias(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-typecheck-fallback\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport f \"fmt\"\nvar _ MissingType\nfunc main() { f.Println(\"debug\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+  - id: no-direct-fmt-println
+    kind: no-direct-call
+    package: fmt
+    function: Println
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.no-direct-fmt-println" || !strings.Contains(got.Message, "fmt.Println") {
+		t.Fatalf("semantic type-check fallback result = %#v", got)
+	}
+}
+
+// 验证 go-review.yaml 中 exclude 配置的目录会被 semantic adapter 跳过，不触发违规。
 func TestProjectExcludeAppliesToSemanticAdapter(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-exclude\n"), 0o644); err != nil {
@@ -514,7 +849,7 @@ func TestProjectExcludeAppliesToSemanticAdapter(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
@@ -548,6 +883,7 @@ profiles:
 	}
 }
 
+// 验证 go-review.yaml 中 exclude 配置的目录会被 go.format adapter 跳过，不触发格式检查。
 func TestProjectExcludeAppliesToGoFormatAdapter(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/format-exclude\n"), 0o644); err != nil {

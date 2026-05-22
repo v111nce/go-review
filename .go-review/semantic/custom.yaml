@@ -1,1 +1,18 @@
 rules:
+# Team-owned semantic rules live here.
+# Keep built-in rule names under rules:, for example:
+#   - no-direct-os-getenv
+
+# User-defined semantic rules supported by go.semantic.
+# Currently supported kind: no-direct-call.
+# This is not a general semantic DSL or plugin mechanism.
+# Semantic steps report the first failing finding and do not auto-fix code.
+# It reports calls to an imported package function, including aliased imports.
+# Example: ban direct fmt.Println and require injected logging instead.
+# custom_rules:
+#   - id: no-direct-fmt-println
+#     kind: no-direct-call
+#     package: fmt
+#     function: Println
+#     message: "不要直接使用 fmt.Println"
+#     suggestion: "改用注入的 logger"

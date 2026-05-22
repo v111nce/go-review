@@ -144,12 +144,18 @@ tools:
     go.format: "system-gofmt"
     go.test: "go"
     go.semantic: "builtin"
+    # Optional adapters. Uncomment after installing the named tools.
+    # go.vet: "go"                       # built in with Go; uncomment the adapter/step/profile entries below to enable.
+    # staticcheck: "staticcheck"          # install: go install honnef.co/go/tools/cmd/staticcheck@latest
+    # govulncheck: "govulncheck"          # install: go install golang.org/x/vuln/cmd/govulncheck@latest
+    # gosec: "gosec"                      # install: go install github.com/securego/gosec/v2/cmd/gosec@latest
 defaults:
   timeout: 30s
   workdir: ..
-exclude:
-  - vendor
-  - testdata
+# Project-owned excludes. Add entries only when this repository intentionally ignores them.
+# exclude:
+#   - generated
+#   - third_party
 artifacts:
   dir: ".go-review/artifacts/latest"
 adapters:
@@ -170,19 +176,66 @@ adapters:
     capabilities: [check]
     timeout: 30s
     fix_safety: review
+  # Optional: go vet (no extra install; ships with Go).
+  # - id: go.vet
+  #   type: cmd
+  #   command: go
+  #   args: [vet, ./...]
+  #   capabilities: [check]
+  #   timeout: 2m
+  #   parser: text
+  # Optional: staticcheck. Install first:
+  #   go install honnef.co/go/tools/cmd/staticcheck@latest
+  # - id: staticcheck
+  #   type: cmd
+  #   command: staticcheck
+  #   args: [./...]
+  #   capabilities: [check]
+  #   timeout: 2m
+  #   parser: text
+  # Optional: govulncheck. Install first:
+  #   go install golang.org/x/vuln/cmd/govulncheck@latest
+  # - id: govulncheck
+  #   type: cmd
+  #   command: govulncheck
+  #   args: [./...]
+  #   capabilities: [scan]
+  #   timeout: 5m
+  #   parser: text
+  # Optional: gosec. Install first:
+  #   go install github.com/securego/gosec/v2/cmd/gosec@latest
+  # - id: gosec
+  #   type: cmd
+  #   command: gosec
+  #   args: [./...]
+  #   capabilities: [scan]
+  #   timeout: 5m
+  #   parser: text
 steps:
   - id: format-check
     adapter: go.format
-    on_fail: stop
+    on_fail: continue
     allow_fix: true
   - id: test
     adapter: go.test
-    depends_on: [format-check]
-    on_fail: stop
+    on_fail: continue
   - id: semantic
     adapter: go.semantic
-    depends_on: [test]
-    on_fail: stop
+    on_fail: continue
+  # Optional steps. Uncomment the matching adapter above before enabling.
+  # Each step uses on_fail: continue so one review area does not prevent others from running.
+  # - id: vet
+  #   adapter: go.vet
+  #   on_fail: continue
+  # - id: staticcheck
+  #   adapter: staticcheck
+  #   on_fail: continue
+  # - id: vulncheck
+  #   adapter: govulncheck
+  #   on_fail: continue
+  # - id: security
+  #   adapter: gosec
+  #   on_fail: continue
 profiles:
   - name: fast
     steps: [format-check, test]
@@ -190,6 +243,9 @@ profiles:
     steps: [format-check, test, semantic]
   - name: nightly
     steps: [format-check, test, semantic]
+  # Optional after enabling the matching steps above:
+  # - name: full
+  #   steps: [format-check, test, semantic, vet, staticcheck, vulncheck, security]
 `
 }
 
@@ -201,6 +257,21 @@ func defaultSemanticConfig() string {
 
 func customSemanticConfig() string {
 	return `rules:
+# Team-owned semantic rules live here.
+# Keep built-in rule names under rules:, for example:
+#   - no-direct-os-getenv
+
+# User-defined semantic rules supported by go.semantic.
+# Currently supported kind: no-direct-call.
+# It reports calls to an imported package function, including aliased imports.
+# Example: ban direct fmt.Println and require injected logging instead.
+# custom_rules:
+#   - id: no-direct-fmt-println
+#     kind: no-direct-call
+#     package: fmt
+#     function: Println
+#     message: "不要直接使用 fmt.Println"
+#     suggestion: "改用注入的 logger"
 `
 }
 

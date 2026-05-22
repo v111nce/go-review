@@ -8,7 +8,9 @@ Go 项目长期维护时，质量退化通常不是单点 bug，而是目录边�
 
 单个工具只能解决一部分问题。成熟团队真正需要的是一个通用 code-review 编排层：
 
-- 接入任意工具，而不是绑定 `golangci-lint` 或某个固定生态。
+- 平台本体不绑定 `golangci-lint`，但通用 Go lint/format 优先复用 `golangci-lint` 作为成熟底座。
+- 团队语义规约优先用 Go 官方生态的 `go/analysis` 编写 analyzer，避免把 AST/type-check 规则散落在 runner 里。
+- `go test`、安全扫描、漏洞扫描和报告输出仍作为独立 adapter/step 编排，不由 linter runner 替代。
 - 定义工具运行顺序、并行关系和依赖关系。
 - 把不同工具的输出归一成统一 review 结果。
 - 在安全场景下执行自动修复。
@@ -101,12 +103,12 @@ flowchart LR
 | Adapter | 默认接入工具 | 能力 |
 | --- | --- | --- |
 | `cmd` | 任意外部命令 | 通用接入 |
-| `go.format` | `gofmt`、`goimports`、`gofumpt`、`gci` | 格式检查和修复 |
-| `go.lint` | `golangci-lint`、`go vet`、`staticcheck`、`revive` 等 | lint |
-| `go.arch` | `internal/`、`depguard`、package 依赖图 | 架构约束 |
-| `go.security` | `gosec`、`govulncheck` | 安全和漏洞扫描 |
-| `go.test` | `go test`、coverage、race | 测试回归 |
-| `go.semantic` | 自定义 `go/analysis` analyzer | 团队语义规约 |
+| `go.format` | 短期可内置 `gofmt`；长期可由 `golangci-lint` formatters 统一承载 `gofmt`、`goimports`、`gofumpt`、`gci` | 格式检查和修复 |
+| `go.lint` | `golangci-lint` 作为主 runner，聚合 `go vet`、`staticcheck`、`revive`、`errcheck` 等 | lint |
+| `go.arch` | `depguard`、package 依赖图、自研 import boundary analyzer | 架构约束 |
+| `go.security` | `gosec`、`govulncheck`；可按成熟度由 `golangci-lint` 或独立命令接入 | 安全和漏洞扫描 |
+| `go.test` | `go test`、coverage、race，作为独立 step 保留 | 测试回归 |
+| `go.semantic` | 平台自研 `go/analysis` analyzer runtime / registry | 团队语义规约 |
 | `report.github` | GitHub Checks、PR 评论、SARIF | Review 报告 |
 
 ### Story 候选
@@ -154,7 +156,7 @@ nightly:
 
 ## 自定义规约 Adapter
 
-`custom-rule-adapters` 让团队把自己的编码规约接入平台。它可以是 Go 语义规则，也可以是任意外部工具。
+`custom-rule-adapters` 让团队把自己的编码规约接入平台。它可以是 Go 语义规则，也可以是任意外部工具。默认方向是：需要 AST 和类型信息的规则用 `go/analysis` 写 analyzer；已有二进制、脚本或第三方工具通过通用 `cmd` adapter 接入；不把 `golangci-lint` 插件机制作为平台第一扩展面。
 
 典型规则包括：
 
@@ -167,7 +169,7 @@ nightly:
 | 时间来源 | 业务逻辑不能直接调用 `time.Now`，必须使用注入时钟 |
 | 依赖限制 | 某些目录不能依赖 Web 框架、ORM 或基础设施包 |
 
-字段访问只是一个例子，不是产品主线。平台要支持这类规则，是因为它能代表“团队自定义语义规约”：需要看 Go 语法树和类型信息，不能靠简单文本替换。
+字段访问只是一个例子，不是产品主线。平台要支持这类规则，是因为它能代表“团队自定义语义规约”：需要看 Go 语法树和类型信息，不能靠简单文本替换。产品层不承诺任意 YAML 就能表达所有 semantic 规则；复杂规则必须由 analyzer 代码或外部工具实现，再由 go-review 编排和归一报告。
 
 ### Story 候选
 

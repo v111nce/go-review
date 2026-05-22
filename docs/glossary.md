@@ -14,10 +14,10 @@
 | 只报告违规 | 工具发现问题但不自动修改代码 |
 | 回归门禁 | 在本地、PR、主分支或定时任务中运行的质量检查 |
 | `module key` | 产品功能模块的稳定英文标识 |
-| `go/analysis` | Go 官方工具链中用于构建静态分析器的包 |
-| `SuggestedFix` | `go/analysis` 诊断中携带的建议修复 |
-| `golangci-lint` | Go 常用聚合型 linter 入口 |
+| `go/analysis` | Go 官方工具链中用于构建静态分析器的包；本平台把它作为自定义 Go semantic analyzer 底座 |
+| `SuggestedFix` | `go/analysis` 诊断中携带的建议修复，只有证明安全时才可进入自动修复事务 |
+| `golangci-lint` | Go 常用聚合型 linter / formatter runner；本平台把它作为 `go.lint` / format 类 adapter 的优先底座，而不是平台本体 |
 | `depguard` | 用于限制 Go import 依赖的 linter |
 | 外部命令 Adapter | 平台通过启动外部可执行程序接入的 adapter 形态，适合隔离运行和语言无关扩展 |
-| Go 语义规则 Adapter | 基于 Go AST 和类型信息实现的规则 adapter，适合检测普通文本匹配无法可靠判断的 Go 代码语义 |
-| `golangci-lint module plugin` | golangci-lint 自身的扩展方式，适合把自定义 linter 深度集成到 golangci-lint，但不作为本平台第一版主扩展面 |
+| Go 语义规则 Adapter | 基于 Go AST 和类型信息实现的规则 adapter，长期由 `go/analysis` analyzer runtime / registry 承载，适合检测普通文本匹配无法可靠判断的 Go 代码语义 |
+| `golangci-lint module plugin` | golangci-lint 自身的扩展方式，适合把自定义 linter 深度集成到 golangci-lint，但不作为本平台第一版主扩展面；本平台优先通过 adapter 调用 golangci-lint |

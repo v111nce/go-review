@@ -4,9 +4,17 @@ tools:
   adapters:
     go.format: "system-gofmt"
     go.test: "go1.24+"
+    # Optional adapters. Uncomment after installing the named tools.
+    # staticcheck: "staticcheck"          # install: go install honnef.co/go/tools/cmd/staticcheck@latest
+    # govulncheck: "govulncheck"          # install: go install golang.org/x/vuln/cmd/govulncheck@latest
+    # gosec: "gosec"                      # install: go install github.com/securego/gosec/v2/cmd/gosec@latest
 defaults:
   timeout: 30s
   workdir: .
+# Project-owned excludes. Add entries only when this repository intentionally ignores them.
+# exclude:
+#   - generated
+#   - third_party
 artifacts:
   dir: "artifacts/go-review"
 adapters:
@@ -22,15 +30,46 @@ adapters:
     capabilities: [test]
     timeout: 1m
     parser: go-test
+  # Optional adapters. Uncomment after installing each tool.
+  # - id: staticcheck
+  #   type: cmd
+  #   command: staticcheck
+  #   args: [./...]
+  #   capabilities: [check]
+  #   timeout: 2m
+  #   parser: text
+  # - id: govulncheck
+  #   type: cmd
+  #   command: govulncheck
+  #   args: [./...]
+  #   capabilities: [scan]
+  #   timeout: 5m
+  #   parser: text
+  # - id: gosec
+  #   type: cmd
+  #   command: gosec
+  #   args: [./...]
+  #   capabilities: [scan]
+  #   timeout: 5m
+  #   parser: text
 steps:
   - id: format-check
     adapter: go.format
-    on_fail: stop
+    on_fail: continue
     allow_fix: true
   - id: test
     adapter: go.test
-    depends_on: [format-check]
-    on_fail: stop
+    on_fail: continue
+  # Optional steps. Uncomment the matching adapter first.
+  # - id: staticcheck
+  #   adapter: staticcheck
+  #   on_fail: continue
+  # - id: vulncheck
+  #   adapter: govulncheck
+  #   on_fail: continue
+  # - id: security
+  #   adapter: gosec
+  #   on_fail: continue
 profiles:
   - name: fast
     steps: [format-check, test]
@@ -38,3 +77,6 @@ profiles:
     steps: [format-check, test]
   - name: nightly
     steps: [format-check, test]
+  # Optional after enabling the matching steps above:
+  # - name: full
+  #   steps: [format-check, test, staticcheck, vulncheck, security]

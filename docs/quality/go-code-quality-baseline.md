@@ -6,15 +6,15 @@
 
 | 检查类别 | 目标 | 推荐 adapter / 工具 | 自动修复 | 门禁级别 |
 | --- | --- | --- | --- | --- |
-| 格式化 | 统一代码格式 | `go.format`：`gofmt`、`gofumpt` | 是 | PR 必须通过 |
-| import 整理 | 删除未用 import，统一分组 | `go.format`：`goimports`、`gci` | 是 | PR 必须通过 |
-| 基础静态检查 | 无效代码、未使用代码、错误赋值 | `go.lint`：`go vet`、`staticcheck`、`unused`、`ineffassign` | 部分 | PR 必须通过 |
-| 代码风格 | 命名、注释、复杂度、重复代码 | `go.lint`：`revive`、`cyclop`、`gocognit`、`dupl` | 部分 | 渐进收紧 |
-| 错误处理 | 未检查错误、错误包装 | `go.lint`：`errcheck`、`errorlint` | 部分 | PR 必须通过 |
-| 架构依赖 | package import 方向和禁用依赖 | `go.arch`：`internal/`、`depguard`、依赖图检查 | 否 | PR 必须通过 |
-| 自定义语义规则 | 团队业务约束 | `go.semantic`：自定义 `go/analysis` 规则 | 安全子集 | 按规则启用 |
-| 安全扫描 | 常见安全问题 | `go.security`：`gosec` | 否 | PR 轻量 / nightly 全量 |
-| 漏洞扫描 | 依赖漏洞 | `go.security`：`govulncheck` | 否 | PR 轻量 / nightly 全量 |
+| 格式化 | 统一代码格式 | `go.format` / `go.lint`：短期 `gofmt`，长期优先复用 `golangci-lint` formatters（`gofmt`、`gofumpt`） | 是 | PR 必须通过 |
+| import 整理 | 删除未用 import，统一分组 | `go.format` / `go.lint`：`goimports`、`gci`，长期优先由 `golangci-lint` 聚合 | 是 | PR 必须通过 |
+| 基础静态检查 | 无效代码、未使用代码、错误赋值 | `go.lint`：`golangci-lint` 聚合 `go vet`、`staticcheck`、`unused`、`ineffassign` | 部分 | PR 必须通过 |
+| 代码风格 | 命名、注释、复杂度、重复代码 | `go.lint`：`golangci-lint` 聚合 `revive`、`cyclop`、`gocognit`、`dupl` | 部分 | 渐进收紧 |
+| 错误处理 | 未检查错误、错误包装 | `go.lint`：`golangci-lint` 聚合 `errcheck`、`errorlint` | 部分 | PR 必须通过 |
+| 架构依赖 | package import 方向和禁用依赖 | `go.arch`：`depguard`、依赖图检查、自研 `go/analysis` import boundary analyzer | 否 | PR 必须通过 |
+| 自定义语义规则 | 团队业务约束 | `go.semantic`：自研 `go/analysis` analyzer runtime / registry | 安全子集 | 按规则启用 |
+| 安全扫描 | 常见安全问题 | `go.security`：`gosec`，可由 `golangci-lint` 聚合或独立命令运行 | 否 | PR 轻量 / nightly 全量 |
+| 漏洞扫描 | 依赖漏洞 | `go.security`：`govulncheck` 独立命令 | 否 | PR 轻量 / nightly 全量 |
 | 测试回归 | 编译、单测和全量回归 | `go.test`：`go test` | 否 | PR 和定时 |
 | 数据竞争 | 并发风险 | `go.test`：`go test -race` | 否 | 定时或关键模块 |
 | 报告输出 | PR 评论、检查结果、机器可读报告 | `report.github`、JSON、Markdown、SARIF | 不适用 | PR 和定时 |
@@ -33,9 +33,9 @@
 
 允许自动修复：
 
-- 格式化和 import 顺序。
+- 格式化和 import 顺序，可由内置 `go.format` 或 `golangci-lint run --fix` 执行。
 - adapter 明确声明为 `safe` 的修复。
-- `go.semantic` 规则能通过类型信息和读写位置证明安全的局部改写。
+- `go/analysis` analyzer 通过 `SuggestedFix` 给出、且 `go.semantic` 能证明作用范围安全的局部改写。
 
 禁止默认自动修复：
 
@@ -62,7 +62,8 @@
 
 ## 高风险漏测项
 
-- 自定义语义规则只用字符串匹配，误伤同名字段或方法。
+- 自定义语义规则绕开 `go/analysis`，只用字符串匹配，误伤同名字段或方法。
+- 把 `golangci-lint` 当成完整 review pipeline，导致 `go test`、安全扫描、报告和失败策略缺失。
 - 自动修复没有区分安全场景和危险场景。
 - CI 和本地使用不同版本的 adapter 或底层工具。
 - pipeline 只支持线性顺序，无法表达并行、依赖和失败策略。

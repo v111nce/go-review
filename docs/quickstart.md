@@ -10,8 +10,8 @@ The current executable slice implements the full first-story set from `.omx/plan
 2. Config, adapter registry, command adapter, and minimal `go.format` wrapper.
 3. Normalized result/report artifacts.
 4. Pipeline DAG/profile execution for `fast`, `ci`, `main`, and `nightly` gates.
-5. Example `go.semantic` custom rule adapter.
-6. Safe `go.format` autofix with validation rollback evidence.
+5. Example `go.semantic` semantic-rule adapter; current code slice is a minimal AST/type-info proof, while the target architecture uses `go/analysis` analyzers.
+6. Safe `go.format` autofix with validation rollback evidence; target architecture may delegate broader format/lint coverage to `golangci-lint` while keeping `go-review` as the orchestrator.
 
 ## Fixture-backed commands
 
@@ -53,7 +53,7 @@ Expected behavior:
 
 ## Safe fixes
 
-`check` never modifies files. `fix --profile fast` may modify files, but only for steps marked `allow_fix: true` whose adapter declares `fix_safety: safe`; the current default safe fixer is `go.format`/gofmt. After applying a safe fix, `go-review` reruns dependent validation steps and rolls back the edit if validation fails.
+`check` never modifies files. `fix --profile fast` may modify files, but only for steps marked `allow_fix: true` whose adapter declares `fix_safety: safe`; the current implementation slice uses `go.format`/gofmt as the safe fixer; the target lint/format adapter can delegate safe fixes to `golangci-lint run --fix`. After applying a safe fix, `go-review` reruns dependent validation steps and rolls back the edit if validation fails.
 
 ## Framework self-check CI
 

@@ -16,8 +16,9 @@
 
 包含：
 
-- Go 语义规则 adapter 接口。
-- 示例规则 adapter。
+- 基于 `go/analysis` 的 Go 语义 analyzer 接口。
+- `go.semantic` analyzer runtime / registry 的最小接入方式。
+- 示例规则 analyzer。
 - 本地运行方式。
 - 正反例测试样例。
 
@@ -29,23 +30,23 @@
 
 ## 依赖
 
-- Backend: `go.semantic` adapter、统一结果模型。
+- Backend: `go.semantic` adapter、`go/analysis` analyzer runtime、统一结果模型。
 - Quality: 自定义语义 adapter 正反例测试。
 
 ## 任务
 
-- 定义自定义规则 adapter 的输入输出接口。
-- 提供一个最小示例规则。
-- 将示例规则输出映射到统一 violation。
+- 定义自定义 `go/analysis` analyzer 的输入输出接口。
+- 提供一个最小示例 analyzer。
+- 将 analyzer diagnostic / SuggestedFix 输出映射到统一 violation / fix metadata。
 - 提供 fixture 测试结构。
 - 编写自定义 adapter 使用说明。
 
 ## 验收标准
 
-- 示例 adapter 能检测一个违规样例。
-- 示例 adapter 对合规样例不报错。
+- 示例 analyzer 能检测一个违规样例。
+- 示例 analyzer 对合规样例不报错。
 - 结果包含 adapter ID、rule ID、位置、原因和建议。
-- 示例 adapter 可以被 pipeline step 调用。
+- 示例 analyzer 可以通过 `go.semantic` 被 pipeline step 调用。
 
 ## 测试
 

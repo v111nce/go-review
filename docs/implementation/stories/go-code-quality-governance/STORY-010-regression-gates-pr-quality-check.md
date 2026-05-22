@@ -17,10 +17,10 @@ PR 合入前自动发现违规，并以可读报告阻断不合格变更。
 包含：
 
 - `ci` profile。
-- format check。
-- lint。
+- format check，可由内置 `go.format` 或 `golangci-lint` formatter 承载。
+- lint，优先通过 `golangci-lint` adapter 承载。
 - arch。
-- test。
+- test，作为独立 `go.test` step 承载。
 - 轻量 security。
 - 报告 artifact。
 
