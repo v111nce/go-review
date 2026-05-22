@@ -6,8 +6,8 @@
 
 | 检查类别 | 目标 | 推荐 adapter / 工具 | 自动修复 | 门禁级别 |
 | --- | --- | --- | --- | --- |
-| 格式化 | 统一代码格式 | `go.format` / `go.lint`：短期 `gofmt`，长期优先复用 `golangci-lint` formatters（`gofmt`、`gofumpt`） | 是 | PR 必须通过 |
-| import 整理 | 删除未用 import，统一分组 | `go.format` / `go.lint`：`goimports`、`gci`，长期优先由 `golangci-lint` 聚合 | 是 | PR 必须通过 |
+| 格式化 | 统一代码格式 | `go.lint`：复用 `golangci-lint` formatters（默认 `gofmt`，可扩展 `gofumpt`） | 是 | PR 必须通过 |
+| import 整理 | 删除未用 import，统一分组 | `go.lint`：由 `golangci-lint` 聚合 `goimports`、`gci` | 是 | PR 必须通过 |
 | 基础静态检查 | 无效代码、未使用代码、错误赋值 | `go.lint`：`golangci-lint` 聚合 `go vet`、`staticcheck`、`unused`、`ineffassign` | 部分 | PR 必须通过 |
 | 代码风格 | 命名、注释、复杂度、重复代码 | `go.lint`：`golangci-lint` 聚合 `revive`、`cyclop`、`gocognit`、`dupl` | 部分 | 渐进收紧 |
 | 错误处理 | 未检查错误、错误包装 | `go.lint`：`golangci-lint` 聚合 `errcheck`、`errorlint` | 部分 | PR 必须通过 |
@@ -33,7 +33,7 @@
 
 允许自动修复：
 
-- 格式化和 import 顺序，可由内置 `go.format` 或 `golangci-lint run --fix` 执行。
+- 格式化和 import 顺序，由 `go.lint` adapter 调用 `golangci-lint fmt` 或安全 fixer 执行。
 - adapter 明确声明为 `safe` 的修复。
 - `go/analysis` analyzer 通过 `SuggestedFix` 给出、且 `go.semantic` 能证明作用范围安全的局部改写。
 

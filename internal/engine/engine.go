@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -124,7 +123,7 @@ type StepContext struct {
 func NewRegistry() *Registry {
 	r := &Registry{adapters: map[string]AdapterFactory{}}
 	r.Register("cmd", func(cfg config.Adapter) (Adapter, error) { return CommandAdapter{cfg: cfg}, nil })
-	r.Register("go.format", func(cfg config.Adapter) (Adapter, error) { return GoFormatAdapter{cfg: cfg}, nil })
+	r.Register("go.lint", func(cfg config.Adapter) (Adapter, error) { return GoLintAdapter{cfg: cfg}, nil })
 	r.Register("go.semantic", func(cfg config.Adapter) (Adapter, error) { return SemanticAdapter{cfg: cfg}, nil })
 	return r
 }
@@ -480,122 +479,6 @@ func (a CommandAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, e
 	}
 	_ = duration
 	return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: a.cfg.ID, Kind: ResultArtifact, Message: message, FixSafety: a.cfg.FixSafety, GateStatus: status, Artifacts: artifacts}, err
-}
-
-type GoFormatAdapter struct {
-	cfg config.Adapter
-}
-
-func (a GoFormatAdapter) Metadata() AdapterMetadata {
-	return AdapterMetadata{ID: a.cfg.ID, Type: "go.format", Capabilities: a.cfg.Capabilities, Version: a.cfg.Version}
-}
-
-func (a GoFormatAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, error) {
-	fixMode := stepCtx.Command == CommandFix && stepCtx.Step.AllowFix && a.cfg.FixSafety == config.FixSafe
-	args, err := gofmtArgs(a.cfg.Args, fixMode, stepCtx)
-	if err != nil {
-		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "go.format", Kind: ResultViolation, Message: err.Error(), FixSafety: a.cfg.FixSafety, GateStatus: config.GateFail}, nil
-	}
-	if len(args) == 0 {
-		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "go.format", Kind: ResultArtifact, Message: "gofmt skipped; no non-excluded Go files", FixSafety: a.cfg.FixSafety, GateStatus: config.GatePass}, nil
-	}
-	cmdCfg := a.cfg
-	cmdCfg.Command = "gofmt"
-	cmdCfg.Args = args
-	cmdCfg.Type = "cmd"
-	result, err := CommandAdapter{cfg: cmdCfg}.Run(ctx, stepCtx)
-	result.RuleID = "go.format"
-	result.FixSafety = a.cfg.FixSafety
-	result.FixAvailable = a.cfg.FixSafety == config.FixSafe
-	if !fixMode {
-		for _, artifact := range result.Artifacts {
-			if artifact.Name == "stdout" && strings.TrimSpace(artifact.Content) != "" {
-				result.Kind = ResultViolation
-				result.Message = "gofmt would change files"
-				result.GateStatus = config.GateFail
-				return result, err
-			}
-		}
-		if result.GateStatus == config.GatePass {
-			result.Message = "gofmt clean"
-		}
-	} else if result.GateStatus == config.GatePass {
-		result.Message = "gofmt applied"
-		result.FixApplied = true
-	}
-	return result, err
-}
-
-func gofmtArgs(configured []string, fixMode bool, stepCtx StepContext) ([]string, error) {
-	flags := []string{"-l"}
-	paths := []string{"."}
-	if fixMode {
-		flags = []string{"-w"}
-	}
-	if len(configured) > 0 {
-		flags = flags[:0]
-		paths = paths[:0]
-		for _, arg := range configured {
-			if strings.HasPrefix(arg, "-") {
-				flags = append(flags, arg)
-			} else {
-				paths = append(paths, arg)
-			}
-		}
-	}
-	if len(paths) == 0 {
-		return flags, nil
-	}
-	workdir := resolveWorkdir(stepCtx.ProjectRoot, stepCtx.Adapter.Workdir)
-	var files []string
-	for _, input := range paths {
-		resolved := input
-		if !filepath.IsAbs(resolved) {
-			resolved = filepath.Join(workdir, input)
-		}
-		info, err := os.Stat(resolved)
-		if err != nil {
-			return nil, err
-		}
-		if projectPathExcluded(stepCtx.ProjectRoot, resolved, info.Name(), projectExcludes(stepCtx.Config)) {
-			continue
-		}
-		if info.IsDir() {
-			found, err := goFiles(resolved, projectExcludes(stepCtx.Config))
-			if err != nil {
-				return nil, err
-			}
-			files = append(files, found...)
-			continue
-		}
-		if strings.HasSuffix(info.Name(), ".go") {
-			files = append(files, resolved)
-		}
-	}
-	sort.Strings(files)
-	files = uniqueStrings(files)
-	args := append([]string{}, flags...)
-	for _, file := range files {
-		if rel, err := filepath.Rel(workdir, file); err == nil && !strings.HasPrefix(rel, "..") {
-			args = append(args, rel)
-		} else {
-			args = append(args, file)
-		}
-	}
-	return args, nil
-}
-
-func uniqueStrings(values []string) []string {
-	seen := map[string]struct{}{}
-	var out []string
-	for _, value := range values {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
-	}
-	return out
 }
 
 func formatLocation(result Result) string {

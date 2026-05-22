@@ -103,8 +103,7 @@ flowchart LR
 | Adapter | 默认接入工具 | 能力 |
 | --- | --- | --- |
 | `cmd` | 任意外部命令 | 通用接入 |
-| `go.format` | 短期可内置 `gofmt`；长期可由 `golangci-lint` formatters 统一承载 `gofmt`、`goimports`、`gofumpt`、`gci` | 格式检查和修复 |
-| `go.lint` | `golangci-lint` 作为主 runner，聚合 `go vet`、`staticcheck`、`revive`、`errcheck` 等 | lint |
+| `go.lint` | 由 `golangci-lint` formatters/linters 统一承载 `gofmt`、`goimports`、`gofumpt`、`gci` 及 `go vet`、`staticcheck`、`revive`、`errcheck` 等通用 lint | 格式/lint 检查和修复 |
 | `go.arch` | `depguard`、package 依赖图、自研 import boundary analyzer | 架构约束 |
 | `go.security` | `gosec`、`govulncheck`；可按成熟度由 `golangci-lint` 或独立命令接入 | 安全和漏洞扫描 |
 | `go.test` | `go test`、coverage、race，作为独立 step 保留 | 测试回归 |

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -130,19 +131,19 @@ profiles:
 	}
 }
 
-// 验证 go.format adapter 在 check 模式下发现未格式化文件时返回 fail，并标记 fix 可用。
-func TestGoFormatCheckDetectsUnformattedFile(t *testing.T) {
+// 验证 go.lint adapter 在 check 模式下发现未格式化文件时返回 fail，并标记 fix 可用。
+func TestGoLintCheckDetectsUnformattedFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte("package main\nfunc main(){\n}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cfg := writeConfig(t, dir, `schema_version: "1.0"
+	cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
 defaults:
   workdir: .
 adapters:
   - id: format
-    type: go.format
-    args: [-l, .]
+    type: go.lint
+    command: %s
     fix_safety: safe
 steps:
   - id: format-step
@@ -150,7 +151,7 @@ steps:
 profiles:
   - name: fast
     steps: [format-step]
-`)
+`, fakeGolangciLint(t)))
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -164,18 +165,19 @@ profiles:
 }
 
 // 验证 fix_safety=review 的 adapter 在 fix 模式下不会自动应用修改，文件保持原样。
-func TestGoFormatFixRequiresSafeAllowedStep(t *testing.T) {
+func TestGoLintFixRequiresSafeAllowedStep(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "bad.go")
 	if err := os.WriteFile(file, []byte("package main\nfunc main(){\n}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cfg := writeConfig(t, dir, `schema_version: "1.0"
+	cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
 defaults:
   workdir: .
 adapters:
   - id: format
-    type: go.format
+    type: go.lint
+    command: %s
     fix_safety: review
 steps:
   - id: format-step
@@ -184,7 +186,7 @@ steps:
 profiles:
   - name: fast
     steps: [format-step]
-`)
+`, fakeGolangciLint(t)))
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -210,12 +212,13 @@ func TestFixRollsBackWhenDependentValidationFails(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "bad_test.go"), []byte("package main\nimport \"testing\"\nfunc TestMessage(t *testing.T) { if Message() != \"right\" { t.Fatal(\"validation failed\") } }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cfg := writeConfig(t, dir, `schema_version: "1.0"
+	cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
 defaults:
   workdir: .
 adapters:
   - id: format
-    type: go.format
+    type: go.lint
+    command: %s
     fix_safety: safe
   - id: test
     type: cmd
@@ -231,7 +234,7 @@ steps:
 profiles:
   - name: fast
     steps: [format-step, test-step]
-`)
+`, fakeGolangciLint(t)))
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -458,6 +461,11 @@ func TestGoSemanticFixtureViaCLI(t *testing.T) {
 			}
 		})
 	}
+}
+
+func fakeGolangciLint(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(filepath.Dir(currentFile(t)), "testdata", "bin", "fake-golangci-lint")
 }
 
 func currentFile(t *testing.T) string {
@@ -883,8 +891,8 @@ profiles:
 	}
 }
 
-// 验证 go-review.yaml 中 exclude 配置的目录会被 go.format adapter 跳过，不触发格式检查。
-func TestProjectExcludeAppliesToGoFormatAdapter(t *testing.T) {
+// 验证 go-review.yaml 中 exclude 配置的目录会被 go.lint adapter 跳过，不触发格式检查。
+func TestProjectExcludeAppliesToGoLintAdapter(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/format-exclude\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -896,14 +904,15 @@ func TestProjectExcludeAppliesToGoFormatAdapter(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(generated, "bad.go"), []byte("package generated\nfunc Bad(){println(\"skip\")}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cfg := writeConfig(t, dir, `schema_version: "1.0"
+	cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
 defaults:
   workdir: .
 exclude:
   - generated
 adapters:
   - id: format
-    type: go.format
+    type: go.lint
+    command: %s
     fix_safety: safe
 steps:
   - id: format-check
@@ -911,7 +920,7 @@ steps:
 profiles:
   - name: fast
     steps: [format-check]
-`)
+`, fakeGolangciLint(t)))
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)

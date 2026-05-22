@@ -36,5 +36,5 @@ go run ./cmd/go-review check --config testdata/fixtures/regression-gates/configs
 go run ./cmd/go-review fix --config testdata/fixtures/regression-gates/configs/go-review.yaml --profile fast --workdir testdata/fixtures/regression-gates/autofix-project
 ```
 
-The fixture uses `cmd` steps and `go.format` by adapter ID to preserve the platform boundary: concrete tools stay behind adapters and the pipeline core remains tool-agnostic.
+The fixture uses `cmd` steps and `go.lint` by adapter ID to preserve the platform boundary: concrete tools stay behind adapters and the pipeline core remains tool-agnostic.
 The `semantic` profile proves a custom semantic rule can affect the same gate contract; the `autofix-project` proves safe fixes are validated after application.

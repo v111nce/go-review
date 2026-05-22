@@ -36,7 +36,7 @@ Status: accepted
 
 Status: accepted
 
-决策：第一版交付 `cmd`、`go.format`、`go.lint`、`go.arch`、`go.security`、`go.test`、`go.semantic`、`report.github` 这组常用 adapter。`go.lint` / format 类能力优先复用 `golangci-lint`，`go.semantic` 长期使用 `go/analysis` analyzer，`go.test` 保持独立 step。第一版只支持项目内本地 adapter，不提供 adapter 市场或远程安装能力。
+决策：第一版交付 `cmd`、`go.lint`、`go.arch`、`go.security`、`go.test`、`go.semantic`、`report.github` 这组常用 adapter。`go.lint` / format 类能力优先复用 `golangci-lint`，`go.semantic` 使用 `go/analysis` analyzer，`go.test` 保持独立 step。第一版只支持项目内本地 adapter，不提供 adapter 市场或远程安装能力。
 
 理由：这组 adapter 已覆盖通用 Go code-review 的基本闭环。本地 adapter 足以验证接入模型、pipeline 编排和门禁体验；市场和远程安装属于后续分发能力。复用 `golangci-lint` 和 `go/analysis` 可以避免重复造通用 lint/AST 分析轮子，让产品价值集中在统一编排、报告、门禁和安全修复事务。
 

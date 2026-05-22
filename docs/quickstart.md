@@ -7,11 +7,11 @@ This project implements a tool-agnostic Go code-review orchestration platform. T
 The current executable slice implements the full first-story set from `.omx/plans/ralplan-docs-implementation-20260519T091728Z.md`:
 
 1. Go module and thin `go-review` CLI bootstrap.
-2. Config, adapter registry, command adapter, and minimal `go.format` wrapper.
+2. Config, adapter registry, command adapter, and `go.lint` wrapper backed by `golangci-lint fmt`.
 3. Normalized result/report artifacts.
 4. Pipeline DAG/profile execution for `fast`, `ci`, `main`, and `nightly` gates.
-5. Example `go.semantic` semantic-rule adapter; current code slice is a minimal AST/type-info proof, while the target architecture uses `go/analysis` analyzers.
-6. Safe `go.format` autofix with validation rollback evidence; target architecture may delegate broader format/lint coverage to `golangci-lint` while keeping `go-review` as the orchestrator.
+5. `go.semantic` semantic-rule adapter backed by `go/analysis` analyzers.
+6. Safe `go.lint` format autofix through `golangci-lint fmt`, with validation rollback evidence.
 
 ## Fixture-backed commands
 
@@ -53,7 +53,7 @@ Expected behavior:
 
 ## Safe fixes
 
-`check` never modifies files. `fix --profile fast` may modify files, but only for steps marked `allow_fix: true` whose adapter declares `fix_safety: safe`; the current implementation slice uses `go.format`/gofmt as the safe fixer; the target lint/format adapter can delegate safe fixes to `golangci-lint run --fix`. After applying a safe fix, `go-review` reruns dependent validation steps and rolls back the edit if validation fails.
+`check` never modifies files. `fix --profile fast` may modify files, but only for steps marked `allow_fix: true` whose adapter declares `fix_safety: safe`; format fixes run through the `go.lint` adapter and `golangci-lint fmt`. After applying a safe fix, `go-review` reruns dependent validation steps and rolls back the edit if validation fails.
 
 ## Framework self-check CI
 

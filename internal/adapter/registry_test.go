@@ -34,7 +34,7 @@ func TestNewDefaultRegistryIncludesBuiltins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewDefaultRegistry: %v", err)
 	}
-	for _, id := range []string{CommandAdapterID, GoFormatAdapterID} {
+	for _, id := range []string{CommandAdapterID, GoLintAdapterID} {
 		if _, ok := registry.Resolve(id); !ok {
 			t.Fatalf("expected builtin %s to resolve", id)
 		}

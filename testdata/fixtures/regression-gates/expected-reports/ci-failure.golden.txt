@@ -1,4 +1,4 @@
 go-review profile=ci gate=fail
-FAIL format-check adapter=go.format rule=go.format file=testdata/fixtures/regression-gates/violating-project/main.go reason="gofmt changes required"
+FAIL format-check adapter=go.lint rule=go.lint file=testdata/fixtures/regression-gates/violating-project/main.go reason="golangci-lint fmt changes required"
 FAIL test adapter=go.test rule=go-test file=testdata/fixtures/regression-gates/violating-project/main_test.go reason="intentional failure"
 ARTIFACT artifacts/go-review/go-review-ci.json

@@ -26,7 +26,7 @@ func (tx *fixTransaction) shouldProtect(ctx StepContext) bool {
 	return tx.command == CommandFix &&
 		ctx.Step.AllowFix &&
 		ctx.Adapter.FixSafety == config.FixSafe &&
-		ctx.Adapter.Type == "go.format"
+		ctx.Adapter.Type == "go.lint"
 }
 
 func (tx *fixTransaction) snapshotProject() error {

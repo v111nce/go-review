@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+set -eu
+mode=check
+files=""
+for arg in "$@"; do
+  case "$arg" in
+    --diff) mode=diff ;;
+    -*|fmt|gofmt) ;;
+    *) files="$files $arg" ;;
+  esac
+done
+if [ -z "${files# }" ]; then
+  files=$(find . -name '*.go' -type f | sort)
+fi
+changed=0
+for file in $files; do
+  [ -f "$file" ] || continue
+  if grep -q 'main(){' "$file" || grep -q 'Bad(){' "$file"; then
+    changed=1
+    if [ "$mode" = "diff" ]; then
+      printf 'diff -- %s\n' "$file"
+    else
+      tmp=$(mktemp)
+      sed 's/main(){/main() {/g; s/Bad(){/Bad() {/g' "$file" > "$tmp"
+      cat "$tmp" > "$file"
+      rm -f "$tmp"
+    fi
+  fi
+done
+if [ "$mode" = "diff" ] && [ "$changed" -eq 1 ]; then
+  exit 1
+fi
+exit 0

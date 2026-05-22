@@ -47,12 +47,12 @@ func TestRegressionGateFixtureConfigProfiles(t *testing.T) {
 		})
 	}
 
-	format, ok := cfg.Adapter("go.format")
+	format, ok := cfg.Adapter("go.lint")
 	if !ok {
-		t.Fatal("go.format adapter missing")
+		t.Fatal("go.lint adapter missing")
 	}
 	if format.FixSafety != config.FixSafe {
-		t.Fatalf("go.format fix safety = %q, want safe", format.FixSafety)
+		t.Fatalf("go.lint fix safety = %q, want safe", format.FixSafety)
 	}
 }
 
@@ -69,12 +69,12 @@ func TestRegressionGateSemanticAndAutofixFixtures(t *testing.T) {
 	autofixProject := filepath.Join(root, "testdata/fixtures/regression-gates/autofix-project")
 	fix := command("go", "run", "./cmd/go-review", "fix", "--config", configPath, "--profile", "fast", "--workdir", autofixProject).WithDir(root)
 	if out, err := fix.CombinedOutput(); err != nil {
-		t.Fatalf("autofix fixture should pass after safe gofmt and validation: %v\n%s", err, out)
+		t.Fatalf("autofix fixture should pass after safe golangci-lint fmt and validation: %v\n%s", err, out)
 	}
 	defer func() {
 		_ = os.WriteFile(filepath.Join(autofixProject, "main.go"), []byte("package main\n\nimport \"fmt\"\n\nfunc main(){fmt.Println(Message())}\n\nfunc Message() string { return \"autofix fixture\" }\n"), 0o644)
 	}()
-	if out, err := command("gofmt", "-l", "main.go").WithDir(autofixProject).CombinedOutput(); err != nil || strings.TrimSpace(string(out)) != "" {
+	if out, err := command("../scripts/fake-golangci-lint", "fmt", "--diff", "main.go").WithDir(autofixProject).CombinedOutput(); err != nil || strings.TrimSpace(string(out)) != "" {
 		t.Fatalf("autofix fixture should be formatted, err=%v out=%q", err, out)
 	}
 }
@@ -87,8 +87,8 @@ func TestRegressionGateFixtureProjects(t *testing.T) {
 	}
 
 	violating := filepath.Join(root, "testdata/fixtures/regression-gates/violating-project")
-	if out, err := command("gofmt", "-l", "main.go").WithDir(violating).CombinedOutput(); err != nil != false || !strings.Contains(string(out), "main.go") {
-		t.Fatalf("violating fixture should be reported by gofmt -l, err=%v out=%q", err, out)
+	if out, err := command("../scripts/fake-golangci-lint", "fmt", "--diff", "main.go").WithDir(violating).CombinedOutput(); err == nil || !strings.Contains(string(out), "main.go") {
+		t.Fatalf("violating fixture should be reported by golangci-lint fmt, err=%v out=%q", err, out)
 	}
 	if out, err := command("go", "test", "./...").WithDir(violating).CombinedOutput(); err == nil || !strings.Contains(string(out), "intentional failure") {
 		t.Fatalf("violating fixture should fail go test with intentional failure, err=%v out=%s", err, out)
@@ -100,7 +100,7 @@ func TestGoldenReportContract(t *testing.T) {
 		Profile:    "fast",
 		GateStatus: report.GatePass,
 		Steps: []report.Step{
-			{ID: "format-check", AdapterID: "go.format", Status: report.GatePass},
+			{ID: "format-check", AdapterID: "go.lint", Status: report.GatePass},
 			{ID: "test", AdapterID: "go.test", Status: report.GatePass},
 		},
 	}

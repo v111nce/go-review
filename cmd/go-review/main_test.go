@@ -291,12 +291,12 @@ func minimalConfig() string {
 defaults:
   workdir: .
 adapters:
-  - id: go.format
-    type: go.format
+  - id: go.lint
+    type: go.lint
     fix_safety: safe
 steps:
   - id: format-check
-    adapter: go.format
+    adapter: go.lint
     allow_fix: true
 profiles:
   - name: fast

@@ -2,7 +2,7 @@ schema_version: "1.0"
 tools:
   go_review: "0.1.0-fixture"
   adapters:
-    go.format: "system-gofmt"
+    go.lint: "system-golangci-lint"
     go.test: "go1.24+"
     fixture_contract: "2026-05-19"
 defaults:
@@ -11,10 +11,9 @@ defaults:
 artifacts:
   dir: "artifacts/go-review"
 adapters:
-  - id: go.format
-    type: go.format
-    command: go.format
-    capabilities: [check, fix]
+  - id: go.lint
+    type: go.lint
+        capabilities: [check, fix]
     timeout: 30s
     fix_safety: safe
   - id: go.test
@@ -53,7 +52,7 @@ adapters:
     fix_safety: review
 steps:
   - id: format-check
-    adapter: go.format
+    adapter: go.lint
     on_fail: stop
     allow_fix: true
   - id: test

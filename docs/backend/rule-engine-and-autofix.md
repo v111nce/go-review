@@ -52,7 +52,7 @@ flowchart TD
   fixer --> scheduler
 
   registry --> cmd[cmd adapter]
-  registry --> format[go.format adapter]
+  registry --> format[go.lint adapter]
   registry --> lint[go.lint adapter]
   registry --> arch[go.arch adapter]
   registry --> security[go.security adapter]
@@ -75,7 +75,7 @@ flowchart TD
 | `reporter` | 输出 review 结果 | 终端、JSON、Markdown、SARIF、GitHub PR 评论 |
 | `policy` | 处理严重级别、豁免和门禁策略 | profile、ignore、baseline |
 
-一个 adapter 可以同时实现多个类型。例如 `go.format` 既是 `checker` 也是 `fixer`。
+一个 adapter 可以同时实现多个类型。例如 `go.lint` format step 既是 `checker` 也是 `fixer`。
 
 ## 通用工具接入契约
 
@@ -130,12 +130,11 @@ report-github depends_on: lint, arch, test, security
 | Adapter | 默认执行 | 主要输出 |
 | --- | --- | --- |
 | `cmd` | 任意外部命令 | 用户自定义解析结果 |
-| `go.format` | 短期内置 `gofmt`；长期可委托 `golangci-lint` formatters 跑 `gofmt`、`goimports`、`gofumpt`、`gci` | 格式违规和可应用修复 |
-| `go.lint` | `golangci-lint` 作为主 runner，聚合 `go vet`、`staticcheck`、`revive`、`errcheck` 等 | lint 违规 |
+| `go.lint` | 委托 `golangci-lint`；默认 format step 使用 `golangci-lint fmt --enable gofmt`，也可聚合 `go vet`、`staticcheck`、`revive`、`errcheck` 等通用 lint | 格式/lint 违规和可应用修复 |
 | `go.arch` | `depguard`、package 依赖图、自研 import boundary analyzer | 架构边界违规 |
 | `go.security` | `gosec`、`govulncheck`；可由 `golangci-lint` 或独立命令接入 | 安全和漏洞问题 |
 | `go.test` | `go test`、coverage、race，独立于 `golangci-lint` 保留 | 测试和回归结果 |
-| `go.semantic` | 当前最小内置 AST 规则；长期演进为自研 `go/analysis` analyzer runtime / registry | 团队语义规约违规 |
+| `go.semantic` | 自研 `go/analysis` analyzer runtime / registry；当前内置 `no-direct-os-getenv` 和配置式 `no-direct-call` analyzer | 团队语义规约违规 |
 | `report.github` | GitHub Checks、PR Review、SARIF | PR 评论和检查结果 |
 
 ## `go/analysis` 与 `golangci-lint` 的分工
@@ -149,7 +148,7 @@ report-github depends_on: lint, arch, test, security
 推荐集成方式：
 
 1. `go.lint` adapter 调用 `golangci-lint run`，`fix` 模式可调用 `golangci-lint run --fix`。
-2. `go.semantic` adapter 当前运行已实现的内置/配置式语义规则；长期目标是运行平台内置或项目显式接入的 `go/analysis` analyzers，并把 diagnostics 映射为统一结果。
+2. `go.semantic` adapter 运行平台内置或配置式 `go/analysis` analyzers，并把 diagnostics 映射为统一结果。
 3. `go.test` adapter 继续独立调用 `go test ./...`、`go test -race` 或 coverage 命令，因为 linter runner 不承担测试回归职责。
 4. 安全工具根据稳定性选择由 `golangci-lint` 聚合或由 `go.security` 独立命令接入；无论哪种方式都进入统一 result model。
 
@@ -216,9 +215,9 @@ Diagnostic
 
 因此这类规则应该作为 `go.semantic` analyzer 示例或外部工具 adapter，而不是产品内置固定规则。
 
-当前代码基线提供了一个最小 `go.semantic` 示例规则：`semantic.no-direct-os-getenv`。它通过 AST 定位直接 `os.Getenv` 调用，并把诊断映射为统一 violation，包含 adapter ID、step ID、rule ID、文件、行列、原因、建议和 `review` 修复安全级别。该规则用于证明语义检查可以进入 profile 并影响门禁；它不是完整的任意规则 DSL，也不是动态加载不可信规则代码的插件市场，也不提供 semantic 自动修复。当前 adapter 仍遵循 step-level 单 `Result` 契约：同一次 semantic step 只报告首个 failing finding，不承诺输出多 diagnostics。
+当前代码基线提供了一个最小 `go.semantic` 示例规则：`semantic.no-direct-os-getenv`。它通过 `go/analysis` analyzer 基于 AST/type info 定位直接 `os.Getenv` 调用，并把诊断映射为统一 violation，包含 adapter ID、step ID、rule ID、文件、行列、原因、建议和 `review` 修复安全级别。该规则用于证明语义检查可以进入 profile 并影响门禁；它不是完整的任意规则 DSL，也不是动态加载不可信规则代码的插件市场，也不提供 semantic 自动修复。当前 adapter 仍遵循 step-level 单 `Result` 契约：同一次 semantic step 只报告首个 failing finding，不承诺输出多 diagnostics。
 
-默认项目初始化会生成 `.go-review/semantic/default.yaml` 和 `.go-review/semantic/custom.yaml`：`default.yaml` 放框架自带规则，`custom.yaml` 留给团队配置已实现的语义规则。当前配置式 custom rule 只覆盖有限的 `no-direct-call` 这类调用禁用规则；函数参数数量、返回值数量、函数体行数、架构边界等规则需要新增 `go/analysis` analyzer 或通过外部工具接入。adapter 配置里的 `parser` 仅是兼容的内置规则选择入口，不是 parser 插件机制。忽略目录不放在 semantic 文件里，而是放在 `.go-review/go-review.yaml` 顶层 `exclude`，例如 `exclude: [vendor, testdata]`；这是项目级配置，配置后所有内置扫描类步骤都应跳过这些路径。主配置只需要一个 `go.semantic` adapter 和一个 `semantic` step，不需要按 `cmd/internal/integration` 拆成多个 semantic step。
+默认项目初始化会生成 `.go-review/semantic/default.yaml` 和 `.go-review/semantic/custom.yaml`：`default.yaml` 放框架自带规则，`custom.yaml` 留给团队配置已实现的语义规则。当前配置式 custom rule 只覆盖有限的 `no-direct-call` analyzer kind；函数参数数量、返回值数量、函数体行数、架构边界等规则需要新增 `go/analysis` analyzer 或通过外部工具接入。adapter 配置里的 `parser` 仅是兼容的内置规则选择入口，不是 parser 插件机制。忽略目录不放在 semantic 文件里，而是放在 `.go-review/go-review.yaml` 顶层 `exclude`，例如 `exclude: [vendor, testdata]`；这是项目级配置，配置后所有内置扫描类步骤都应跳过这些路径。主配置只需要一个 `go.semantic` adapter 和一个 `semantic` step，不需要按 `cmd/internal/integration` 拆成多个 semantic step。
 
 ## 失败和安全策略
 
@@ -228,7 +227,7 @@ Diagnostic
 - 同一文件存在多个互相重叠的 text edit 时，必须拒绝自动应用并转人工处理。
 - 豁免必须记录 adapter ID、规则 ID、原因和范围。
 - CI 环境默认只检查，不直接改写主分支代码。
-- `fix` 命令当前只会自动应用配置为 `safe` 且 step `allow_fix: true` 的 `go.format` 修复；随后运行依赖验证 step，验证失败时回滚已应用格式化修改并保留失败证据。
+- `fix` 命令当前只会自动应用配置为 `safe` 且 step `allow_fix: true` 的 `go.lint` format 修复；随后运行依赖验证 step，验证失败时回滚已应用格式化修改并保留失败证据。
 
 ## 测试策略
 
@@ -237,7 +236,7 @@ Diagnostic
 | adapter 配置 | 使用 fixture 项目验证启停、参数、输出解析和超时 |
 | pipeline 调度 | 验证顺序、并行、依赖、失败策略和 profile |
 | 常用 adapter | 用故意违规样例验证每个 adapter 能产出统一结果 |
-| 自定义语义 adapter | 当前用 engine fixture 覆盖 AST 和类型边界；迁移到 `go/analysis` analyzer 后再补 `analysistest` |
+| 自定义语义 adapter | 当前用 engine fixture 覆盖 `go/analysis` analyzer 的 AST 和类型边界；后续可补 `analysistest` |
 | 自动修复 | golden file 验证修复前后代码 |
 | 报告输出 | 快照测试验证终端、JSON、Markdown、SARIF 输出 |
 | 回归门禁 | 用故意违规样例确认门禁失败 |

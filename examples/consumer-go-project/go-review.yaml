@@ -2,7 +2,7 @@ schema_version: "1.0"
 tools:
   go_review: "0.1.0-example"
   adapters:
-    go.format: "system-gofmt"
+    go.lint: "system-golangci-lint"       # install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
     go.test: "go1.24+"
     # Optional adapters. Uncomment after installing the named tools.
     # staticcheck: "staticcheck"          # install: go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -18,8 +18,8 @@ defaults:
 artifacts:
   dir: "artifacts/go-review"
 adapters:
-  - id: go.format
-    type: go.format
+  - id: go.lint
+    type: go.lint
     capabilities: [check, fix]
     timeout: 30s
     fix_safety: safe
@@ -54,7 +54,7 @@ adapters:
   #   parser: text
 steps:
   - id: format-check
-    adapter: go.format
+    adapter: go.lint
     on_fail: continue
     allow_fix: true
   - id: test

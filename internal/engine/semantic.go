@@ -11,36 +11,66 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
+
+	"golang.org/x/tools/go/analysis"
 
 	"github.com/v111nce/go-review/internal/config"
 )
 
 const noDirectEnvRuleID = "semantic.no-direct-os-getenv"
 
-// SemanticAdapter provides a first built-in go/analysis-style semantic rule bridge.
-//
-// It intentionally ships one small example rule instead of a dynamic plugin loader:
-// direct os.Getenv calls are reported so teams can see how AST-backed rules map into
-// the same pipeline/result contract without the core becoming a string-matching linter.
+// SemanticAdapter runs configured Go semantic rules as go/analysis analyzers.
 type SemanticAdapter struct {
 	cfg config.Adapter
 }
 
-// These private runner maps are an internal seam only: they keep the current
-// narrow semantic rules from piling up in switch statements without creating a
-// public plugin, extension, SDK, or YAML DSL surface.
-type semanticBuiltInRuleRunner func(SemanticAdapter, StepContext) (Result, error)
+type semanticAnalyzerFactory func() (*analysis.Analyzer, semanticRuleMeta)
+type semanticCustomAnalyzerFactory func(semanticCustomRule) (*analysis.Analyzer, semanticRuleMeta)
 
-type semanticCustomKindRunner func(SemanticAdapter, semanticCustomRule, StepContext) (Result, error)
-
-var semanticBuiltInRunners = map[string]semanticBuiltInRuleRunner{
-	"no-direct-os-getenv": SemanticAdapter.runNoDirectOSGetenv,
+type semanticRuleMeta struct {
+	RuleID        string
+	PassMessage   string
+	FixSafety     config.FixSafety
+	FixAvailable  bool
+	SuggestionFor func(analysis.Diagnostic) string
 }
 
-var semanticCustomKindRunners = map[string]semanticCustomKindRunner{
-	"no-direct-call": SemanticAdapter.runNoDirectCall,
+var semanticBuiltInAnalyzers = map[string]semanticAnalyzerFactory{
+	"no-direct-os-getenv": func() (*analysis.Analyzer, semanticRuleMeta) {
+		meta := semanticRuleMeta{
+			RuleID:      noDirectEnvRuleID,
+			PassMessage: "semantic no-direct-os-getenv passed",
+			SuggestionFor: func(analysis.Diagnostic) string {
+				return "read environment values through an injected config/env provider"
+			},
+		}
+		return noDirectCallAnalyzer(semanticCustomRule{
+			ID:         noDirectEnvRuleID,
+			Package:    "os",
+			Function:   "Getenv",
+			Message:    "direct os.Getenv access bypasses injectable configuration",
+			Suggestion: "read environment values through an injected config/env provider",
+		}, "no_direct_os_getenv"), meta
+	},
+}
+
+var semanticCustomAnalyzers = map[string]semanticCustomAnalyzerFactory{
+	"no-direct-call": func(rule semanticCustomRule) (*analysis.Analyzer, semanticRuleMeta) {
+		message := rule.Message
+		if message == "" {
+			message = fmt.Sprintf("direct %s.%s call is disallowed", rule.Package, rule.Function)
+		}
+		meta := semanticRuleMeta{
+			RuleID:      semanticRuleID(rule.ID),
+			PassMessage: fmt.Sprintf("semantic custom rule %s passed", rule.ID),
+			SuggestionFor: func(analysis.Diagnostic) string {
+				return rule.Suggestion
+			},
+		}
+		rule.Message = message
+		return noDirectCallAnalyzer(rule, analyzerName(rule.ID)), meta
+	},
 }
 
 func (a SemanticAdapter) Metadata() AdapterMetadata {
@@ -53,36 +83,159 @@ func (a SemanticAdapter) Run(_ context.Context, stepCtx StepContext) (Result, er
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.config", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
 	for _, rule := range cfg.Rules {
-		result, err := a.runRule(rule, stepCtx)
+		analyzer, meta, err := a.builtInAnalyzer(rule)
+		if err != nil {
+			return a.semanticConfigFailure(stepCtx, err.Error()), nil
+		}
+		result, err := a.runAnalyzer(analyzer, meta, stepCtx)
 		if err != nil || result.GateStatus == config.GateFail {
 			return result, err
 		}
 	}
 	for _, rule := range cfg.CustomRules {
-		result, err := a.runCustomRule(rule, stepCtx)
+		analyzer, meta, err := a.customAnalyzer(rule)
+		if err != nil {
+			return a.semanticConfigFailure(stepCtx, err.Error()), nil
+		}
+		result, err := a.runAnalyzer(analyzer, meta, stepCtx)
 		if err != nil || result.GateStatus == config.GateFail {
 			return result, err
 		}
 	}
 	ruleCount := len(cfg.Rules) + len(cfg.CustomRules)
+	return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.rules", Kind: ResultArtifact, Message: fmt.Sprintf("semantic analyzers passed (%d)", ruleCount), FixSafety: a.cfg.FixSafety, GateStatus: config.GatePass}, nil
+}
+
+func (a SemanticAdapter) builtInAnalyzer(rule string) (*analysis.Analyzer, semanticRuleMeta, error) {
+	rule = semanticBuiltInRuleName(rule)
+	factory, ok := semanticBuiltInAnalyzers[rule]
+	if !ok {
+		return nil, semanticRuleMeta{}, fmt.Errorf("unsupported semantic rule %q", rule)
+	}
+	analyzer, meta := factory()
+	return analyzer, meta, nil
+}
+
+func (a SemanticAdapter) customAnalyzer(rule semanticCustomRule) (*analysis.Analyzer, semanticRuleMeta, error) {
+	kind := semanticCustomKind(rule.Kind)
+	factory, ok := semanticCustomAnalyzers[kind]
+	if !ok {
+		return nil, semanticRuleMeta{}, fmt.Errorf("unsupported semantic custom rule kind %q", kind)
+	}
+	rule.Kind = kind
+	analyzer, meta := factory(rule)
+	return analyzer, meta, nil
+}
+
+func noDirectCallAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              fmt.Sprintf("reports direct %s.%s calls", rule.Package, rule.Function),
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				packageNames := importedNames(file, rule.Package)
+				ast.Inspect(file, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					sel, ok := call.Fun.(*ast.SelectorExpr)
+					if !ok || sel.Sel == nil || sel.Sel.Name != rule.Function {
+						return true
+					}
+					if !isPackageFunctionSelector(pass.TypesInfo, packageNames, rule.Package, rule.Function, sel) {
+						return true
+					}
+					diagnostic := analysis.Diagnostic{Pos: call.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message}
+					if rule.Suggestion != "" {
+						diagnostic.SuggestedFixes = []analysis.SuggestedFix{{Message: rule.Suggestion}}
+					}
+					pass.Report(diagnostic)
+					return true
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
+func (a SemanticAdapter) runAnalyzer(analyzer *analysis.Analyzer, meta semanticRuleMeta, stepCtx StepContext) (Result, error) {
+	files, err := goFiles(resolveWorkdir(stepCtx.ProjectRoot, a.cfg.Workdir), projectExcludes(stepCtx.Config))
+	if err != nil {
+		return Result{}, err
+	}
+	if len(files) == 0 {
+		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: meta.RuleID, Kind: ResultArtifact, Message: fmt.Sprintf("%s skipped; no non-excluded Go files", analyzer.Name), FixSafety: a.cfg.FixSafety, GateStatus: config.GatePass}, nil
+	}
+	fset := token.NewFileSet()
+	parsedFiles := make([]*ast.File, 0, len(files))
+	for _, file := range files {
+		parsed, err := parser.ParseFile(fset, file, nil, 0)
+		if err != nil {
+			return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: meta.RuleID, Kind: ResultViolation, File: relPath(stepCtx.ProjectRoot, file), Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
+		}
+		parsedFiles = append(parsedFiles, parsed)
+	}
+	info := &types.Info{Uses: map[*ast.Ident]types.Object{}}
+	typesCfg := types.Config{Importer: importer.Default(), Error: func(error) {}}
+	pkg, _ := typesCfg.Check("semanticfixture", fset, parsedFiles, info)
+
+	var diagnostics []analysis.Diagnostic
+	pass := &analysis.Pass{
+		Analyzer:  analyzer,
+		Fset:      fset,
+		Files:     parsedFiles,
+		Pkg:       pkg,
+		TypesInfo: info,
+		Report: func(diagnostic analysis.Diagnostic) {
+			diagnostics = append(diagnostics, diagnostic)
+		},
+		ReadFile: os.ReadFile,
+	}
+	if _, err := analyzer.Run(pass); err != nil {
+		return Result{}, err
+	}
+	if len(diagnostics) == 0 {
+		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: meta.RuleID, Kind: ResultArtifact, Message: meta.PassMessage, FixSafety: a.cfg.FixSafety, GateStatus: config.GatePass}, nil
+	}
+	diagnostic := diagnostics[0]
+	pos := fset.Position(diagnostic.Pos)
 	return Result{
-		AdapterID:  a.cfg.ID,
-		StepID:     stepCtx.Step.ID,
-		RuleID:     "semantic.rules",
-		Kind:       ResultArtifact,
-		Message:    fmt.Sprintf("semantic rules passed (%d)", ruleCount),
-		FixSafety:  a.cfg.FixSafety,
-		GateStatus: config.GatePass,
+		AdapterID:    a.cfg.ID,
+		StepID:       stepCtx.Step.ID,
+		RuleID:       diagnosticRuleID(diagnostic, meta.RuleID),
+		Kind:         ResultViolation,
+		File:         relPath(stepCtx.ProjectRoot, pos.Filename),
+		Line:         pos.Line,
+		Column:       pos.Column,
+		Message:      diagnostic.Message,
+		Suggestion:   diagnosticSuggestion(diagnostic, meta),
+		FixAvailable: meta.FixAvailable,
+		FixSafety:    a.cfg.FixSafety,
+		GateStatus:   config.GateFail,
 	}, nil
 }
 
-func (a SemanticAdapter) runRule(rule string, stepCtx StepContext) (Result, error) {
-	rule = semanticBuiltInRuleName(rule)
-	runner, ok := semanticBuiltInRunners[rule]
-	if !ok {
-		return a.semanticConfigFailure(stepCtx, fmt.Sprintf("unsupported semantic rule %q", rule)), nil
+func diagnosticRuleID(diagnostic analysis.Diagnostic, fallback string) string {
+	if strings.TrimSpace(diagnostic.Category) != "" {
+		return semanticRuleID(diagnostic.Category)
 	}
-	return runner(a, stepCtx)
+	return fallback
+}
+
+func diagnosticSuggestion(diagnostic analysis.Diagnostic, meta semanticRuleMeta) string {
+	if meta.SuggestionFor != nil {
+		if suggestion := meta.SuggestionFor(diagnostic); suggestion != "" {
+			return suggestion
+		}
+	}
+	for _, fix := range diagnostic.SuggestedFixes {
+		if strings.TrimSpace(fix.Message) != "" {
+			return fix.Message
+		}
+	}
+	return ""
 }
 
 func semanticBuiltInRuleName(rule string) string {
@@ -108,7 +261,7 @@ type semanticCustomRule struct {
 }
 
 func (a SemanticAdapter) semanticConfig(stepCtx StepContext) (semanticConfig, error) {
-	// Parser is a backward-compatible selector for one built-in semantic rule;
+	// Parser is a backward-compatible selector for one built-in semantic analyzer;
 	// it is not a parser plugin or extension mechanism.
 	if strings.TrimSpace(a.cfg.Parser) != "" {
 		return semanticConfig{Rules: []string{strings.TrimSpace(a.cfg.Parser)}}, nil
@@ -284,7 +437,7 @@ func validateSemanticCustomRule(path string, lineNo int, rule semanticCustomRule
 		return fmt.Errorf("%s:%d: custom rule missing id", path, lineNo)
 	}
 	kind := semanticCustomKind(rule.Kind)
-	if _, ok := semanticCustomKindRunners[kind]; !ok {
+	if _, ok := semanticCustomAnalyzers[kind]; !ok {
 		return fmt.Errorf("%s:%d: unsupported custom rule kind %q", path, lineNo, kind)
 	}
 	if strings.TrimSpace(rule.Package) == "" || strings.TrimSpace(rule.Function) == "" {
@@ -335,35 +488,6 @@ func cleanSemanticValue(value string) string {
 	return strings.Trim(strings.TrimSpace(value), "\"'")
 }
 
-func defaultProjectExcludes() []string {
-	return []string{".git", ".go-review", "artifacts", "vendor"}
-}
-
-func projectExcludes(cfg *config.Config) []string {
-	if cfg == nil {
-		return defaultProjectExcludes()
-	}
-	return append(defaultProjectExcludes(), cfg.Exclude...)
-}
-
-func normalizeProjectExcludes(values []string) []string {
-	seen := map[string]struct{}{}
-	var normalized []string
-	for _, value := range values {
-		value = filepath.ToSlash(strings.TrimSpace(value))
-		value = strings.Trim(value, "/")
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		normalized = append(normalized, value)
-	}
-	return normalized
-}
-
 func stripSemanticComment(s string) string {
 	inSingle, inDouble := false, false
 	for i, r := range s {
@@ -385,16 +509,6 @@ func stripSemanticComment(s string) string {
 	return s
 }
 
-func (a SemanticAdapter) runCustomRule(rule semanticCustomRule, stepCtx StepContext) (Result, error) {
-	kind := semanticCustomKind(rule.Kind)
-	runner, ok := semanticCustomKindRunners[kind]
-	if !ok {
-		return a.semanticConfigFailure(stepCtx, fmt.Sprintf("unsupported semantic custom rule kind %q", kind)), nil
-	}
-	rule.Kind = kind
-	return runner(a, rule, stepCtx)
-}
-
 func semanticCustomKind(kind string) string {
 	kind = strings.TrimSpace(kind)
 	if kind == "" {
@@ -404,190 +518,7 @@ func semanticCustomKind(kind string) string {
 }
 
 func (a SemanticAdapter) semanticConfigFailure(stepCtx StepContext, message string) Result {
-	return Result{
-		AdapterID:  a.cfg.ID,
-		StepID:     stepCtx.Step.ID,
-		RuleID:     "semantic.config",
-		Kind:       ResultViolation,
-		Message:    message,
-		FixSafety:  config.FixNone,
-		GateStatus: config.GateFail,
-	}
-}
-
-func (a SemanticAdapter) runNoDirectCall(rule semanticCustomRule, stepCtx StepContext) (Result, error) {
-	files, err := goFiles(resolveWorkdir(stepCtx.ProjectRoot, a.cfg.Workdir), projectExcludes(stepCtx.Config))
-	if err != nil {
-		return Result{}, err
-	}
-	fset := token.NewFileSet()
-	parsedFiles := make([]*ast.File, 0, len(files))
-	for _, file := range files {
-		parsed, err := parser.ParseFile(fset, file, nil, 0)
-		if err != nil {
-			return Result{
-				AdapterID:  a.cfg.ID,
-				StepID:     stepCtx.Step.ID,
-				RuleID:     semanticRuleID(rule.ID),
-				Kind:       ResultViolation,
-				File:       relPath(stepCtx.ProjectRoot, file),
-				Message:    err.Error(),
-				FixSafety:  config.FixNone,
-				GateStatus: config.GateFail,
-			}, nil
-		}
-		parsedFiles = append(parsedFiles, parsed)
-	}
-
-	info := &types.Info{Uses: map[*ast.Ident]types.Object{}}
-	typesCfg := types.Config{Importer: importer.Default(), Error: func(error) {}}
-	// Type-check errors are intentionally tolerated: package/type info improves
-	// selector precision when available, and import-name fallback keeps this
-	// narrow rule useful for partial or fixture packages.
-	_, _ = typesCfg.Check("semanticcustom", fset, parsedFiles, info)
-
-	for _, parsed := range parsedFiles {
-		packageNames := importedNames(parsed, rule.Package)
-		var finding *Result
-		ast.Inspect(parsed, func(node ast.Node) bool {
-			if finding != nil {
-				return false
-			}
-			call, ok := node.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || sel.Sel == nil || sel.Sel.Name != rule.Function {
-				return true
-			}
-			if !isPackageFunctionSelector(info, packageNames, rule.Package, rule.Function, sel) {
-				return true
-			}
-			pos := fset.Position(call.Pos())
-			message := rule.Message
-			if message == "" {
-				message = fmt.Sprintf("direct %s.%s call is disallowed", rule.Package, rule.Function)
-			}
-			finding = &Result{
-				AdapterID:    a.cfg.ID,
-				StepID:       stepCtx.Step.ID,
-				RuleID:       semanticRuleID(rule.ID),
-				Kind:         ResultViolation,
-				File:         relPath(stepCtx.ProjectRoot, pos.Filename),
-				Line:         pos.Line,
-				Column:       pos.Column,
-				Message:      message,
-				Suggestion:   rule.Suggestion,
-				FixAvailable: false,
-				FixSafety:    a.cfg.FixSafety,
-				GateStatus:   config.GateFail,
-			}
-			return false
-		})
-		if finding != nil {
-			return *finding, nil
-		}
-	}
-	return Result{
-		AdapterID:  a.cfg.ID,
-		StepID:     stepCtx.Step.ID,
-		RuleID:     semanticRuleID(rule.ID),
-		Kind:       ResultArtifact,
-		Message:    fmt.Sprintf("semantic custom rule %s passed", rule.ID),
-		FixSafety:  a.cfg.FixSafety,
-		GateStatus: config.GatePass,
-	}, nil
-}
-
-func (a SemanticAdapter) runNoDirectOSGetenv(stepCtx StepContext) (Result, error) {
-	files, err := goFiles(resolveWorkdir(stepCtx.ProjectRoot, a.cfg.Workdir), projectExcludes(stepCtx.Config))
-	if err != nil {
-		return Result{}, err
-	}
-	fset := token.NewFileSet()
-	parsedFiles := make([]*ast.File, 0, len(files))
-	for _, file := range files {
-		parsed, err := parser.ParseFile(fset, file, nil, 0)
-		if err != nil {
-			return Result{
-				AdapterID:  a.cfg.ID,
-				StepID:     stepCtx.Step.ID,
-				RuleID:     noDirectEnvRuleID,
-				Kind:       ResultViolation,
-				File:       relPath(stepCtx.ProjectRoot, file),
-				Message:    err.Error(),
-				FixSafety:  config.FixNone,
-				GateStatus: config.GateFail,
-			}, nil
-		}
-		parsedFiles = append(parsedFiles, parsed)
-	}
-
-	info := &types.Info{Uses: map[*ast.Ident]types.Object{}}
-	typesCfg := types.Config{Importer: importer.Default(), Error: func(error) {}}
-	// Type-check errors are intentionally tolerated; see runNoDirectCall for the
-	// fallback contract shared by semantic rules.
-	_, _ = typesCfg.Check("semanticfixture", fset, parsedFiles, info)
-
-	var findings []Result
-	for _, parsed := range parsedFiles {
-		osNames := importedNames(parsed, "os")
-		ast.Inspect(parsed, func(node ast.Node) bool {
-			call, ok := node.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-			sel, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || sel.Sel == nil || sel.Sel.Name != "Getenv" {
-				return true
-			}
-			if !isOSGetenvSelector(info, osNames, sel) {
-				return true
-			}
-			pos := fset.Position(call.Pos())
-			findings = append(findings, Result{
-				AdapterID:    a.cfg.ID,
-				StepID:       stepCtx.Step.ID,
-				RuleID:       noDirectEnvRuleID,
-				Kind:         ResultViolation,
-				File:         relPath(stepCtx.ProjectRoot, pos.Filename),
-				Line:         pos.Line,
-				Column:       pos.Column,
-				Message:      "direct os.Getenv access bypasses injectable configuration",
-				Suggestion:   "read environment values through an injected config/env provider",
-				FixAvailable: false,
-				FixSafety:    a.cfg.FixSafety,
-				GateStatus:   config.GateFail,
-			})
-			return true
-		})
-	}
-	if len(findings) == 0 {
-		return Result{
-			AdapterID:  a.cfg.ID,
-			StepID:     stepCtx.Step.ID,
-			RuleID:     noDirectEnvRuleID,
-			Kind:       ResultArtifact,
-			Message:    "semantic no-direct-os-getenv passed",
-			FixSafety:  a.cfg.FixSafety,
-			GateStatus: config.GatePass,
-		}, nil
-	}
-	return findings[0], nil
-}
-
-func isOSGetenvSelector(info *types.Info, osNames map[string]struct{}, sel *ast.SelectorExpr) bool {
-	obj := info.Uses[sel.Sel]
-	if obj != nil && obj.Pkg() != nil {
-		return obj.Pkg().Path() == "os" && obj.Name() == "Getenv"
-	}
-	ident, ok := sel.X.(*ast.Ident)
-	if !ok {
-		return false
-	}
-	_, ok = osNames[ident.Name]
-	return ok
+	return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.config", Kind: ResultViolation, Message: message, FixSafety: config.FixNone, GateStatus: config.GateFail}
 }
 
 func semanticRuleID(id string) string {
@@ -601,10 +532,29 @@ func semanticRuleID(id string) string {
 	return "semantic." + id
 }
 
+func analyzerName(id string) string {
+	id = strings.TrimPrefix(semanticRuleID(id), "semantic.")
+	var b strings.Builder
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('_')
+		}
+	}
+	name := strings.Trim(b.String(), "_")
+	if name == "" || (name[0] >= '0' && name[0] <= '9') {
+		name = "semantic_" + name
+	}
+	return name
+}
+
 func isPackageFunctionSelector(info *types.Info, packageNames map[string]struct{}, packagePath, function string, sel *ast.SelectorExpr) bool {
-	obj := info.Uses[sel.Sel]
-	if obj != nil && obj.Pkg() != nil {
-		return obj.Pkg().Path() == packagePath && obj.Name() == function
+	if info != nil {
+		obj := info.Uses[sel.Sel]
+		if obj != nil && obj.Pkg() != nil {
+			return obj.Pkg().Path() == packagePath && obj.Name() == function
+		}
 	}
 	ident, ok := sel.X.(*ast.Ident)
 	if !ok {
@@ -627,55 +577,7 @@ func importedNames(file *ast.File, importPath string) map[string]struct{} {
 			names[spec.Name.Name] = struct{}{}
 			continue
 		}
-		// The selector name for an unaliased import is the package name, which is
-		// usually the final path element (for example log/slog is used as slog.X).
 		names[path.Base(importPath)] = struct{}{}
 	}
 	return names
-}
-
-func goFiles(root string, excludes []string) ([]string, error) {
-	var files []string
-	excludes = normalizeProjectExcludes(append(defaultProjectExcludes(), excludes...))
-	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if projectPathExcluded(root, path, entry.Name(), excludes) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if strings.HasSuffix(entry.Name(), ".go") && !projectPathExcluded(root, path, entry.Name(), excludes) {
-			files = append(files, path)
-		}
-		return nil
-	})
-	sort.Strings(files)
-	return files, err
-}
-
-func projectPathExcluded(root, path, name string, excludes []string) bool {
-	rel, err := filepath.Rel(root, path)
-	if err != nil {
-		return false
-	}
-	rel = filepath.ToSlash(rel)
-	if rel == "." {
-		return false
-	}
-	for _, exclude := range excludes {
-		if name == exclude || rel == exclude || strings.HasPrefix(rel, exclude+"/") {
-			return true
-		}
-	}
-	return false
-}
-
-func relPath(root, file string) string {
-	if rel, err := filepath.Rel(root, file); err == nil && !strings.HasPrefix(rel, "..") {
-		return rel
-	}
-	return file
 }

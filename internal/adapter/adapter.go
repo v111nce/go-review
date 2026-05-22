@@ -135,7 +135,7 @@ func RegisterBuiltins(r *Registry) error {
 	if r == nil {
 		return errors.New("registry is nil")
 	}
-	for _, builtin := range []Adapter{NewCommandAdapter(), NewGoFormatAdapter()} {
+	for _, builtin := range []Adapter{NewCommandAdapter(), NewGoLintAdapter()} {
 		if err := r.Register(builtin); err != nil {
 			return err
 		}

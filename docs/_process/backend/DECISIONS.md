@@ -12,7 +12,7 @@ Status: accepted
 
 Status: accepted
 
-决策：需要理解 Go 语法和类型的团队自定义语义规则使用 `golang.org/x/tools/go/analysis` 实现，并通过 diagnostic 和 `SuggestedFix` 表达问题与修复。`go.semantic` 的长期形态是 analyzer runtime / registry，而不是手写散落 AST 逻辑或把任意 YAML 当成完整规则语言。
+决策：需要理解 Go 语法和类型的团队自定义语义规则使用 `golang.org/x/tools/go/analysis` 实现，并通过 diagnostic 和 `SuggestedFix` 表达问题与修复。`go.semantic` 的形态是 analyzer runtime / registry，而不是手写散落 AST 逻辑或把任意 YAML 当成完整规则语言。
 
 理由：自定义规约需要 Go AST 和类型信息才能避免误判。字符串替换无法可靠区分字段读取、写入、取地址和同名成员。`go/analysis` 是 Go 官方生态的 analyzer 接口，可让规则实现与 runner/报告编排解耦。
 

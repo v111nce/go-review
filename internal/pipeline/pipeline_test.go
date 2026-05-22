@@ -8,7 +8,7 @@ import (
 func TestNewGraphOrdersAndBatchesDAG(t *testing.T) {
 	g, err := NewGraph([]Step{
 		{ID: "test", AdapterID: "go.test", DependsOn: []string{"lint"}},
-		{ID: "format", AdapterID: "go.format"},
+		{ID: "format", AdapterID: "go.lint"},
 		{ID: "security", AdapterID: "go.security"},
 		{ID: "lint", AdapterID: "go.lint", DependsOn: []string{"format"}},
 	})

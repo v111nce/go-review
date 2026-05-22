@@ -19,7 +19,7 @@ Sources:
 Implement the first executable surface as a contract-first vertical core:
 
 1. Keep the CLI thin and delegate orchestration to engine/config/pipeline packages.
-2. Treat built-ins such as `go.format` as adapters, not as pipeline-core branches.
+2. Treat built-ins such as `go.lint` as adapters, not as pipeline-core branches.
 3. Use one fixture YAML contract for fast, ci, main, and nightly profiles so developer and CI gates cannot drift silently.
 4. Store fixture projects and golden reports under `testdata/fixtures/regression-gates/` for early smoke/integration tests.
 5. Defer provider-specific CI and PR-comment integrations until the report artifact contract is stable.
@@ -27,7 +27,7 @@ Implement the first executable surface as a contract-first vertical core:
 ## Consequences
 
 - Early tests can prove profile selection, adapter IDs, gate status, and artifact paths without requiring every production adapter.
-- The implementation remains tool-agnostic while still proving concrete behavior with `cmd`, `go.format`, and `go test` adapter IDs.
+- The implementation remains tool-agnostic while still proving concrete behavior with `cmd`, `go.lint`, and `go test` adapter IDs.
 - General lint/format coverage can move behind a `golangci-lint` adapter without turning `golangci-lint` into the platform boundary.
 - Custom Go semantic rules can move behind `go/analysis` analyzers without scattering AST logic through the pipeline runner.
 - Future code lanes must update the fixture contract if config keys or report JSON shape intentionally change.

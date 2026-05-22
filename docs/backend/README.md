@@ -23,7 +23,7 @@ flowchart TD
   normalizer --> fixer --> scheduler
 
   registry --> cmd[cmd adapter]
-  registry --> format[go.format]
+  registry --> format[go.lint]
   registry --> lint[go.lint]
   registry --> semantic[go.semantic]
   registry --> test[go.test via cmd]

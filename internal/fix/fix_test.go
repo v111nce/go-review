@@ -29,16 +29,16 @@ func TestPolicyDecisionPrecedence(t *testing.T) {
 	policy := Policy{
 		Default: SafetyNone,
 		Profile: SafetyReview,
-		Adapter: map[string]Safety{"go.format": SafetySafe},
+		Adapter: map[string]Safety{"go.lint": SafetySafe},
 		Rule:    map[string]Safety{"no-env": SafetyNone},
 	}
-	if got := policy.Decision("go.format", "other", ""); got != SafetySafe {
+	if got := policy.Decision("go.lint", "other", ""); got != SafetySafe {
 		t.Fatalf("adapter decision = %s, want safe", got)
 	}
-	if got := policy.Decision("go.format", "no-env", ""); got != SafetyNone {
+	if got := policy.Decision("go.lint", "no-env", ""); got != SafetyNone {
 		t.Fatalf("rule decision = %s, want none", got)
 	}
-	if got := policy.Decision("go.format", "no-env", SafetyReview); got != SafetyReview {
+	if got := policy.Decision("go.lint", "no-env", SafetyReview); got != SafetyReview {
 		t.Fatalf("result decision = %s, want review", got)
 	}
 }

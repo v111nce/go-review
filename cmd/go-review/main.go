@@ -141,7 +141,7 @@ func defaultConfig() string {
 tools:
   go_review: "generated"
   adapters:
-    go.format: "system-gofmt"
+    go.lint: "system-golangci-lint"       # install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
     go.test: "go"
     go.semantic: "builtin"
     # Optional adapters. Uncomment after installing the named tools.
@@ -159,8 +159,8 @@ defaults:
 artifacts:
   dir: ".go-review/artifacts/latest"
 adapters:
-  - id: go.format
-    type: go.format
+  - id: go.lint
+    type: go.lint
     capabilities: [check, fix]
     timeout: 30s
     fix_safety: safe
@@ -213,7 +213,7 @@ adapters:
   #   parser: text
 steps:
   - id: format-check
-    adapter: go.format
+    adapter: go.lint
     on_fail: continue
     allow_fix: true
   - id: test
@@ -315,7 +315,7 @@ Usage:
 
 Commands:
   check    run configured adapters without applying edits (default; initializes missing config)
-  fix      run configured adapters in fix mode when adapters support safe fixes such as gofmt
+  fix      run configured adapters in fix mode when adapters support safe fixes such as golangci-lint fmt
   init     create .go-review/go-review.yaml without running checks
   version  print build version metadata
 

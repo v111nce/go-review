@@ -39,7 +39,7 @@ Go 生态已经有成熟工具：
 | 不替代 `go test` | 测试、coverage、race 应该作为独立 step，拥有自己的 artifact 和失败策略 |
 | 不负责跨工具 profile | fast / ci / nightly 需要组合 lint、test、security、semantic 和报告输出 |
 | 不负责统一 LLM 修复上下文 | go-review 需要把所有工具结果归一成 Markdown / JSON / LLM report |
-| 不作为团队 semantic 规则主扩展面 | 复杂团队规则长期优先写成 `go/analysis` analyzer；当前不把 `.go-review/semantic/custom.yaml` 伪装成通用扩展面 |
+| 不作为团队 semantic 规则主扩展面 | 复杂团队规则优先写成 `go/analysis` analyzer；当前不把 `.go-review/semantic/custom.yaml` 伪装成通用扩展面 |
 
 所以目标关系是：
 
@@ -60,14 +60,14 @@ go-review     = 多工具编排、报告、门禁和安全修复事务
 
 这类规则应该用 Go 官方生态的 `go/analysis` 编写 analyzer。`go/analysis` 负责 AST、type info、diagnostic 和 `SuggestedFix`；go-review 负责把 analyzer 结果映射成统一 review result，并放进 pipeline。
 
-当前实现中的 `.go-review/semantic/custom.yaml` 只支持有限的配置式规则 kind，例如 `no-direct-call`。它不是完整的任意 YAML 规则语言；adapter 配置里的 `parser` 也只是兼容的内置规则选择入口，不是插件机制。当前 semantic step 遵循单结果契约，只报告首个 failing finding，review-only semantic 规则也不自动改写代码。更复杂规则、多 diagnostics 输出或 semantic autofix 需要后续单独设计 analyzer/runtime 和 safe fix transaction。
+当前实现中的 `.go-review/semantic/custom.yaml` 只支持有限的配置式 analyzer kind，例如 `no-direct-call`；这些规则由 `go/analysis` analyzer 执行。它不是完整的任意 YAML 规则语言；adapter 配置里的 `parser` 也只是兼容的内置规则选择入口，不是插件机制。当前 semantic step 遵循单结果契约，只报告首个 failing finding，review-only semantic 规则也不自动改写代码。更复杂规则、多 diagnostics 输出或 semantic autofix 仍需要新增 analyzer 实现和 safe fix transaction 设计。
 
 ## go-review 的产品边界
 
 | 层级 | 负责什么 | 不负责什么 |
 | --- | --- | --- |
 | `golangci-lint` | 通用 lint、formatter、部分 safe fix | 不跑测试，不生成 go-review 统一报告，不管理跨工具 pipeline |
-| `go/analysis` | 长期用于编写 Go 语义 analyzer，产出 diagnostic / SuggestedFix | 不负责 profile、artifact、报告归一或 CI 门禁 |
+| `go/analysis` | 编写 Go 语义 analyzer，产出 diagnostic / SuggestedFix | 不负责 profile、artifact、报告归一或 CI 门禁 |
 | `go-review` | adapter、steps、profiles、`on_fail`、artifact、safe fix transaction、中文/LLM 报告 | 不重复造通用 lint 规则，不把所有 semantic 规则硬编码进 runner |
 
 ## 推荐运行模型
@@ -113,7 +113,7 @@ profiles:
     steps: [lint, test, semantic]
 ```
 
-安全自动修复仍由 go-review 管控：只有 step 显式允许 `allow_fix: true`，且 adapter / 规则声明 `fix_safety: safe` 时，`go-review fix` 才能应用修改。format / import 类修复可以由内置 `go.format` 或 `golangci-lint run --fix` 承担；review-only semantic 规则默认只报告。
+安全自动修复仍由 go-review 管控：只有 step 显式允许 `allow_fix: true`，且 adapter / 规则声明 `fix_safety: safe` 时，`go-review fix` 才能应用修改。format 类修复由 `go.lint` adapter 调用 `golangci-lint fmt` 承担；review-only semantic 规则默认只报告。
 
 ## 用户获得的价值
 
@@ -123,7 +123,7 @@ profiles:
 | 一份报告 | lint、test、security、semantic 的结果进入统一 Markdown / JSON / LLM context |
 | 独立失败收集 | `on_fail: continue` 让 format、test、semantic、安全扫描互不遮挡 |
 | 成熟工具复用 | 通用 lint/format 不重写，优先复用 `golangci-lint` |
-| 自定义规则可演进 | 团队规则当前可用已支持的 semantic kind 或 `cmd` 外部工具接入；复杂 analyzer 走后续 `go/analysis` runtime |
+| 自定义规则可演进 | 团队规则当前可用已支持的 `go/analysis` semantic kind 或 `cmd` 外部工具接入；复杂规则需要新增 analyzer |
 | 安全修复边界 | safe fix 可以自动应用，review / none 只报告，失败可回滚 |
 
 ## 关联产品模块
@@ -134,7 +134,7 @@ profiles:
 | --- | --- |
 | `tool-adapter-platform` | 解释为什么所有工具都通过 adapter 接入，而不是绑定单一 linter |
 | `review-pipeline` | 解释为什么需要 profile、step、失败策略和跨工具编排 |
-| `custom-rule-adapters` | 解释为什么团队 semantic 规则需要已实现 semantic kind、后续 `go/analysis` runtime 或外部工具承载 |
+| `custom-rule-adapters` | 解释为什么团队 semantic 规则需要已实现 `go/analysis` analyzer kind 或外部工具承载 |
 | `policy-and-autofix` | 解释为什么 safe fix、review-only 和 rollback 要统一治理 |
 | `regression-gates` | 解释为什么本地、CI、nightly 需要复用同一套门禁配置 |
 
