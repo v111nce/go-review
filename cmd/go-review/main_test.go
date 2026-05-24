@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/v111nce/go-review/internal/config"
+	"github.com/v111nce/go-review/internal/rulecatalog"
 )
 
 func TestRunVersionCommands(t *testing.T) {
@@ -283,6 +284,156 @@ func captureRun(args []string) (stdout string, stderr string, code int) {
 	_, _ = io.Copy(&outBuf, outR)
 	_, _ = io.Copy(&errBuf, errR)
 	return outBuf.String(), errBuf.String(), code
+}
+
+// TestDefaultConfigCoversAllDirectGolangciRules 锁定 A 类 direct golangci 规则的默认承接。
+// 这不是跑每个 linter 的真实 fixture，而是全量校验 catalog 中 `tool-golangci` 的每条规则
+// 都能被默认 go.lint.format/go.lint.static 配置覆盖，避免 catalog 标了 implemented 但默认配置漏启用。
+func TestDefaultConfigCoversAllDirectGolangciRules(t *testing.T) {
+	cfg, err := config.Load(strings.NewReader(defaultConfig()))
+	if err != nil {
+		t.Fatalf("Load(defaultConfig): %v", err)
+	}
+	catalog, err := rulecatalog.LoadFile("../../rules/go-rules.json")
+	if err != nil {
+		t.Fatalf("LoadFile: %v", err)
+	}
+	enabled := defaultGolangciToolRules(t, cfg)
+	for _, rule := range catalog.Rules {
+		if rule.Handling != "tool-golangci" {
+			continue
+		}
+		if !rule.Implemented {
+			t.Fatalf("direct golangci rule %s should be implemented", rule.ID)
+		}
+		if rule.Adapter != "go.lint" {
+			t.Fatalf("direct golangci rule %s adapter=%q, want go.lint", rule.ID, rule.Adapter)
+		}
+		if len(rule.ToolRules) == 0 {
+			t.Fatalf("direct golangci rule %s missing tool_rules", rule.ID)
+		}
+		covered := false
+		for _, toolRule := range rule.ToolRules {
+			if defaultToolRuleCovered(enabled, toolRule) {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			t.Fatalf("direct golangci rule %s tool_rules=%v not covered by default go.lint args; enabled=%v", rule.ID, rule.ToolRules, enabled)
+		}
+	}
+}
+
+// TestCatalogToolRulesHaveKnownExecutionOwners 锁定 A 类所有 tool_rules 的承接边界。
+// direct 规则必须被默认配置启用；config 规则允许先进入已知配置型工具清单，但不能出现未知工具名。
+func TestCatalogToolRulesHaveKnownExecutionOwners(t *testing.T) {
+	cfg, err := config.Load(strings.NewReader(defaultConfig()))
+	if err != nil {
+		t.Fatalf("Load(defaultConfig): %v", err)
+	}
+	catalog, err := rulecatalog.LoadFile("../../rules/go-rules.json")
+	if err != nil {
+		t.Fatalf("LoadFile: %v", err)
+	}
+	enabled := defaultGolangciToolRules(t, cfg)
+	knownConfig := map[string]bool{
+		"atomic linters":               true,
+		"denylist":                     true,
+		"dep policy":                   true,
+		"depguard":                     true,
+		"gci":                          true,
+		"forbidigo":                    true,
+		"go.semantic":                  true,
+		"govet composites":             true,
+		"govet printf":                 true,
+		"govet printf analyzer config": true,
+		"package denylist":             true,
+		"perf linters":                 true,
+		"revive error-strings":         true,
+		"revive naming":                true,
+		"semantic":                     true,
+	}
+	for _, rule := range catalog.Rules {
+		switch rule.Handling {
+		case "tool-golangci":
+			for _, toolRule := range rule.ToolRules {
+				if !defaultToolRuleCovered(enabled, toolRule) && !knownConfig[toolRule] {
+					t.Fatalf("direct golangci rule %s has unknown/unenabled tool rule %q", rule.ID, toolRule)
+				}
+			}
+		case "tool-golangci-config":
+			if rule.Adapter != "go.lint" {
+				t.Fatalf("config golangci rule %s adapter=%q, want go.lint", rule.ID, rule.Adapter)
+			}
+			for _, toolRule := range rule.ToolRules {
+				if !defaultToolRuleCovered(enabled, toolRule) && !knownConfig[toolRule] {
+					t.Fatalf("config golangci rule %s has unknown tool rule %q", rule.ID, toolRule)
+				}
+			}
+		}
+	}
+}
+
+func defaultToolRuleCovered(enabled map[string]bool, toolRule string) bool {
+	toolRule = strings.TrimSpace(toolRule)
+	if enabled[toolRule] {
+		return true
+	}
+	if head, _, ok := strings.Cut(toolRule, " "); ok && enabled[head] {
+		return true
+	}
+	switch toolRule {
+	case "gci":
+		return enabled["goimports"]
+	case "gofumpt":
+		return enabled["gofmt"]
+	default:
+		return false
+	}
+}
+
+func defaultGolangciToolRules(t *testing.T, cfg *config.Config) map[string]bool {
+	t.Helper()
+	enabled := map[string]bool{"go.lint": true}
+	for _, adapter := range cfg.Adapters {
+		if adapter.Type != "go.lint" {
+			continue
+		}
+		for i := 0; i < len(adapter.Args); i++ {
+			arg := adapter.Args[i]
+			switch {
+			case arg == "--enable" || arg == "-E":
+				if i+1 >= len(adapter.Args) {
+					t.Fatalf("adapter %s has %s without value", adapter.ID, arg)
+				}
+				markToolRules(enabled, adapter.Args[i+1])
+				i++
+			case arg == "--enable-only":
+				if i+1 >= len(adapter.Args) {
+					t.Fatalf("adapter %s has --enable-only without value", adapter.ID)
+				}
+				markToolRules(enabled, adapter.Args[i+1])
+				i++
+			case strings.HasPrefix(arg, "--enable="):
+				markToolRules(enabled, strings.TrimPrefix(arg, "--enable="))
+			case strings.HasPrefix(arg, "-E="):
+				markToolRules(enabled, strings.TrimPrefix(arg, "-E="))
+			case strings.HasPrefix(arg, "--enable-only="):
+				markToolRules(enabled, strings.TrimPrefix(arg, "--enable-only="))
+			}
+		}
+	}
+	return enabled
+}
+
+func markToolRules(enabled map[string]bool, value string) {
+	for _, part := range strings.Split(value, ",") {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			enabled[part] = true
+		}
+	}
 }
 
 func TestRulesCRUDAndRenderDoc(t *testing.T) {
