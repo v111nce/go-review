@@ -2,13 +2,23 @@
 set -eu
 mode=check
 run_mode=fmt
+linter=""
 files=""
 for arg in "$@"; do
   case "$arg" in
     run) run_mode=run ;;
     --diff) mode=diff ;;
-    -*|fmt|gofmt|goimports|gci|errcheck) ;;
-    *) files="$files $arg" ;;
+    --enable|--enable-only|-E) shift_linter=1 ;;
+    --enable=*|--enable-only=*|-E=*) linter=${arg#*=} ;;
+    -*|fmt|gofmt|goimports|gci|errcheck|revive|gosec) ;;
+    *)
+      if [ "${shift_linter:-0}" = "1" ]; then
+        linter="$arg"
+        shift_linter=0
+      else
+        files="$files $arg"
+      fi
+      ;;
   esac
 done
 if [ -z "${files# }" ]; then
@@ -19,6 +29,14 @@ if [ "$run_mode" = "run" ]; then
     [ -f "$file" ] || continue
     if grep -q 'fmt.Errorf("ignored")' "$file"; then
       printf '%s:4:12: Error return value is not checked (errcheck)\n' "$file"
+      exit 1
+    fi
+    if grep -q 'BadName' "$file"; then
+      printf '%s:3:6: exported: exported function BadName should have comment or be unexported (revive)\n' "$file"
+      exit 1
+    fi
+    if grep -q 'math/rand' "$file"; then
+      printf '%s:4:10: G404: Use of weak random number generator (math/rand instead of crypto/rand) (gosec)\n' "$file"
       exit 1
     fi
   done

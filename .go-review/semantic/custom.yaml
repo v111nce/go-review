@@ -1,8 +1,10 @@
 # Team-owned semantic rules live here.
 # This file's rules: entries are rule objects supported by go.semantic.
-# Supported kinds:
+# Supported custom kinds:
 # - no-direct-call: reports calls to an imported package function, including aliased imports.
 # - max-params: reports functions/methods whose parameter count is greater than max.
+# Built-in semantic/default.yaml supports: import-blank, custom-contexts, no-tfatal-goroutine,
+# channel-size, enum-start-one, exit-in-main, and no-direct-os-getenv.
 rules:
   - id: max-four-params
     kind: max-params

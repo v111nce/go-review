@@ -38,21 +38,64 @@ type semanticRuleMeta struct {
 }
 
 var semanticBuiltInAnalyzers = map[string]semanticAnalyzerFactory{
-	"no-direct-os-getenv": func() (*analysis.Analyzer, semanticRuleMeta) {
-		meta := semanticRuleMeta{
-			RuleID:      noDirectEnvRuleID,
-			PassMessage: "semantic no-direct-os-getenv passed",
-			SuggestionFor: func(analysis.Diagnostic) string {
-				return "read environment values through an injected config/env provider"
-			},
+	"channel-size": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
+			ID:         "uber.guideline.channel-size",
+			Max:        1,
+			Message:    "channel buffer size greater than 1 requires explicit design justification",
+			Suggestion: "prefer an unbuffered channel, size 1, or document why a larger buffer is required",
 		}
-		return noDirectCallAnalyzer(semanticCustomRule{
+		return channelSizeAnalyzer(rule, "channel_size"), semanticMeta(rule, "semantic channel-size passed")
+	},
+	"custom-contexts": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
+			ID:         "google.libs.custom-contexts",
+			Message:    "custom context-like interface should use context.Context directly",
+			Suggestion: "accept context.Context instead of defining a custom Context interface/type",
+		}
+		return customContextAnalyzer(rule, "custom_contexts"), semanticMeta(rule, "semantic custom-contexts passed")
+	},
+	"enum-start-one": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
+			ID:         "uber.guideline.enum-start-one",
+			Message:    "iota enum should reserve zero as unknown or invalid and start valid values at one",
+			Suggestion: "add an explicit zero value such as Unknown or Invalid before iota values",
+		}
+		return enumStartOneAnalyzer(rule, "enum_start_one"), semanticMeta(rule, "semantic enum-start-one passed")
+	},
+	"exit-in-main": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
+			ID:         "uber.guideline.exit-in-main",
+			Message:    "os.Exit should be centralized in main",
+			Suggestion: "return errors from library code and call os.Exit only from main",
+		}
+		return exitInMainAnalyzer(rule, "exit_in_main"), semanticMeta(rule, "semantic exit-in-main passed")
+	},
+	"import-blank": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
+			ID:         "go.official.import-blank",
+			Message:    "blank import is only allowed in main or test files for explicit side effects",
+			Suggestion: "move side-effect registration to main/test scope or replace the blank import with a normal dependency",
+		}
+		return blankImportAnalyzer(rule, "import_blank"), semanticMeta(rule, "semantic import-blank passed")
+	},
+	"no-tfatal-goroutine": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
+			ID:         "google.bp.no-tfatal-goroutine",
+			Message:    "do not call t.Fatal from a goroutine",
+			Suggestion: "send the error to the test goroutine and call t.Fatal there",
+		}
+		return noTFatalGoroutineAnalyzer(rule, "no_tfatal_goroutine"), semanticMeta(rule, "semantic no-tfatal-goroutine passed")
+	},
+	"no-direct-os-getenv": func() (*analysis.Analyzer, semanticRuleMeta) {
+		rule := semanticCustomRule{
 			ID:         noDirectEnvRuleID,
 			Package:    "os",
 			Function:   "Getenv",
 			Message:    "direct os.Getenv access bypasses injectable configuration",
 			Suggestion: "read environment values through an injected config/env provider",
-		}, "no_direct_os_getenv"), meta
+		}
+		return noDirectCallAnalyzer(rule, "no_direct_os_getenv"), semanticMeta(rule, "semantic no-direct-os-getenv passed")
 	},
 }
 
@@ -73,15 +116,18 @@ var semanticCustomAnalyzers = map[string]semanticCustomAnalyzerFactory{
 		return noDirectCallAnalyzer(rule, analyzerName(rule.ID)), meta
 	},
 	"max-params": func(rule semanticCustomRule) (*analysis.Analyzer, semanticRuleMeta) {
-		meta := semanticRuleMeta{
-			RuleID:      semanticRuleID(rule.ID),
-			PassMessage: fmt.Sprintf("semantic custom rule %s passed", rule.ID),
-			SuggestionFor: func(analysis.Diagnostic) string {
-				return rule.Suggestion
-			},
-		}
-		return maxParamsAnalyzer(rule, analyzerName(rule.ID)), meta
+		return maxParamsAnalyzer(rule, analyzerName(rule.ID)), semanticMeta(rule, fmt.Sprintf("semantic custom rule %s passed", rule.ID))
 	},
+}
+
+func semanticMeta(rule semanticCustomRule, passMessage string) semanticRuleMeta {
+	return semanticRuleMeta{
+		RuleID:      semanticRuleID(rule.ID),
+		PassMessage: passMessage,
+		SuggestionFor: func(analysis.Diagnostic) string {
+			return rule.Suggestion
+		},
+	}
 }
 
 func (a SemanticAdapter) Metadata() AdapterMetadata {
@@ -186,6 +232,174 @@ func fieldListNameCount(fields *ast.FieldList) int {
 	return count
 }
 
+func blankImportAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports blank imports outside main and test files",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				filename := pass.Fset.Position(file.Package).Filename
+				if (file.Name != nil && file.Name.Name == "main") || strings.HasSuffix(filename, "_test.go") {
+					continue
+				}
+				for _, spec := range file.Imports {
+					if spec.Name != nil && spec.Name.Name == "_" {
+						pass.Report(analysis.Diagnostic{Pos: spec.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message})
+					}
+				}
+			}
+			return nil, nil
+		},
+	}
+}
+
+func customContextAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports custom context-like interfaces",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				ast.Inspect(file, func(node ast.Node) bool {
+					spec, ok := node.(*ast.TypeSpec)
+					if !ok || spec.Name == nil {
+						return true
+					}
+					if strings.EqualFold(spec.Name.Name, "Context") && selectorExprString(spec.Type) == "context.Context" {
+						return true
+					}
+					if !strings.Contains(strings.ToLower(spec.Name.Name), "context") {
+						return true
+					}
+					if _, ok := spec.Type.(*ast.InterfaceType); ok {
+						pass.Report(analysis.Diagnostic{Pos: spec.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message})
+						return false
+					}
+					return true
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
+func channelSizeAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	max := rule.Max
+	if max <= 0 {
+		max = 1
+	}
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports channel buffers larger than the configured maximum",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				ast.Inspect(file, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok || !isIdent(call.Fun, "make") || len(call.Args) < 2 {
+						return true
+					}
+					if _, ok := call.Args[0].(*ast.ChanType); !ok {
+						return true
+					}
+					size, ok := intLiteralValue(call.Args[1])
+					if !ok || size <= max {
+						return true
+					}
+					pass.Report(analysis.Diagnostic{Pos: call.Args[1].Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message})
+					return true
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
+func enumStartOneAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports const iota groups that start valid enum values at zero",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				for _, decl := range file.Decls {
+					gen, ok := decl.(*ast.GenDecl)
+					if !ok || gen.Tok != token.CONST || len(gen.Specs) == 0 {
+						continue
+					}
+					first, ok := gen.Specs[0].(*ast.ValueSpec)
+					if !ok || !valueSpecUsesIota(first) || firstConstNameAllowsZero(first) {
+						continue
+					}
+					pass.Report(analysis.Diagnostic{Pos: first.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message})
+				}
+			}
+			return nil, nil
+		},
+	}
+}
+
+func exitInMainAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports os.Exit outside package main main()",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				packageNames := importedNames(file, "os")
+				ast.Inspect(file, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					sel, ok := call.Fun.(*ast.SelectorExpr)
+					if !ok || sel.Sel == nil || sel.Sel.Name != "Exit" || !isPackageFunctionSelector(pass.TypesInfo, packageNames, "os", "Exit", sel) {
+						return true
+					}
+					if enclosingFunctionName(file, call.Pos()) == "main" && file.Name != nil && file.Name.Name == "main" {
+						return true
+					}
+					pass.Report(analysis.Diagnostic{Pos: call.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message})
+					return true
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
+func noTFatalGoroutineAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports t.Fatal calls inside go statements",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				ast.Inspect(file, func(node ast.Node) bool {
+					stmt, ok := node.(*ast.GoStmt)
+					if !ok || stmt.Call == nil {
+						return true
+					}
+					ast.Inspect(stmt.Call, func(inner ast.Node) bool {
+						call, ok := inner.(*ast.CallExpr)
+						if !ok {
+							return true
+						}
+						sel, ok := call.Fun.(*ast.SelectorExpr)
+						if ok && sel.Sel != nil && (sel.Sel.Name == "Fatal" || sel.Sel.Name == "Fatalf" || sel.Sel.Name == "FailNow") {
+							pass.Report(analysis.Diagnostic{Pos: call.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message})
+						}
+						return true
+					})
+					return true
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
 func noDirectCallAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
 	return &analysis.Analyzer{
 		Name:             name,
@@ -217,6 +431,73 @@ func noDirectCallAnalyzer(rule semanticCustomRule, name string) *analysis.Analyz
 			return nil, nil
 		},
 	}
+}
+
+func isIdent(expr ast.Expr, name string) bool {
+	ident, ok := expr.(*ast.Ident)
+	return ok && ident.Name == name
+}
+
+func intLiteralValue(expr ast.Expr) (int, bool) {
+	lit, ok := expr.(*ast.BasicLit)
+	if !ok || lit.Kind != token.INT {
+		return 0, false
+	}
+	value, err := strconv.Atoi(lit.Value)
+	return value, err == nil
+}
+
+func valueSpecUsesIota(spec *ast.ValueSpec) bool {
+	for _, value := range spec.Values {
+		if exprUsesIota(value) {
+			return true
+		}
+	}
+	return false
+}
+
+func exprUsesIota(expr ast.Expr) bool {
+	uses := false
+	ast.Inspect(expr, func(node ast.Node) bool {
+		if ident, ok := node.(*ast.Ident); ok && ident.Name == "iota" {
+			uses = true
+			return false
+		}
+		return true
+	})
+	return uses
+}
+
+func firstConstNameAllowsZero(spec *ast.ValueSpec) bool {
+	if len(spec.Names) == 0 {
+		return false
+	}
+	name := strings.ToLower(spec.Names[0].Name)
+	return strings.Contains(name, "unknown") || strings.Contains(name, "invalid") || strings.Contains(name, "unspecified") || strings.Contains(name, "none") || strings.Contains(name, "zero")
+}
+
+func enclosingFunctionName(file *ast.File, pos token.Pos) string {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil || fn.Name == nil {
+			continue
+		}
+		if fn.Pos() <= pos && pos <= fn.End() {
+			return fn.Name.Name
+		}
+	}
+	return ""
+}
+
+func selectorExprString(expr ast.Expr) string {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok || sel.Sel == nil {
+		return ""
+	}
+	if ident, ok := sel.X.(*ast.Ident); ok {
+		return ident.Name + "." + sel.Sel.Name
+	}
+	return sel.Sel.Name
 }
 
 func (a SemanticAdapter) runAnalyzer(analyzer *analysis.Analyzer, meta semanticRuleMeta, stepCtx StepContext) (Result, error) {

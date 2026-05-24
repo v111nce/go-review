@@ -50,12 +50,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "安全随机可稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "gosec 输出已由 go.lint 映射为 go.official.crypto-rand，并有 adapter 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.handle-errors",
@@ -166,12 +166,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "生成代码可排除；对应官方 MixedCaps 命名原则。",
-      "last_verified_at": "2026-05-23",
+      "notes": "revive 输出已由 go.lint 映射为 go.official.identifier-style，并有 adapter 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.mark-helpers",
@@ -2441,7 +2441,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "import-blank"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2449,12 +2451,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "main/test/driver 注册例外。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内置 semantic 规则 import-blank 已实现；允许 main 包和 _test.go 例外，并有 analyzer 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.imports.blank",
@@ -2467,7 +2469,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "import-blank"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2475,8 +2479,8 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 blank import 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "由 go.official.import-blank 同一内置 analyzer 覆盖语义；当前报告 rule_id 统一输出 go.official.import-blank，未单独标 implemented。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
@@ -2493,7 +2497,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "custom-contexts"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2501,12 +2507,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可检测自定义 context 接口。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内置 semantic 规则 custom-contexts 已实现；检测自定义 context-like interface，并有 analyzer 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "team.semantic.max-params",
@@ -2547,7 +2553,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "no-tfatal-goroutine"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2555,12 +2563,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可检测 goroutine 里的 t.Fatal。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内置 semantic 规则 no-tfatal-goroutine 已实现；检测 go statement 内 t.Fatal/Fatalf/FailNow，并有 analyzer 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.channel-size",
@@ -2573,7 +2581,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "channel-size"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2581,12 +2591,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "make(chan T, N) N>1。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内置 semantic 规则 channel-size 已实现；检测 make(chan T, N) 且 N>1，并有 analyzer 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.enum-start-one",
@@ -2599,7 +2609,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "enum-start-one"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2607,12 +2619,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "iota 枚举。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内置 semantic 规则 enum-start-one 已实现；检测 iota enum 首项未预留 unknown/invalid zero，并有 analyzer 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.exit-in-main",
@@ -2625,7 +2637,9 @@
       },
       "handling": "tool-semantic",
       "adapter": "go.semantic",
-      "tool_rules": [],
+      "tool_rules": [
+        "exit-in-main"
+      ],
       "default_profile": "strict",
       "severity": "medium",
       "autofix": {
@@ -2633,12 +2647,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "os.Exit 包/函数过滤。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内置 semantic 规则 exit-in-main 已实现；检测非 package main main() 中的 os.Exit，并有 analyzer 测试覆盖。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.contexts",

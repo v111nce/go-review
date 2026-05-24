@@ -63,6 +63,44 @@ artifacts:
 	}
 }
 
+func TestLoadAdapterArgsBlockAndQuotedCommas(t *testing.T) {
+	cfg, err := Load(strings.NewReader(`
+schema_version: "1.0"
+adapters:
+  - id: lint
+    type: cmd
+    command: golangci-lint
+    args:
+      - run
+      - --no-config
+      - --enable-only=errcheck,govet,staticcheck
+      - --show-stats=false
+  - id: inline
+    type: cmd
+    command: echo
+    args: [run, "--enable-only=revive,gosec", --show-stats=false]
+steps:
+  - id: lint-step
+    adapter: lint
+  - id: inline-step
+    adapter: inline
+profiles:
+  - name: fast
+    steps: [lint-step, inline-step]
+`))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	lint, _ := cfg.Adapter("lint")
+	if got := strings.Join(lint.Args, "|"); got != "run|--no-config|--enable-only=errcheck,govet,staticcheck|--show-stats=false" {
+		t.Fatalf("block args = %q", got)
+	}
+	inline, _ := cfg.Adapter("inline")
+	if got := strings.Join(inline.Args, "|"); got != "run|--enable-only=revive,gosec|--show-stats=false" {
+		t.Fatalf("inline quoted comma args = %q", got)
+	}
+}
+
 func TestUnsupportedSchemaMajorFails(t *testing.T) {
 	_, err := Load(strings.NewReader(`
 schema_version: "2.0"

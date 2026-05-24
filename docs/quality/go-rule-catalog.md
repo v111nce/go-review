@@ -62,13 +62,13 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 | Rule ID | 规则说明 | 处理方式 | 推荐承接 | 默认 | 已实现 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `go.official.comment-sentences` | 注释应像完整句子，尤其 exported API 注释要可读。 | `tool-golangci-config` | go.lint / godoclint, godot, revive | ci | no | 主要针对 doc comment 句式。 |
-| `go.official.crypto-rand` | 安全随机场景必须使用 crypto/rand，不用 math/rand。 | `tool-golangci` | go.lint / gosec | ci | no | 安全随机可稳定检测。 |
+| `go.official.crypto-rand` | 安全随机场景必须使用 crypto/rand，不用 math/rand。 | `tool-golangci` | go.lint / gosec | ci | yes | gosec 输出已由 go.lint 映射为 go.official.crypto-rand，并有 adapter 测试覆盖。 |
 | `go.official.doc-comments` | exported API 和 package 至少应具备符合 Go 文档约定的注释。 | `tool-golangci-config` | go.lint / godoclint, revive | ci | no | 工具只检查存在性和机械格式；注释是否真正有用另走 review。 |
 | `go.official.error-strings` | error 文本不要无故大写开头或以标点结尾，便于组合。 | `tool-golangci-config` | go.lint / revive error-strings | ci | no | 明确启用 revive 对应规则后处理。 |
 | `go.official.examples` | example test 一旦存在，必须可编译、可运行并参与 go test。 | `tool-go-test` | go.test / go test | strict | no | “是否必须写示例”属于文档策略，不由该工具状态承诺。 |
 | `go.official.gofmt` | 代码必须使用 gofmt 统一格式化，避免人工风格争论。 | `tool-golangci` | go.lint / gofmt | default | yes | 机械格式化，可 safe fix；报告 rule_id 输出 go.official.gofmt。 |
 | `go.official.handle-errors` | error 不应被静默丢弃；应处理、返回或明确忽略。 | `tool-golangci` | go.lint / errcheck, govet | default | yes | errcheck 输出会映射为 go.official.handle-errors。 |
-| `go.official.identifier-style` | Go 标识符使用 Go 风格大小写，不用 snake_case 或 ALL_CAPS。 | `tool-golangci` | go.lint / revive | ci | no | 生成代码可排除；对应官方 MixedCaps 命名原则。 |
+| `go.official.identifier-style` | Go 标识符使用 Go 风格大小写，不用 snake_case 或 ALL_CAPS。 | `tool-golangci` | go.lint / revive | ci | yes | revive 输出已由 go.lint 映射为 go.official.identifier-style，并有 adapter 测试覆盖。 |
 | `go.official.import-dot` | 避免 dot import，除非测试等少数合理场景。 | `tool-golangci` | go.lint / depguard, revive | ci | no | 少数测试场景可豁免。 |
 | `go.official.imports` | import 应自动整理、删除未用项并按 Go 习惯分组。 | `tool-golangci` | go.lint / gci, goimports | default | yes | 配置 goimports/gci formatter 时，报告 rule_id 输出 go.official.imports。 |
 | `go.official.indent-error-flow` | 先处理错误并提前返回，让正常路径减少缩进。 | `tool-golangci-config` | go.lint / revive | ci | no | 可检测 else-after-return 等模式。 |
@@ -153,14 +153,14 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 
 | Rule ID | 规则说明 | 处理方式 | 推荐承接 | 默认 | 已实现 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `go.official.import-blank` | blank import 只应用于明确 side effect 场景，并限制作用域。 | `tool-semantic` | go.semantic | strict | no | main/test/driver 注册例外。 |
-| `google.bp.no-tfatal-goroutine` | 不要在非测试 goroutine 中直接调用 t.Fatal。 | `tool-semantic` | go.semantic | strict | no | 可检测 goroutine 里的 t.Fatal。 |
-| `google.imports.blank` | blank import 只用于明确副作用注册场景。 | `tool-semantic` | go.semantic | strict | no | 与官方 blank import 合并。 |
-| `google.libs.custom-contexts` | 不要自定义 context 类型或用自定义接口替代 context.Context。 | `tool-semantic` | go.semantic | strict | no | 可检测自定义 context 接口。 |
+| `go.official.import-blank` | blank import 只应用于明确 side effect 场景，并限制作用域。 | `tool-semantic` | go.semantic / import-blank | strict | yes | 内置 semantic 规则 import-blank 已实现；允许 main 包和 _test.go 例外，并有 analyzer 测试覆盖。 |
+| `google.bp.no-tfatal-goroutine` | 不要在非测试 goroutine 中直接调用 t.Fatal。 | `tool-semantic` | go.semantic / no-tfatal-goroutine | strict | yes | 内置 semantic 规则 no-tfatal-goroutine 已实现；检测 go statement 内 t.Fatal/Fatalf/FailNow，并有 analyzer 测试覆盖。 |
+| `google.imports.blank` | blank import 只用于明确副作用注册场景。 | `tool-semantic` | go.semantic / import-blank | strict | no | 由 go.official.import-blank 同一内置 analyzer 覆盖语义；当前报告 rule_id 统一输出 go.official.import-blank，未单独标 implemented。 |
+| `google.libs.custom-contexts` | 不要自定义 context 类型或用自定义接口替代 context.Context。 | `tool-semantic` | go.semantic / custom-contexts | strict | yes | 内置 semantic 规则 custom-contexts 已实现；检测自定义 context-like interface，并有 analyzer 测试覆盖。 |
 | `team.semantic.max-params` | 函数/方法入参个数不得超过配置阈值。 | `tool-semantic` | go.semantic / max-params | strict | yes | 配置使用该 catalog id 时，报告 rule_id 保持一致。 |
-| `uber.guideline.channel-size` | channel buffer 通常为 0 或 1，更大容量需要明确理由。 | `tool-semantic` | go.semantic | strict | no | make(chan T, N) N>1。 |
-| `uber.guideline.enum-start-one` | iota enum 通常保留 0 作为 unknown/invalid，从 1 开始有效值。 | `tool-semantic` | go.semantic | strict | no | iota 枚举。 |
-| `uber.guideline.exit-in-main` | 进程退出应集中在 main 层并只发生一次。 | `tool-semantic` | go.semantic | strict | no | os.Exit 包/函数过滤。 |
+| `uber.guideline.channel-size` | channel buffer 通常为 0 或 1，更大容量需要明确理由。 | `tool-semantic` | go.semantic / channel-size | strict | yes | 内置 semantic 规则 channel-size 已实现；检测 make(chan T, N) 且 N>1，并有 analyzer 测试覆盖。 |
+| `uber.guideline.enum-start-one` | iota enum 通常保留 0 作为 unknown/invalid，从 1 开始有效值。 | `tool-semantic` | go.semantic / enum-start-one | strict | yes | 内置 semantic 规则 enum-start-one 已实现；检测 iota enum 首项未预留 unknown/invalid zero，并有 analyzer 测试覆盖。 |
+| `uber.guideline.exit-in-main` | 进程退出应集中在 main 层并只发生一次。 | `tool-semantic` | go.semantic / exit-in-main | strict | yes | 内置 semantic 规则 exit-in-main 已实现；检测非 package main main() 中的 os.Exit，并有 analyzer 测试覆盖。 |
 
 ### C. 走 LLM / 人工 review
 

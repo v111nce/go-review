@@ -21,11 +21,23 @@ exclude:
 artifacts:
   dir: ".go-review/artifacts/latest"
 adapters:
-  - id: go.lint
+  - id: go.lint.format
     type: go.lint
+    args: [fmt, --no-config, --enable, gofmt, --enable, goimports]
     capabilities: [check, fix]
     timeout: 30s
     fix_safety: safe
+  - id: go.lint.static
+    type: go.lint
+    args:
+      - run
+      - --no-config
+      - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,revive,thelper,errorlint,errname,forcetypeassert,predeclared,bodyclose,perfsprint,gocritic,godot,godoclint,nonamedreturns,nakedret,testifylint,importas,forbidigo,varnamelen,gochecknoglobals,gochecknoinits,paralleltest,makezero,prealloc,gosec
+      - --output.text.print-issued-lines=false
+      - --show-stats=false
+    capabilities: [check]
+    timeout: 2m
+    fix_safety: none
   - id: go.test
     type: cmd
     command: go
@@ -75,9 +87,12 @@ adapters:
   #   parser: text
 steps:
   - id: format-check
-    adapter: go.lint
+    adapter: go.lint.format
     on_fail: continue
     allow_fix: true
+  - id: lint
+    adapter: go.lint.static
+    on_fail: continue
   - id: test
     adapter: go.test
     on_fail: continue
@@ -102,9 +117,9 @@ profiles:
   - name: fast
     steps: [format-check, test]
   - name: ci
-    steps: [format-check, test, semantic]
+    steps: [format-check, lint, test, semantic]
   - name: nightly
-    steps: [format-check, test, semantic]
+    steps: [format-check, lint, test, semantic]
   # Optional after enabling the matching steps above:
   # - name: full
   #   steps: [format-check, test, semantic, vet, staticcheck, vulncheck, security]

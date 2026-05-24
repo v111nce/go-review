@@ -1,4 +1,10 @@
 # Framework-owned semantic rules live here.
 # This file's rules: entries are built-in rule names registered by go.semantic.
 rules:
+  - import-blank
+  - custom-contexts
+  - no-tfatal-goroutine
+  - channel-size
+  - enum-start-one
+  - exit-in-main
   - no-direct-os-getenv

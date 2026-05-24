@@ -233,6 +233,66 @@ profiles:
 	}
 }
 
+// 验证 go.lint adapter 能从 golangci-lint 输出中解析更多 linter，并映射到 catalog rule_id。
+func TestGoLintRunMapsCatalogRuleIDsFromLinters(t *testing.T) {
+	tests := []struct {
+		name    string
+		source  string
+		args    string
+		wantID  string
+		wantMsg string
+	}{
+		{
+			name:    "revive",
+			source:  "package main\n\nfunc BadName() {}\n",
+			args:    "[run, --no-config, --enable-only, revive]",
+			wantID:  "go.official.identifier-style",
+			wantMsg: "exported function",
+		},
+		{
+			name:    "gosec",
+			source:  "package main\nimport \"math/rand\"\nfunc main() {\n\t_ = rand.Int()\n}\n",
+			args:    "[run, --no-config, --enable-only=gosec]",
+			wantID:  "go.official.crypto-rand",
+			wantMsg: "weak random",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(tt.source), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: lint
+    type: go.lint
+    command: %s
+    args: %s
+steps:
+  - id: lint-step
+    adapter: lint
+profiles:
+  - name: fast
+    steps: [lint-step]
+`, fakeGolangciLint(t), tt.args))
+			summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+			got := summary.Results[0]
+			if got.GateStatus != config.GateFail || got.RuleID != tt.wantID || got.File != "main.go" {
+				t.Fatalf("lint mapped result = %#v", got)
+			}
+			if !strings.Contains(got.Message, tt.wantMsg) {
+				t.Fatalf("lint message = %q, want %q", got.Message, tt.wantMsg)
+			}
+		})
+	}
+}
+
 // 验证 fix_safety=review 的 adapter 在 fix 模式下不会自动应用修改，文件保持原样。
 func TestGoLintFixRequiresSafeAllowedStep(t *testing.T) {
 	dir := t.TempDir()
@@ -593,6 +653,102 @@ profiles:
 	got := summary.Results[0]
 	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "main.go" {
 		t.Fatalf("semantic config result = %#v", got)
+	}
+}
+
+// 验证内置 semantic catalog 规则覆盖 B 类规则中的确定性 AST 检查。
+func TestSemanticAdapterBuiltInCatalogRules(t *testing.T) {
+	tests := []struct {
+		name   string
+		rule   string
+		file   string
+		source string
+		wantID string
+	}{
+		{
+			name:   "import blank",
+			rule:   "import-blank",
+			file:   "pkg.go",
+			source: "package pkg\nimport _ \"net/http/pprof\"\n",
+			wantID: "go.official.import-blank",
+		},
+		{
+			name:   "custom contexts",
+			rule:   "custom-contexts",
+			file:   "context.go",
+			source: "package pkg\ntype RequestContext interface { Done() <-chan struct{} }\n",
+			wantID: "google.libs.custom-contexts",
+		},
+		{
+			name:   "no tfatal goroutine",
+			rule:   "no-tfatal-goroutine",
+			file:   "main_test.go",
+			source: "package pkg\nimport \"testing\"\nfunc TestX(t *testing.T) { go func() { t.Fatal(\"bad\") }() }\n",
+			wantID: "google.bp.no-tfatal-goroutine",
+		},
+		{
+			name:   "channel size",
+			rule:   "channel-size",
+			file:   "chan.go",
+			source: "package pkg\nfunc f() { _ = make(chan int, 2) }\n",
+			wantID: "uber.guideline.channel-size",
+		},
+		{
+			name:   "enum start one",
+			rule:   "enum-start-one",
+			file:   "enum.go",
+			source: "package pkg\nconst (\n\tReady = iota\n\tDone\n)\n",
+			wantID: "uber.guideline.enum-start-one",
+		},
+		{
+			name:   "exit in main",
+			rule:   "exit-in-main",
+			file:   "lib.go",
+			source: "package pkg\nimport \"os\"\nfunc Die() { os.Exit(1) }\n",
+			wantID: "uber.guideline.exit-in-main",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-builtin\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, tt.file), []byte(tt.source), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(filepath.Join(dir, ".go-review", "semantic"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+    fix_safety: review
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+			if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n  - "+tt.rule+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte("rules:\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+			got := summary.Results[0]
+			if got.GateStatus != config.GateFail || got.RuleID != tt.wantID || got.File != tt.file {
+				t.Fatalf("semantic built-in result = %#v", got)
+			}
+		})
 	}
 }
 

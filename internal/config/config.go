@@ -5,14 +5,15 @@ import (
 
 	"errors"
 	"fmt"
-	"github.com/v111nce/go-review/internal/adapter"
-	"github.com/v111nce/go-review/internal/result"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/v111nce/go-review/internal/adapter"
+	"github.com/v111nce/go-review/internal/result"
 )
 
 const (
@@ -496,7 +497,12 @@ func parseAdapterItem(lines []yamlLine, start, parentIndent int, adapter *Adapte
 		case "command":
 			adapter.Command = unquote(val)
 		case "args":
-			adapter.Args = parseStringListInline(val)
+			values, next, err := parseStringListValueOrBlock(val, fields, j+1, fields[j].indent)
+			if err != nil {
+				return i, err
+			}
+			adapter.Args = values
+			j = next - 1
 		case "workdir":
 			adapter.Workdir = unquote(val)
 		case "env":
@@ -708,7 +714,7 @@ func parseStringListInline(value string) []string {
 	if value == "" {
 		return nil
 	}
-	parts := strings.Split(value, ",")
+	parts := splitInlineStringList(value)
 	out := make([]string, 0, len(parts))
 	for _, part := range parts {
 		part = unquote(part)
@@ -717,6 +723,37 @@ func parseStringListInline(value string) []string {
 		}
 	}
 	return out
+}
+
+func splitInlineStringList(value string) []string {
+	var parts []string
+	var b strings.Builder
+	inSingle, inDouble := false, false
+	for _, r := range value {
+		switch r {
+		case '\'':
+			if !inDouble {
+				inSingle = !inSingle
+			}
+			b.WriteRune(r)
+		case '"':
+			if !inSingle {
+				inDouble = !inDouble
+			}
+			b.WriteRune(r)
+		case ',':
+			if inSingle || inDouble {
+				b.WriteRune(r)
+				continue
+			}
+			parts = append(parts, b.String())
+			b.Reset()
+		default:
+			b.WriteRune(r)
+		}
+	}
+	parts = append(parts, b.String())
+	return parts
 }
 
 func parseDuration(value string) (time.Duration, error) {

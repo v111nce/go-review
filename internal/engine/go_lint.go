@@ -159,8 +159,52 @@ func parsePositiveInt(value string) (int, bool) {
 
 func golangciLinterRuleID(linter string) string {
 	switch strings.TrimSpace(linter) {
+	case "bodyclose":
+		return "uber.guideline.defer-cleanup"
 	case "errcheck":
 		return "go.official.handle-errors"
+	case "errname":
+		return "uber.guideline.error-naming"
+	case "errorlint":
+		return "uber.guideline.error-wrapping"
+	case "forcetypeassert":
+		return "uber.guideline.type-assertion-ok"
+	case "gochecknoglobals":
+		return "uber.guideline.mutable-globals"
+	case "gochecknoinits":
+		return "uber.guideline.no-init"
+	case "godot":
+		return "go.official.comment-sentences"
+	case "gosec":
+		return "go.official.crypto-rand"
+	case "govet":
+		return "go.official.handle-errors"
+	case "importas":
+		return "google.imports.renaming"
+	case "makezero":
+		return "uber.style.maps"
+	case "nakedret":
+		return "go.official.naked-returns"
+	case "nonamedreturns":
+		return "go.official.named-results"
+	case "paralleltest":
+		return "uber.pattern.parallel-tests"
+	case "perfsprint":
+		return "uber.perf.strconv"
+	case "prealloc":
+		return "uber.style.maps"
+	case "predeclared":
+		return "uber.guideline.builtin-names"
+	case "revive":
+		return "go.official.identifier-style"
+	case "staticcheck":
+		return "google.bp.zero-values"
+	case "testifylint":
+		return "go.test.no-assert-libraries"
+	case "thelper":
+		return "go.test.mark-helpers"
+	case "varnamelen":
+		return "google.naming.single-letter-vars"
 	default:
 		return ""
 	}
@@ -179,8 +223,10 @@ func cleanDiffPath(value, projectRoot string) string {
 func goLintRuleID(args []string) string {
 	if !isGolangciLintFmt(args) {
 		linters := enabledGolangciLinters(args)
-		if hasFormatter(linters, "errcheck") {
-			return "go.official.handle-errors"
+		if len(linters) == 1 {
+			if mapped := golangciLinterRuleID(linters[0]); mapped != "" {
+				return mapped
+			}
 		}
 		return "go.lint"
 	}
@@ -221,18 +267,29 @@ func enabledGolangciLinters(args []string) []string {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch {
-		case arg == "--enable" || arg == "-E":
+		case arg == "--enable" || arg == "-E" || arg == "--enable-only":
 			if i+1 < len(args) {
-				linters = append(linters, strings.TrimSpace(args[i+1]))
+				linters = appendGolangciNames(linters, args[i+1])
 				i++
 			}
 		case strings.HasPrefix(arg, "--enable="):
-			linters = append(linters, strings.TrimSpace(strings.TrimPrefix(arg, "--enable=")))
+			linters = appendGolangciNames(linters, strings.TrimPrefix(arg, "--enable="))
 		case strings.HasPrefix(arg, "-E="):
-			linters = append(linters, strings.TrimSpace(strings.TrimPrefix(arg, "-E=")))
+			linters = appendGolangciNames(linters, strings.TrimPrefix(arg, "-E="))
+		case strings.HasPrefix(arg, "--enable-only="):
+			linters = appendGolangciNames(linters, strings.TrimPrefix(arg, "--enable-only="))
 		}
 	}
 	return linters
+}
+
+func appendGolangciNames(out []string, value string) []string {
+	for _, part := range strings.Split(value, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func hasFormatter(formatters []string, want string) bool {
@@ -301,11 +358,11 @@ func hasPathArg(args []string) bool {
 		if arg == "fmt" || arg == "--diff" || arg == "--no-config" {
 			continue
 		}
-		if arg == "--enable" || arg == "-E" || arg == "--disable" || arg == "-D" {
+		if arg == "--enable" || arg == "-E" || arg == "--enable-only" || arg == "--disable" || arg == "-D" {
 			i++
 			continue
 		}
-		if strings.HasPrefix(arg, "--enable=") || strings.HasPrefix(arg, "--disable=") {
+		if strings.HasPrefix(arg, "--enable=") || strings.HasPrefix(arg, "--enable-only=") || strings.HasPrefix(arg, "--disable=") {
 			continue
 		}
 		if strings.HasPrefix(arg, "-") {
