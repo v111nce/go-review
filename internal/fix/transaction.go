@@ -7,20 +7,20 @@ import (
 	"sort"
 )
 
-// Formatter validates or formats changed files after edits are staged.
+// Formatter 在编辑写入后校验或格式化变更文件。
 type Formatter func(paths []string) error
 
-// Validator reruns affected checks after formatting succeeds.
+// Validator 在格式化成功后重跑受影响检查。
 type Validator func(paths []string) error
 
-// Transaction applies safe edits with rollback on write, format, or validation failure.
+// Transaction 应用安全编辑，并在写入、格式化或验证失败时回滚。
 type Transaction struct {
 	Root      string
 	Formatter Formatter
 	Validator Validator
 }
 
-// Result is durable evidence for an attempted fix transaction.
+// Result 是一次修复事务尝试的持久证据。
 type Result struct {
 	Applied       bool     `json:"applied"`
 	RolledBack    bool     `json:"rolled_back"`
@@ -28,7 +28,7 @@ type Result struct {
 	FailureReason string   `json:"failure_reason,omitempty"`
 }
 
-// Apply validates and applies only safe edits. Non-safe inputs are reported as no-op.
+// Apply 只校验并应用 safe 编辑；非 safe 输入会作为 no-op 结果返回。
 func (tx Transaction) Apply(safety Safety, edits []TextEdit) Result {
 	if safety != SafetySafe {
 		return Result{Applied: false, FailureReason: "fix safety is not safe"}

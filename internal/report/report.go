@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// GateStatus mirrors the stable serialized status contract without importing pipeline.
+// GateStatus 复用稳定序列化状态契约，同时避免直接导入 pipeline 包。
 type GateStatus string
 
 const (
@@ -22,7 +22,7 @@ const (
 	GateSkipped GateStatus = "skipped"
 )
 
-// Finding is the reportable normalized result subset.
+// Finding 是适合报告展示的标准化结果子集。
 type Finding struct {
 	AdapterID    string     `json:"adapter_id"`
 	StepID       string     `json:"step_id"`
@@ -42,7 +42,7 @@ type Finding struct {
 	GateStatus   GateStatus `json:"gate_status"`
 }
 
-// Step is the reportable pipeline execution subset.
+// Step 是适合报告展示的 pipeline 执行子集。
 type Step struct {
 	ID            string        `json:"id"`
 	AdapterID     string        `json:"adapter_id,omitempty"`
@@ -56,14 +56,14 @@ type Step struct {
 	FixApplied    bool          `json:"fix_applied"`
 }
 
-// ArtifactRef points to captured command/tool output.
+// ArtifactRef 指向捕获到的命令或工具输出。
 type ArtifactRef struct {
 	StepID string `json:"step_id"`
 	Name   string `json:"name"`
 	Path   string `json:"path"`
 }
 
-// Summary keeps high-level counts convenient for humans, LLMs, and machines.
+// Summary 保存人、LLM 和机器都容易消费的高层计数。
 type Summary struct {
 	StepsTotal    int `json:"steps_total"`
 	StepsPassed   int `json:"steps_passed"`
@@ -73,7 +73,7 @@ type Summary struct {
 	FixesApplied  int `json:"fixes_applied"`
 }
 
-// RunReport is the portable artifact written by JSON/Markdown/terminal writers.
+// RunReport 是 JSON、Markdown 和终端 writer 共用的可移植报告产物。
 type RunReport struct {
 	SchemaVersion string        `json:"schema_version"`
 	Command       string        `json:"command,omitempty"`
@@ -91,13 +91,13 @@ type RunReport struct {
 	Metadata      []KeyValue    `json:"metadata,omitempty"`
 }
 
-// KeyValue keeps metadata ordering deterministic.
+// KeyValue 让 metadata 保持稳定排序。
 type KeyValue struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-// Normalize sorts report content and refreshes derived fields to keep artifacts stable.
+// Normalize 对报告内容排序并刷新派生字段，保证产物稳定。
 func (r *RunReport) Normalize() {
 	if r.SchemaVersion == "" {
 		r.SchemaVersion = "go-review.report.v1"
@@ -132,7 +132,7 @@ func (r *RunReport) Normalize() {
 	r.Summary = summarize(*r)
 }
 
-// WriteJSON writes a stable machine-readable report.
+// WriteJSON 写入稳定的机器可读报告。
 func WriteJSON(w io.Writer, r RunReport) error {
 	r.Normalize()
 	encoder := json.NewEncoder(w)
@@ -140,7 +140,7 @@ func WriteJSON(w io.Writer, r RunReport) error {
 	return encoder.Encode(r)
 }
 
-// WriteTerminal writes a compact human-readable summary suitable for local gates.
+// WriteTerminal 写入适合本地门禁查看的紧凑人类可读摘要。
 func WriteTerminal(w io.Writer, r RunReport) error {
 	r.Normalize()
 	if _, err := fmt.Fprintf(w, "go-review profile=%s gate=%s findings=%d\n", emptyDash(r.Profile), r.GateStatus, len(r.Findings)); err != nil {
@@ -173,7 +173,7 @@ func WriteTerminal(w io.Writer, r RunReport) error {
 	return nil
 }
 
-// WriteMarkdown writes the human-facing review report.
+// WriteMarkdown 写入面向人的 review 报告。
 func WriteMarkdown(w io.Writer, r RunReport) error {
 	r.Normalize()
 	const tpl = `# go-review 报告
@@ -233,7 +233,7 @@ func WriteMarkdown(w io.Writer, r RunReport) error {
 	return executeTemplate(w, "markdown", tpl, r)
 }
 
-// WriteLLMMarkdown writes deterministic repair context intended to be pasted into an LLM.
+// WriteLLMMarkdown 写入可复制给 LLM 的确定性修复上下文。
 func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 	r.Normalize()
 	const tpl = `# go-review LLM 修复上下文
@@ -309,7 +309,7 @@ func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 	return executeTemplate(w, "llm-markdown", tpl, r)
 }
 
-// WriteFiles writes latest and timestamped human, LLM, and JSON reports.
+// WriteFiles 同时写入 latest 和带时间戳的人类、LLM、JSON 报告。
 func WriteFiles(dir string, r RunReport) error {
 	if strings.TrimSpace(dir) == "" {
 		return nil

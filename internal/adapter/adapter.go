@@ -1,4 +1,4 @@
-// Package adapter defines the tool-agnostic execution contract for review tools.
+// Package adapter 定义 review 工具无关的 adapter 执行契约。
 package adapter
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/v111nce/go-review/internal/result"
 )
 
-// Capability declares what an adapter can do.
+// Capability 声明 adapter 支持的能力。
 type Capability string
 
 const (
@@ -23,7 +23,7 @@ const (
 	CapabilityReport Capability = "report"
 )
 
-// Metadata describes an adapter without exposing concrete implementation details.
+// Metadata 描述 adapter 元信息，不暴露具体实现细节。
 type Metadata struct {
 	ID           string            `json:"id"`
 	Kind         string            `json:"kind"`
@@ -33,7 +33,7 @@ type Metadata struct {
 	ToolVersions map[string]string `json:"tool_versions,omitempty"`
 }
 
-// ExecutionRequest is the normalized invocation payload for any adapter.
+// ExecutionRequest 是所有 adapter 共用的标准化调用参数。
 type ExecutionRequest struct {
 	AdapterID string            `json:"adapter_id"`
 	StepID    string            `json:"step_id"`
@@ -48,25 +48,25 @@ type ExecutionRequest struct {
 	Options   map[string]string `json:"options,omitempty"`
 }
 
-// Adapter runs one review tool or built-in wrapper behind a common contract.
+// Adapter 用统一契约包装一个 review 工具或内置执行器。
 type Adapter interface {
 	Metadata() Metadata
 	Run(context.Context, ExecutionRequest) (result.StepResult, error)
 }
 
-// Registry resolves configured adapters by ID or kind.
+// Registry 根据显式 ID 或 kind 别名解析 adapter。
 type Registry struct {
 	byID   map[string]Adapter
 	byKind map[string]Adapter
 }
 
-// NewRegistry creates an empty adapter registry.
+// NewRegistry 创建空 adapter 注册表。
 func NewRegistry() *Registry {
 	return &Registry{byID: map[string]Adapter{}, byKind: map[string]Adapter{}}
 }
 
-// Register adds an adapter. IDs must be unique. Kinds are optional aliases; the
-// first adapter for a kind wins so explicit IDs remain deterministic.
+// Register 注册一个 adapter。ID 必须唯一；kind 是可选别名，
+// 同一个 kind 的第一个 adapter 生效，从而保证显式 ID 的解析结果稳定。
 func (r *Registry) Register(a Adapter) error {
 	if a == nil {
 		return errors.New("adapter is nil")
@@ -89,7 +89,7 @@ func (r *Registry) Register(a Adapter) error {
 	return nil
 }
 
-// Resolve returns an adapter by explicit ID first, then kind alias.
+// Resolve 优先按显式 ID 查找 adapter，其次按 kind 别名查找。
 func (r *Registry) Resolve(idOrKind string) (Adapter, bool) {
 	key := strings.TrimSpace(idOrKind)
 	if key == "" {
@@ -102,7 +102,7 @@ func (r *Registry) Resolve(idOrKind string) (Adapter, bool) {
 	return a, ok
 }
 
-// MustResolve returns an error with known adapters when resolution fails.
+// MustResolve 在解析失败时返回包含已知 adapter 列表的错误。
 func (r *Registry) MustResolve(idOrKind string) (Adapter, error) {
 	if a, ok := r.Resolve(idOrKind); ok {
 		return a, nil
@@ -110,7 +110,7 @@ func (r *Registry) MustResolve(idOrKind string) (Adapter, error) {
 	return nil, fmt.Errorf("adapter %q not registered; known adapters: %s", idOrKind, strings.Join(r.IDs(), ", "))
 }
 
-// IDs returns registered adapter IDs in stable order.
+// IDs 按稳定顺序返回已注册 adapter ID。
 func (r *Registry) IDs() []string {
 	ids := make([]string, 0, len(r.byID))
 	for id := range r.byID {
@@ -120,7 +120,7 @@ func (r *Registry) IDs() []string {
 	return ids
 }
 
-// HasCapability reports whether metadata includes a capability.
+// HasCapability 判断元信息中是否包含指定能力。
 func HasCapability(meta Metadata, capability Capability) bool {
 	for _, c := range meta.Capabilities {
 		if c == capability {
@@ -130,7 +130,7 @@ func HasCapability(meta Metadata, capability Capability) bool {
 	return false
 }
 
-// RegisterBuiltins installs the built-in adapters owned by this package.
+// RegisterBuiltins 注册本包内置 adapter。
 func RegisterBuiltins(r *Registry) error {
 	if r == nil {
 		return errors.New("registry is nil")
@@ -143,7 +143,7 @@ func RegisterBuiltins(r *Registry) error {
 	return nil
 }
 
-// NewDefaultRegistry returns a registry with the first-version built-ins installed.
+// NewDefaultRegistry 返回已安装首版内置 adapter 的注册表。
 func NewDefaultRegistry() (*Registry, error) {
 	r := NewRegistry()
 	if err := RegisterBuiltins(r); err != nil {

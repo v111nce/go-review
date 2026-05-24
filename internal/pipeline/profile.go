@@ -2,14 +2,14 @@ package pipeline
 
 import "fmt"
 
-// Profile selects a named subset of a shared pipeline configuration.
+// Profile 从共享 pipeline 配置中选择一组命名 step。
 type Profile struct {
 	Name        string
 	Steps       []string
 	Description string
 }
 
-// SelectProfile resolves a profile and returns its steps in graph order.
+// SelectProfile 解析 profile，并按 graph 顺序返回其中的 step。
 func SelectProfile(g *Graph, profiles []Profile, name string) ([]Step, error) {
 	if name == "" {
 		name = "fast"

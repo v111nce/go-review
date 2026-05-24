@@ -5,9 +5,8 @@ import (
 	"time"
 )
 
-// Run executes a validated graph in deterministic dependency order.
-// The implementation is intentionally sequential for the contract skeleton; the graph
-// exposes ready batches so a bounded parallel scheduler can be added without changing callers.
+// Run 按稳定依赖顺序执行已校验的 graph。
+// 当前实现故意保持串行，作为契约骨架；graph 已暴露 ready batch，后续可以在不改调用方的情况下加入有界并行调度器。
 func Run(g *Graph, exec Execution) []StepResult {
 	results := make([]StepResult, 0, len(g.order))
 	resultByID := map[string]StepResult{}
@@ -58,14 +57,14 @@ func Run(g *Graph, exec Execution) []StepResult {
 			case OnFailSkipDependents:
 				markDependentsSkipped(g, skipped, step.ID, "skipped after failed dependency "+step.ID)
 			case OnFailContinue:
-				// keep scheduling independent/downstream steps
+				// 继续调度独立或下游 step
 			}
 		}
 	}
 	return results
 }
 
-// ReadyBatches returns deterministic dependency-ready layers for bounded parallel execution.
+// ReadyBatches 返回可用于有界并行执行的稳定依赖就绪层。
 func ReadyBatches(g *Graph) [][]Step {
 	remainingDeps := map[string]int{}
 	for _, step := range g.Steps() {
@@ -118,7 +117,7 @@ func markDependentsSkipped(g *Graph, skipped map[string]string, root string, rea
 	}
 }
 
-// AggregateGate returns the pipeline gate for a set of step results.
+// AggregateGate 根据一组 step result 返回 pipeline 门禁状态。
 func AggregateGate(results []StepResult) GateStatus {
 	statuses := make([]GateStatus, 0, len(results))
 	for _, result := range results {

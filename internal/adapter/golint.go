@@ -15,7 +15,7 @@ const (
 	GoLintAdapterKind = "go.lint"
 )
 
-// GoLintAdapter delegates format/lint execution to golangci-lint.
+// GoLintAdapter 将格式化和 lint 执行委托给 golangci-lint。
 type GoLintAdapter struct{}
 
 func NewGoLintAdapter() *GoLintAdapter { return &GoLintAdapter{} }

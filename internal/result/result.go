@@ -1,5 +1,4 @@
-// Package result defines the normalized review output model shared by adapters,
-// pipeline execution, fix policy, and report writers.
+// Package result 定义 adapter、pipeline、修复策略和报告生成器共享的标准化 review 输出模型。
 package result
 
 import (
@@ -9,7 +8,7 @@ import (
 	"time"
 )
 
-// Kind describes the normalized record class emitted by an adapter.
+// Kind 描述 adapter 输出的标准化记录类型。
 type Kind string
 
 const (
@@ -20,7 +19,7 @@ const (
 	KindArtifact  Kind = "artifact"
 )
 
-// Severity describes how urgent a result is for humans and gates.
+// Severity 描述结果对人工处理和门禁的紧急程度。
 type Severity string
 
 const (
@@ -32,7 +31,7 @@ const (
 	SeverityCritical Severity = "critical"
 )
 
-// Category groups results by review domain without binding the core to a tool.
+// Category 按 review 领域给结果分组，避免核心模型绑定具体工具。
 type Category string
 
 const (
@@ -47,7 +46,7 @@ const (
 	CategoryCommand      Category = "command"
 )
 
-// Scope identifies the affected review scope.
+// Scope 标识受影响的 review 范围。
 type Scope string
 
 const (
@@ -59,7 +58,7 @@ const (
 	ScopeSymbol     Scope = "symbol"
 )
 
-// GateStatus is the value consumed by pipeline/report gates.
+// GateStatus 是 pipeline 和报告门禁消费的状态值。
 type GateStatus string
 
 const (
@@ -68,7 +67,7 @@ const (
 	GateFail GateStatus = "fail"
 )
 
-// FixSafety is the canonical automatic-fix safety vocabulary.
+// FixSafety 是自动修复安全等级的标准词表。
 type FixSafety string
 
 const (
@@ -77,21 +76,21 @@ const (
 	FixNone   FixSafety = "none"
 )
 
-// Location points at a source position when one is available.
+// Location 在可定位时指向源码位置。
 type Location struct {
 	File   string `json:"file,omitempty"`
 	Line   int    `json:"line,omitempty"`
 	Column int    `json:"column,omitempty"`
 }
 
-// Fix describes whether and how a result can be remediated.
+// Fix 描述问题是否可修复以及修复方式。
 type Fix struct {
 	Available bool      `json:"available"`
 	Safety    FixSafety `json:"safety"`
 	Message   string    `json:"message,omitempty"`
 }
 
-// ArtifactRef preserves raw or derived adapter outputs for reports/debugging.
+// ArtifactRef 保存原始或派生的 adapter 输出，供报告和调试使用。
 type ArtifactRef struct {
 	Name        string `json:"name"`
 	Kind        string `json:"kind,omitempty"`
@@ -100,7 +99,7 @@ type ArtifactRef struct {
 	Inline      string `json:"inline,omitempty"`
 }
 
-// Result is the normalized, tool-agnostic record produced by adapters.
+// Result 是 adapter 产生的工具无关标准化记录。
 type Result struct {
 	AdapterID  string            `json:"adapter_id"`
 	StepID     string            `json:"step_id"`
@@ -118,7 +117,7 @@ type Result struct {
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
-// StepResult summarizes one adapter execution and its normalized output.
+// StepResult 汇总一次 adapter 执行及其标准化输出。
 type StepResult struct {
 	AdapterID     string        `json:"adapter_id"`
 	StepID        string        `json:"step_id"`
@@ -133,7 +132,7 @@ type StepResult struct {
 	Artifacts     []ArtifactRef `json:"artifacts,omitempty"`
 }
 
-// Validate checks the required fields and enum values for a Result.
+// Validate 检查 Result 的必填字段和枚举值。
 func (r Result) Validate() error {
 	var errs []string
 	if strings.TrimSpace(r.AdapterID) == "" {
@@ -169,7 +168,7 @@ func (r Result) Validate() error {
 	return nil
 }
 
-// Normalize fills optional enums with explicit unknown/none defaults.
+// Normalize 为可选枚举补齐显式 unknown/none 默认值。
 func (r Result) Normalize() Result {
 	if r.Kind == "" {
 		r.Kind = KindViolation
@@ -246,7 +245,7 @@ func (f FixSafety) Valid() bool {
 	}
 }
 
-// ParseFixSafety accepts the canonical policy vocabulary plus documented aliases.
+// ParseFixSafety 解析标准修复安全词表及文档化别名。
 func ParseFixSafety(raw string) (FixSafety, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "safe":
@@ -260,7 +259,7 @@ func ParseFixSafety(raw string) (FixSafety, error) {
 	}
 }
 
-// ParseGateStatus parses pass/warn/fail gate values.
+// ParseGateStatus 解析 pass/warn/fail 门禁值。
 func ParseGateStatus(raw string) (GateStatus, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "pass", "passed", "ok", "success":

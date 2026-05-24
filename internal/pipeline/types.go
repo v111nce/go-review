@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// GateStatus is the normalized pipeline gate outcome used by schedulers and reports.
+// GateStatus 是调度器和报告共用的标准化 pipeline 门禁结果。
 type GateStatus string
 
 const (
@@ -17,7 +17,7 @@ const (
 	GateSkipped GateStatus = "skipped"
 )
 
-// ParseGateStatus validates a serialized gate status.
+// ParseGateStatus 校验序列化后的门禁状态。
 func ParseGateStatus(value string) (GateStatus, error) {
 	switch GateStatus(value) {
 	case GatePass, GateWarn, GateFail, GateSkipped:
@@ -27,7 +27,7 @@ func ParseGateStatus(value string) (GateStatus, error) {
 	}
 }
 
-// MergeGateStatus aggregates step statuses into one pipeline gate.
+// MergeGateStatus 把多个 step 状态聚合成一个 pipeline 门禁状态。
 func MergeGateStatus(statuses ...GateStatus) GateStatus {
 	merged := GatePass
 	for _, status := range statuses {
@@ -43,7 +43,7 @@ func MergeGateStatus(statuses ...GateStatus) GateStatus {
 				merged = GateSkipped
 			}
 		case GatePass, "":
-			// pass and unset do not worsen the aggregate
+			// pass 和空值不会降低聚合结果
 		default:
 			return GateFail
 		}
@@ -51,7 +51,7 @@ func MergeGateStatus(statuses ...GateStatus) GateStatus {
 	return merged
 }
 
-// OnFailPolicy controls downstream behavior after a step fails.
+// OnFailPolicy 控制 step 失败后的下游行为。
 type OnFailPolicy string
 
 const (
@@ -67,7 +67,7 @@ func normalizeOnFail(policy OnFailPolicy) OnFailPolicy {
 	return policy
 }
 
-// Step is the contract-stable DAG node used by the review pipeline.
+// Step 是 review pipeline 使用的稳定契约 DAG 节点。
 type Step struct {
 	ID          string
 	AdapterID   string
@@ -79,7 +79,7 @@ type Step struct {
 	Description string
 }
 
-// StepResult captures the observable result of one step execution.
+// StepResult 记录一次 step 执行的可观测结果。
 type StepResult struct {
 	StepID        string        `json:"step_id"`
 	AdapterID     string        `json:"adapter_id,omitempty"`
@@ -91,17 +91,17 @@ type StepResult struct {
 	FailureReason string        `json:"failure_reason,omitempty"`
 }
 
-// Execution is the minimal adapter-agnostic callback used by the scheduler.
+// Execution 是调度器使用的最小 adapter 无关执行回调。
 type Execution func(step Step) StepResult
 
-// Graph is a validated DAG of review steps.
+// Graph 是已校验的 review step DAG。
 type Graph struct {
 	steps      map[string]Step
 	order      []string
 	dependents map[string][]string
 }
 
-// NewGraph validates steps, dependencies, and cycles.
+// NewGraph 校验 step、依赖关系和环。
 func NewGraph(steps []Step) (*Graph, error) {
 	if len(steps) == 0 {
 		return nil, errors.New("pipeline must contain at least one step")
@@ -148,13 +148,13 @@ func NewGraph(steps []Step) (*Graph, error) {
 	return g, nil
 }
 
-// Step returns one validated step by id.
+// Step 按 ID 返回一个已校验 step。
 func (g *Graph) Step(id string) (Step, bool) {
 	step, ok := g.steps[id]
 	return step, ok
 }
 
-// Steps returns steps in deterministic topological order.
+// Steps 按稳定拓扑顺序返回 step。
 func (g *Graph) Steps() []Step {
 	out := make([]Step, 0, len(g.order))
 	for _, id := range g.order {
@@ -163,7 +163,7 @@ func (g *Graph) Steps() []Step {
 	return out
 }
 
-// Dependents returns deterministic direct dependents for a step.
+// Dependents 返回某个 step 的稳定直接下游列表。
 func (g *Graph) Dependents(id string) []string {
 	deps := append([]string(nil), g.dependents[id]...)
 	return deps

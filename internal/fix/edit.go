@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-// TextEdit is a byte-offset replacement within one file.
+// TextEdit 表示单个文件内基于字节偏移的替换。
 type TextEdit struct {
 	File    string
 	Start   int
@@ -14,7 +14,7 @@ type TextEdit struct {
 	NewText string
 }
 
-// ValidateEdits checks range validity and overlapping edits.
+// ValidateEdits 检查编辑范围是否合法以及是否重叠。
 func ValidateEdits(edits []TextEdit) error {
 	byFile := map[string][]TextEdit{}
 	for _, edit := range edits {
@@ -42,7 +42,7 @@ func ValidateEdits(edits []TextEdit) error {
 	return nil
 }
 
-// ApplyToBytes applies non-overlapping edits to file content.
+// ApplyToBytes 将不重叠编辑应用到文件内容。
 func ApplyToBytes(content []byte, edits []TextEdit) ([]byte, error) {
 	if err := ValidateEdits(edits); err != nil {
 		return nil, err

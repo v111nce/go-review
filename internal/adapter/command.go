@@ -19,10 +19,10 @@ const (
 	CommandAdapterKind = "command"
 )
 
-// CommandAdapter executes arbitrary local commands and maps process state to a gate result.
+// CommandAdapter 执行本地命令，并把进程状态映射为门禁结果。
 type CommandAdapter struct{}
 
-// NewCommandAdapter creates the generic command adapter.
+// NewCommandAdapter 创建通用命令 adapter。
 func NewCommandAdapter() *CommandAdapter { return &CommandAdapter{} }
 
 func (a *CommandAdapter) Metadata() Metadata {

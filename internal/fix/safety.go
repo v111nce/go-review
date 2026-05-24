@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Safety is the canonical automatic-fix safety level.
+// Safety 是自动修复安全等级的标准枚举。
 type Safety string
 
 const (
@@ -14,7 +14,7 @@ const (
 	SafetyNone   Safety = "none"
 )
 
-// ParseSafety normalizes canonical values and documented aliases.
+// ParseSafety 规范化标准值及文档化别名。
 func ParseSafety(value string) (Safety, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "", "none", "report-only", "report_only", "off":
@@ -28,7 +28,7 @@ func ParseSafety(value string) (Safety, error) {
 	}
 }
 
-// Policy applies documented precedence: result, rule, adapter, profile/default.
+// Policy 按文档化优先级解析安全等级：result、rule、adapter、profile/default。
 type Policy struct {
 	Default Safety
 	Profile Safety
@@ -36,7 +36,7 @@ type Policy struct {
 	Rule    map[string]Safety
 }
 
-// Decision resolves the safety for one candidate fix.
+// Decision 解析单个候选修复的最终安全等级。
 func (p Policy) Decision(adapterID, ruleID string, resultLevel Safety) Safety {
 	if resultLevel != "" {
 		return resultLevel
@@ -60,5 +60,5 @@ func (p Policy) Decision(adapterID, ruleID string, resultLevel Safety) Safety {
 	return SafetyNone
 }
 
-// CanAutoApply reports whether the resolved level is eligible for fix command application.
+// CanAutoApply 判断解析后的等级是否允许 fix 命令自动应用。
 func CanAutoApply(level Safety) bool { return level == SafetySafe }
