@@ -6,6 +6,7 @@
 
 | 领域 | 入口 | 内容 |
 | --- | --- | --- |
+| Structure | [documentation-structure.md](documentation-structure.md) | 仓库目录、文档归属、代码目录和规则落地结构说明 |
 | Product | [product/README.md](product/README.md) | 产品能力、用户价值、功能模块和 Story 候选 |
 | Frontend | [frontend/README.md](frontend/README.md) | 当前无 UI 面，保留 canonical 入口 |
 | Backend | [backend/README.md](backend/README.md) | 规则引擎、检测器、自动修复和运行契约 |

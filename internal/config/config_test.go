@@ -63,6 +63,9 @@ artifacts:
 	}
 }
 
+// TestLoadAdapterArgsBlockAndQuotedCommas 锁定 adapter.args 的两种写法：
+// 块状列表必须保留 `--enable-only=a,b,c` 为单个命令行参数；内联列表只有在引号外
+// 才能按逗号切分，避免 golangci-lint 的 linter 列表被解析坏。
 func TestLoadAdapterArgsBlockAndQuotedCommas(t *testing.T) {
 	cfg, err := Load(strings.NewReader(`
 schema_version: "1.0"

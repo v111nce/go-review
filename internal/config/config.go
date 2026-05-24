@@ -683,6 +683,12 @@ func parseStringMap(lines []yamlLine, start, parentIndent int) (map[string]strin
 	return m, i, nil
 }
 
+// parseStringListValueOrBlock 解析既可内联也可块状书写的字符串列表。
+//
+// go-review.yaml 里 adapter.args 经常包含逗号参数，例如
+// `--enable-only=errcheck,govet,staticcheck`。如果用户写成块状列表，每一行必须作为
+// 一个完整参数保留，不能被逗号拆开；如果用户写成 YAML 内联列表，则交给
+// parseStringListInline 按“引号外逗号”切分。
 func parseStringListValueOrBlock(value string, lines []yamlLine, start, parentIndent int) ([]string, int, error) {
 	if strings.TrimSpace(value) != "" {
 		return parseStringListInline(value), start, nil
@@ -703,6 +709,8 @@ func parseStringListValueOrBlock(value string, lines []yamlLine, start, parentIn
 	return out, i, nil
 }
 
+// parseStringListInline 解析 `[a, b]` 或 `a, b` 形式的内联字符串列表。
+// 引号内的逗号必须保留为参数内容，因此实际切分由 splitInlineStringList 完成。
 func parseStringListInline(value string) []string {
 	value = strings.TrimSpace(value)
 	if value == "" || value == "[]" {
@@ -725,6 +733,10 @@ func parseStringListInline(value string) []string {
 	return out
 }
 
+// splitInlineStringList 只在引号外按逗号切分。
+//
+// 这样 `args: [run, --enable-only="errcheck,govet"]` 会得到两个参数：run 和
+// --enable-only=errcheck,govet，而不会把 errcheck/govet 拆成独立命令行参数。
 func splitInlineStringList(value string) []string {
 	var parts []string
 	var b strings.Builder

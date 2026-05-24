@@ -58,6 +58,8 @@ func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
 	}
 }
 
+// TestRunAutoInitializesMissingConfig 验证首次运行时会自动生成默认配置、semantic 配置、
+// 本地规则 catalog 和报告目录，并且默认配置中只把用户自有 exclude 作为注释提示。
 func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/auto-init\n")
@@ -171,6 +173,8 @@ func TestRunBareAutoInitializesFromProjectRoot(t *testing.T) {
 	}
 }
 
+// TestDefaultConfigKeepsReviewAreasIndependent 锁定默认 pipeline 的失败隔离策略。
+// format/lint/test/semantic 任一部分失败，都不能阻止其它部分继续运行。
 func TestDefaultConfigKeepsReviewAreasIndependent(t *testing.T) {
 	cfg, err := config.Load(strings.NewReader(defaultConfig()))
 	if err != nil {

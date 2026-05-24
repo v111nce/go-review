@@ -128,6 +128,10 @@ func initProject(workdir string) (string, error) {
 	return configPath, nil
 }
 
+// writeDefaultRuleCatalog 初始化消费方项目内的轻量规则 catalog。
+//
+// 完整规则库在仓库根目录 rules/go-rules.json；初始化用户项目时只写入最小示例，
+// 让报告中的 rule_id 有本地可读解释，同时避免把 200+ 条规则一次性灌进用户配置。
 func writeDefaultRuleCatalog(configDir string) error {
 	path := filepath.Join(configDir, "rules.json")
 	if _, err := os.Stat(path); err == nil {
@@ -138,6 +142,8 @@ func writeDefaultRuleCatalog(configDir string) error {
 	return rulecatalog.SaveFile(path, defaultRuleCatalog())
 }
 
+// defaultRuleCatalog 返回初始化模板中的最小规则集。
+// 它覆盖默认会跑到的 gofmt/imports，以及一个 go.semantic 自定义规则示例。
 func defaultRuleCatalog() rulecatalog.Catalog {
 	return rulecatalog.Catalog{
 		SchemaVersion: rulecatalog.SchemaVersion,
@@ -191,6 +197,8 @@ func defaultRuleCatalog() rulecatalog.Catalog {
 	}
 }
 
+// writeDefaultSemanticConfig 写入 semantic/default.yaml 和 semantic/custom.yaml。
+// default.yaml 每次 init 都覆盖为当前框架默认；custom.yaml 只在不存在时创建，避免覆盖用户规则。
 func writeDefaultSemanticConfig(configDir string) error {
 	semanticDir := filepath.Join(configDir, "semantic")
 	if err := os.MkdirAll(semanticDir, 0o755); err != nil {
@@ -208,6 +216,10 @@ func writeDefaultSemanticConfig(configDir string) error {
 	return nil
 }
 
+// defaultConfig 是 `go-review init` 生成的默认配置模板。
+//
+// 模板中所有主要 step 都使用 on_fail: continue，确保 format、lint、test、semantic 互不阻断；
+// 未安装依赖的可选工具只以注释给出，用户安装后再取消注释启用。
 func defaultConfig() string {
 	return `schema_version: "1.0"
 tools:
@@ -336,6 +348,8 @@ profiles:
 `
 }
 
+// defaultSemanticConfig 是框架内置 semantic 规则列表。
+// 文件名已经表达“默认规则”，因此顶层统一使用 rules，列表项是 go.semantic 注册名。
 func defaultSemanticConfig() string {
 	return `# Framework-owned semantic rules live here.
 # This file's rules: entries are built-in rule names registered by go.semantic.
@@ -350,6 +364,8 @@ rules:
 `
 }
 
+// customSemanticConfig 是团队自定义 semantic 规则模板。
+// 这里的 rules 是对象列表；kind 必须是 go.semantic 已支持的参数化 analyzer 类型。
 func customSemanticConfig() string {
 	return `# Team-owned semantic rules live here.
 # This file's rules: entries are rule objects supported by go.semantic.
@@ -403,6 +419,8 @@ func defaultReportDir(configPath string) string {
 	return filepath.Join(dir, ".go-review", "reports")
 }
 
+// runRules 分发规则 catalog CRUD 子命令。
+// catalog JSON 是源数据，render-doc 只是把源数据同步成 Markdown 视图。
 func runRules(args []string) int {
 	if len(args) == 0 {
 		printRulesHelp()
@@ -433,6 +451,7 @@ func runRules(args []string) int {
 	}
 }
 
+// runRulesList 以一行一条规则的形式列出 catalog，便于 grep 和脚本检查。
 func runRulesList(args []string) int {
 	fs := rulesFlagSet("rules list")
 	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
@@ -450,6 +469,7 @@ func runRulesList(args []string) int {
 	return 0
 }
 
+// runRulesGet 输出单条规则 JSON，用于查看或作为 upsert 修改的输入模板。
 func runRulesGet(args []string) int {
 	fs := rulesFlagSet("rules get")
 	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
@@ -479,6 +499,8 @@ func runRulesGet(args []string) int {
 	return 0
 }
 
+// runRulesAdd 执行 add/upsert。
+// 输入既可以是一条 Rule JSON，也可以是包含 rules 数组的 Catalog JSON，方便批量维护。
 func runRulesAdd(args []string, upsert bool) int {
 	name := "add"
 	if upsert {
@@ -519,6 +541,7 @@ func runRulesAdd(args []string, upsert bool) int {
 	return 0
 }
 
+// runRulesDelete 删除一条规则；删除前会先完整加载并校验 catalog。
 func runRulesDelete(args []string) int {
 	fs := rulesFlagSet("rules delete")
 	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
@@ -546,6 +569,7 @@ func runRulesDelete(args []string) int {
 	return 0
 }
 
+// runRulesValidate 校验 catalog schema、枚举、必填字段和 rule_id 唯一性。
 func runRulesValidate(args []string) int {
 	fs := rulesFlagSet("rules validate")
 	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
@@ -561,6 +585,7 @@ func runRulesValidate(args []string) int {
 	return 0
 }
 
+// runRulesRenderDoc 从 JSON catalog 生成 Markdown 文档。
 func runRulesRenderDoc(args []string) int {
 	fs := rulesFlagSet("rules render-doc")
 	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
@@ -594,20 +619,24 @@ func runRulesRenderDoc(args []string) int {
 	return 0
 }
 
+// rulesFlagSet 创建 rules 子命令专用 flag set，并把解析错误输出到 stderr。
 func rulesFlagSet(name string) *flag.FlagSet {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	return fs
 }
 
+// defaultRulesCatalogPath 返回本仓库规则源数据的默认路径。
 func defaultRulesCatalogPath() string {
 	return filepath.Join("rules", "go-rules.json")
 }
 
+// loadRulesCatalog 加载现有 catalog；文件不存在会作为错误返回。
 func loadRulesCatalog(path string) (rulecatalog.Catalog, error) {
 	return rulecatalog.LoadFile(path)
 }
 
+// loadRulesCatalogOrEmpty 在 add/upsert 场景下允许目标 catalog 尚不存在。
 func loadRulesCatalogOrEmpty(path string) (rulecatalog.Catalog, error) {
 	catalog, err := rulecatalog.LoadFile(path)
 	if os.IsNotExist(err) {
@@ -616,6 +645,7 @@ func loadRulesCatalogOrEmpty(path string) (rulecatalog.Catalog, error) {
 	return catalog, err
 }
 
+// readRulesInput 读取 --file 或命令行内联 JSON 规则输入。
 func readRulesInput(filePath string, args []string) ([]rulecatalog.Rule, error) {
 	if strings.TrimSpace(filePath) != "" {
 		data, err := os.ReadFile(filePath)
@@ -630,6 +660,7 @@ func readRulesInput(filePath string, args []string) ([]rulecatalog.Rule, error) 
 	return parseRulesJSON([]byte(strings.Join(args, " ")))
 }
 
+// parseRulesJSON 支持两种输入：完整 Catalog JSON 或单条 Rule JSON。
 func parseRulesJSON(data []byte) ([]rulecatalog.Rule, error) {
 	var catalog rulecatalog.Catalog
 	if err := json.Unmarshal(data, &catalog); err == nil && len(catalog.Rules) > 0 {
@@ -650,6 +681,7 @@ func parseRulesJSON(data []byte) ([]rulecatalog.Rule, error) {
 	return []rulecatalog.Rule{rule}, nil
 }
 
+// emptyValue 把空字段显示为 `-`，避免 rules list 输出列缺失。
 func emptyValue(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "-"
@@ -657,6 +689,7 @@ func emptyValue(value string) string {
 	return value
 }
 
+// printRulesHelp 输出 rules 子命令帮助。
 func printRulesHelp() {
 	fmt.Fprintln(os.Stdout, `go-review rules manages the JSON rule catalog.
 

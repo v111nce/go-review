@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// TestCatalogCRUDValidateAndRender 覆盖规则 catalog 的基础 CRUD、校验和 Markdown 渲染。
+// 这样 rules/go-rules.json 作为源数据时，命令行维护和文档生成都有回归保护。
 func TestCatalogCRUDValidateAndRender(t *testing.T) {
 	catalog := Empty()
 	rule := Rule{
@@ -68,6 +70,8 @@ func TestRuleValidationRejectsAmbiguousHandling(t *testing.T) {
 	}
 }
 
+// TestRepositoryCatalogImplementsAllNonCandidateRules 锁定当前分类承诺：
+// 除 D 类 candidate 外，其余规则必须标记 implemented，并指向明确 adapter/tool_rules。
 func TestRepositoryCatalogImplementsAllNonCandidateRules(t *testing.T) {
 	catalog, err := LoadFile("../../rules/go-rules.json")
 	if err != nil {

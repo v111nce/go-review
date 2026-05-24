@@ -10,6 +10,11 @@ import (
 	"github.com/v111nce/go-review/internal/config"
 )
 
+// GoLintAdapter 负责把 go-review 的 go.lint adapter 语义落到 golangci-lint。
+//
+// 这里不直接重新实现 gofmt、goimports、govet 等工具能力，而是把它们统一交给
+// golangci-lint fmt/run 执行；go-review 只补充编排、默认参数、排除目录、报告归一和
+// rule catalog 映射。这样后续新增 linter 时可以优先调整配置，而不是复制外部工具逻辑。
 type GoLintAdapter struct {
 	cfg config.Adapter
 }
@@ -18,6 +23,13 @@ func (a GoLintAdapter) Metadata() AdapterMetadata {
 	return AdapterMetadata{ID: a.cfg.ID, Type: "go.lint", Capabilities: a.cfg.Capabilities, Version: a.cfg.Version}
 }
 
+// Run 执行一次 golangci-lint 检查或安全修复。
+//
+// 关键行为：
+//  1. check 模式下给 fmt 子命令自动追加 --diff，只报告会被修改的文件；
+//  2. fix 模式下移除 --diff，让 golangci-lint fmt 真正写回格式化结果；
+//  3. run 子命令失败时解析第一条 linter 输出，归一为 file/line/column/message；
+//  4. 根据 formatter/linter 名称映射到 rules/go-rules.json 里的稳定 rule_id。
 func (a GoLintAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, error) {
 	fixMode := stepCtx.Command == CommandFix && stepCtx.Step.AllowFix && a.cfg.FixSafety == config.FixSafe
 	args, err := golangciLintArgs(a.cfg.Args, fixMode, stepCtx)
@@ -64,6 +76,10 @@ func (a GoLintAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, er
 	return result, err
 }
 
+// formatDiffFile 从 golangci-lint fmt --diff 的 artifact 中提取首个受影响文件。
+//
+// format-check 只有 diff 文本，没有标准的 file:line 输出；这里兼容 git diff、普通
+// diff 以及 ---/+++ 文件头三种形式，尽量给报告补上“位置”字段，方便用户定位。
 func formatDiffFile(artifacts []Artifact, projectRoot string) string {
 	for _, artifact := range artifacts {
 		for _, line := range strings.Split(artifact.Content, "\n") {
@@ -91,6 +107,10 @@ func formatDiffFile(artifacts []Artifact, projectRoot string) string {
 	return ""
 }
 
+// applyGolangciLintFinding 把 golangci-lint run 的第一条文本诊断归一到 Result。
+//
+// 当前报告面只展示一个阻断点，因此取 artifact 中第一条非空诊断；完整原始输出仍保留
+// 在 artifact 文件里，避免丢失后续 linter 的细节。
 func applyGolangciLintFinding(result *Result, projectRoot string) {
 	line := firstNonEmptyArtifactLine(result.Artifacts)
 	if line == "" {
@@ -113,6 +133,8 @@ func applyGolangciLintFinding(result *Result, projectRoot string) {
 	}
 }
 
+// firstNonEmptyArtifactLine 返回 artifact 中第一条非空输出。
+// golangci-lint run 的失败输出通常一行就是一个 finding，可直接进入解析流程。
 func firstNonEmptyArtifactLine(artifacts []Artifact) string {
 	for _, artifact := range artifacts {
 		for _, line := range strings.Split(artifact.Content, "\n") {
@@ -125,6 +147,9 @@ func firstNonEmptyArtifactLine(artifacts []Artifact) string {
 	return ""
 }
 
+// parseGolangciLintLine 解析 golangci-lint 常见输出：file.go:line:column: message (linter)。
+//
+// 如果输出不符合这个格式，则保留原始文本作为 message，避免因为解析失败吞掉错误。
 func parseGolangciLintLine(line string) (file string, lineNo int, column int, message string, linter string) {
 	parts := strings.SplitN(line, ":", 4)
 	if len(parts) < 4 {
@@ -143,6 +168,8 @@ func parseGolangciLintLine(line string) (file string, lineNo int, column int, me
 	return strings.TrimSpace(parts[0]), parsedLine, parsedColumn, message, linter
 }
 
+// parsePositiveInt 用极小依赖解析正整数。
+// 这里刻意不返回 strconv 的详细错误，因为调用方只需要知道字段是否能作为位置使用。
 func parsePositiveInt(value string) (int, bool) {
 	if value == "" {
 		return 0, false
@@ -157,6 +184,10 @@ func parsePositiveInt(value string) (int, bool) {
 	return n, n > 0
 }
 
+// golangciLinterRuleID 把 golangci-lint 的 linter 名称映射为本项目 catalog rule_id。
+//
+// rule_id 是报告和 rules/go-rules.json 之间的稳定关联键；外部 linter 名称只是实现细节。
+// 多个 linter 可能覆盖同一规范主题，例如 errcheck/govet 都可能落到错误处理规则。
 func golangciLinterRuleID(linter string) string {
 	switch strings.TrimSpace(linter) {
 	case "bodyclose":
@@ -210,6 +241,7 @@ func golangciLinterRuleID(linter string) string {
 	}
 }
 
+// cleanDiffPath 清理 diff 或 linter 输出中的路径前缀，并尽量转成项目相对路径。
 func cleanDiffPath(value, projectRoot string) string {
 	value = strings.TrimPrefix(value, "a/")
 	value = strings.TrimPrefix(value, "b/")
@@ -220,6 +252,11 @@ func cleanDiffPath(value, projectRoot string) string {
 	return filepath.ToSlash(value)
 }
 
+// goLintRuleID 根据 golangci-lint 参数推断本次 adapter 的默认 rule_id。
+//
+// 对 run：只有启用单个 linter 时才精确映射；如果一次启用多个 linter，就回退到
+// go.lint，避免把组合检查错误归因到某一条 catalog rule。
+// 对 fmt：gofmt/gofumpt 映射代码格式规则，goimports/gci 映射 import 分组规则。
 func goLintRuleID(args []string) string {
 	if !isGolangciLintFmt(args) {
 		linters := enabledGolangciLinters(args)
@@ -243,6 +280,7 @@ func goLintRuleID(args []string) string {
 	return "go.lint.format"
 }
 
+// enabledGolangciFormatters 提取 golangci-lint fmt 的 --enable/-E formatter 名称。
 func enabledGolangciFormatters(args []string) []string {
 	var formatters []string
 	for i := 0; i < len(args); i++ {
@@ -262,6 +300,10 @@ func enabledGolangciFormatters(args []string) []string {
 	return formatters
 }
 
+// enabledGolangciLinters 提取 golangci-lint run 的显式 linter 名称。
+//
+// 同时支持 --enable x、--enable=x、-E=x、--enable-only x、--enable-only=x；
+// --enable-only 里经常写逗号列表，所以后续会继续拆成多个名称。
 func enabledGolangciLinters(args []string) []string {
 	var linters []string
 	for i := 0; i < len(args); i++ {
@@ -283,6 +325,8 @@ func enabledGolangciLinters(args []string) []string {
 	return linters
 }
 
+// appendGolangciNames 追加逗号分隔的 formatter/linter 名称。
+// 例如 --enable-only=errcheck,govet 会被拆成 errcheck 和 govet 两个独立项。
 func appendGolangciNames(out []string, value string) []string {
 	for _, part := range strings.Split(value, ",") {
 		if part = strings.TrimSpace(part); part != "" {
@@ -292,6 +336,7 @@ func appendGolangciNames(out []string, value string) []string {
 	return out
 }
 
+// hasFormatter 判断 formatter 列表中是否启用了指定名称。
 func hasFormatter(formatters []string, want string) bool {
 	for _, formatter := range formatters {
 		if formatter == want {
@@ -301,6 +346,7 @@ func hasFormatter(formatters []string, want string) bool {
 	return false
 }
 
+// golangciLintCommand 返回用户配置的 golangci-lint 路径；未配置时使用 PATH 中的默认命令。
 func golangciLintCommand(configured string) string {
 	if strings.TrimSpace(configured) != "" {
 		return configured
@@ -308,6 +354,11 @@ func golangciLintCommand(configured string) string {
 	return "golangci-lint"
 }
 
+// golangciLintArgs 生成最终传给 golangci-lint 的参数。
+//
+// 默认没有 args 时执行 `golangci-lint fmt --no-config --enable gofmt`。如果是 check
+// 模式，自动补 --diff；如果是 fix 模式，移除 --diff。fmt 子命令在未显式传路径时
+// 会自动展开项目内 Go 文件，并应用默认/用户排除目录，避免扫到 vendor/testdata 等区域。
 func golangciLintArgs(configured []string, fixMode bool, stepCtx StepContext) ([]string, error) {
 	args := append([]string{}, configured...)
 	if len(args) == 0 {
@@ -339,6 +390,8 @@ func golangciLintArgs(configured []string, fixMode bool, stepCtx StepContext) ([
 	return args, nil
 }
 
+// isGolangciLintFmt 判断参数是否表示 golangci-lint fmt 子命令。
+// 它会跳过前置 flag；遇到第一个非 flag 参数不是 fmt 时，就按 run/其他命令处理。
 func isGolangciLintFmt(args []string) bool {
 	for _, arg := range args {
 		if arg == "fmt" {
@@ -352,6 +405,10 @@ func isGolangciLintFmt(args []string) bool {
 	return false
 }
 
+// hasPathArg 判断用户是否已经在参数中显式指定了检查路径。
+//
+// fmt 子命令只有在没有路径参数时才由 go-review 自动补文件列表；这里必须识别并跳过
+// --enable/--enable-only/--disable 这类带值 flag，否则会把 linter 名误判成文件路径。
 func hasPathArg(args []string) bool {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -373,6 +430,7 @@ func hasPathArg(args []string) bool {
 	return false
 }
 
+// hasArg 判断完整参数列表里是否存在指定 flag。
 func hasArg(args []string, want string) bool {
 	for _, arg := range args {
 		if arg == want {
@@ -382,6 +440,7 @@ func hasArg(args []string, want string) bool {
 	return false
 }
 
+// removeArg 删除指定 flag，主要用于 fix 模式下移除 check 模式自动追加的 --diff。
 func removeArg(args []string, remove string) []string {
 	out := args[:0]
 	for _, arg := range args {
@@ -392,10 +451,15 @@ func removeArg(args []string, remove string) []string {
 	return out
 }
 
+// defaultProjectExcludes 返回工具层默认排除目录。
+//
+// 这些排除不写入用户生成的 go-review.yaml，避免让用户误以为是自己配置的；但运行时
+// 会默认生效，防止格式化/语义检查进入 .git、.go-review、vendor、testdata 等非源码治理面。
 func defaultProjectExcludes() []string {
 	return []string{".git", ".go-review", "artifacts", "vendor", "testdata"}
 }
 
+// projectExcludes 合并工具默认排除目录和用户在配置中追加的 exclude。
 func projectExcludes(cfg *config.Config) []string {
 	if cfg == nil {
 		return defaultProjectExcludes()
@@ -403,6 +467,7 @@ func projectExcludes(cfg *config.Config) []string {
 	return append(defaultProjectExcludes(), cfg.Exclude...)
 }
 
+// normalizeProjectExcludes 统一排除目录写法，去掉首尾斜杠并去重。
 func normalizeProjectExcludes(values []string) []string {
 	seen := map[string]struct{}{}
 	var normalized []string
@@ -421,6 +486,8 @@ func normalizeProjectExcludes(values []string) []string {
 	return normalized
 }
 
+// goFiles 收集指定根目录下未被排除的 Go 文件，并保持排序稳定。
+// 稳定排序能让报告和测试输出可重复，避免不同文件系统遍历顺序造成噪音。
 func goFiles(root string, excludes []string) ([]string, error) {
 	var files []string
 	excludes = normalizeProjectExcludes(excludes)
@@ -443,6 +510,8 @@ func goFiles(root string, excludes []string) ([]string, error) {
 	return files, err
 }
 
+// projectPathExcluded 判断路径是否命中排除规则。
+// 规则既匹配目录名，也匹配项目相对路径前缀，例如 testdata 和 internal/testdata 都会被跳过。
 func projectPathExcluded(root, path, name string, excludes []string) bool {
 	rel, err := filepath.Rel(root, path)
 	if err != nil {
@@ -460,6 +529,7 @@ func projectPathExcluded(root, path, name string, excludes []string) bool {
 	return false
 }
 
+// relPath 尽量把绝对路径转成项目相对路径；失败时保留原路径以免丢失定位信息。
 func relPath(root, file string) string {
 	if rel, err := filepath.Rel(root, file); err == nil && !strings.HasPrefix(rel, "..") {
 		return rel
