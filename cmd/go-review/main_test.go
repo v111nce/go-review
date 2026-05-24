@@ -104,7 +104,7 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"rules:", "no-direct-os-getenv"} {
+	for _, want := range []string{"rules:", "import-blank", "custom-contexts", "no-tfatal-goroutine", "channel-size", "enum-start-one", "exit-in-main", "no-direct-os-getenv"} {
 		if !strings.Contains(string(semanticConfig), want) {
 			t.Fatalf("semantic default config missing %q:\n%s", want, semanticConfig)
 		}

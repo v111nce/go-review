@@ -67,3 +67,41 @@ func TestRuleValidationRejectsAmbiguousHandling(t *testing.T) {
 		t.Fatalf("Validate err = %v, want invalid handling", err)
 	}
 }
+
+func TestRepositoryCatalogImplementsAllNonCandidateRules(t *testing.T) {
+	catalog, err := LoadFile("../../rules/go-rules.json")
+	if err != nil {
+		t.Fatalf("LoadFile: %v", err)
+	}
+	counts := map[string]int{}
+	for _, rule := range catalog.Rules {
+		counts[rule.Handling]++
+		if rule.Handling == "candidate" {
+			if rule.Implemented {
+				t.Fatalf("candidate rule %s should not be implemented", rule.ID)
+			}
+			continue
+		}
+		if !rule.Implemented {
+			t.Fatalf("non-candidate rule %s handling=%s should be implemented", rule.ID, rule.Handling)
+		}
+		switch rule.Handling {
+		case "tool-golangci", "tool-golangci-config", "tool-go-test", "tool-semantic":
+			if rule.Adapter == "" || len(rule.ToolRules) == 0 {
+				t.Fatalf("tool rule %s missing adapter/tool_rules: %#v", rule.ID, rule)
+			}
+		case "llm-review":
+			if rule.Adapter != "llm.review" || len(rule.ToolRules) != 1 || rule.ToolRules[0] != "AGENTS.md" || !strings.Contains(rule.Notes, "AGENTS.md") {
+				t.Fatalf("llm rule %s not linked to AGENTS.md: %#v", rule.ID, rule)
+			}
+		default:
+			t.Fatalf("unexpected non-candidate handling %s for %s", rule.Handling, rule.ID)
+		}
+	}
+	want := map[string]int{"tool-golangci": 35, "tool-golangci-config": 47, "tool-go-test": 3, "tool-semantic": 8, "llm-review": 121, "candidate": 8}
+	for handling, n := range want {
+		if counts[handling] != n {
+			t.Fatalf("handling %s count=%d, want %d", handling, counts[handling], n)
+		}
+	}
+}

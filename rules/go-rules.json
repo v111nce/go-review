@@ -22,8 +22,8 @@
         "safety": "safe"
       },
       "status": "active",
-      "notes": "机械格式化，可 safe fix；报告 rule_id 输出 go.official.gofmt。",
-      "last_verified_at": "2026-05-22",
+      "notes": "机械格式化，可 safe fix；报告 rule_id 输出 go.official.gofmt。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "format"
       ],
@@ -50,7 +50,7 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "gosec 输出已由 go.lint 映射为 go.official.crypto-rand，并有 adapter 测试覆盖。",
+      "notes": "gosec 输出已由 go.lint 映射为 go.official.crypto-rand，并有 adapter 测试覆盖。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
       "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
@@ -79,8 +79,8 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "errcheck 输出会映射为 go.official.handle-errors。",
-      "last_verified_at": "2026-05-22",
+      "notes": "errcheck 输出会映射为 go.official.handle-errors。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "errors"
       ],
@@ -108,8 +108,8 @@
         "safety": "safe"
       },
       "status": "active",
-      "notes": "配置 goimports/gci formatter 时，报告 rule_id 输出 go.official.imports。",
-      "last_verified_at": "2026-05-22",
+      "notes": "配置 goimports/gci formatter 时，报告 rule_id 输出 go.official.imports。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "format",
         "imports"
@@ -138,12 +138,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "少数测试场景可豁免。",
-      "last_verified_at": "2026-05-23",
+      "notes": "少数测试场景可豁免。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.identifier-style",
@@ -166,7 +166,7 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "revive 输出已由 go.lint 映射为 go.official.identifier-style，并有 adapter 测试覆盖。",
+      "notes": "revive 输出已由 go.lint 映射为 go.official.identifier-style，并有 adapter 测试覆盖。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
       "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
@@ -194,12 +194,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "稳定检测 t.Helper()。",
-      "last_verified_at": "2026-05-23",
+      "notes": "稳定检测 t.Helper()。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.constant-names",
@@ -222,12 +222,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "MixedCaps，不用 ALL_CAPS/kFoo。",
-      "last_verified_at": "2026-05-23",
+      "notes": "MixedCaps，不用 ALL_CAPS/kFoo。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.imports.grouping",
@@ -251,12 +251,12 @@
         "safety": "safe"
       },
       "status": "active",
-      "notes": "可 safe fix。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可 safe fix。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.imports.dot",
@@ -279,12 +279,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 dot import 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 dot import 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.errors.handle-errors",
@@ -307,12 +307,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.literal-field-names",
@@ -335,12 +335,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "只承接 govet composites 能稳定覆盖的外部包 struct literal。",
-      "last_verified_at": "2026-05-23",
+      "notes": "只承接 govet composites 能稳定覆盖的外部包 struct literal。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.literal-braces",
@@ -363,12 +363,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "主要由 gofmt 处理。",
-      "last_verified_at": "2026-05-23",
+      "notes": "主要由 gofmt 处理。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.repeated-type-names",
@@ -392,12 +392,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "复合字面量格式。",
-      "last_verified_at": "2026-05-23",
+      "notes": "复合字面量格式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.indentation-confusion",
@@ -421,12 +421,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "主要由 gofmt。",
-      "last_verified_at": "2026-05-23",
+      "notes": "主要由 gofmt。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.function-formatting",
@@ -449,12 +449,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "机械格式。",
-      "last_verified_at": "2026-05-23",
+      "notes": "机械格式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.libs.crypto-rand",
@@ -477,12 +477,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.helpers",
@@ -505,12 +505,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "t.Helper 稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "t.Helper 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.import-ordering",
@@ -534,12 +534,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 imports 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 imports 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.error-w-placement",
@@ -562,12 +562,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "%w 语义可检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "%w 语义可检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.zero-values",
@@ -591,12 +591,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "冗余初始化。",
-      "last_verified_at": "2026-05-23",
+      "notes": "冗余初始化。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.composite-literals",
@@ -621,12 +621,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "field names 等。",
-      "last_verified_at": "2026-05-23",
+      "notes": "field names 等。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.field-names-test-literals",
@@ -649,12 +649,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "外部包 struct 稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "外部包 struct 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.defer-cleanup",
@@ -678,12 +678,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "资源 close 子集可稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "资源 close 子集可稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.error-wrapping",
@@ -706,12 +706,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "%w/Is/As。",
-      "last_verified_at": "2026-05-23",
+      "notes": "%w/Is/As。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.error-naming",
@@ -734,12 +734,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "Err 前缀 / Error 后缀。",
-      "last_verified_at": "2026-05-23",
+      "notes": "Err 前缀 / Error 后缀。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.type-assertion-ok",
@@ -762,12 +762,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.builtin-names",
@@ -791,12 +791,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.perf.strconv",
@@ -820,12 +820,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "性能 profile。",
-      "last_verified_at": "2026-05-23",
+      "notes": "性能 profile。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.group-declarations",
@@ -849,12 +849,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "子集由格式化器覆盖。",
-      "last_verified_at": "2026-05-23",
+      "notes": "子集由格式化器覆盖。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.import-order",
@@ -878,12 +878,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.unnecessary-else",
@@ -907,12 +907,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.local-vars",
@@ -936,12 +936,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "零值 var、短声明子集。",
-      "last_verified_at": "2026-05-23",
+      "notes": "零值 var、短声明子集。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.struct-field-names",
@@ -964,12 +964,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "外部包 struct。",
-      "last_verified_at": "2026-05-23",
+      "notes": "外部包 struct。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.linting.runners",
@@ -982,7 +982,9 @@
       },
       "handling": "tool-golangci",
       "adapter": "go.lint",
-      "tool_rules": [],
+      "tool_rules": [
+        "go.lint"
+      ],
       "default_profile": "default",
       "severity": "error",
       "autofix": {
@@ -990,12 +992,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "本项目通过 go.lint 编排。",
-      "last_verified_at": "2026-05-23",
+      "notes": "本项目通过 go.lint 编排。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.comment-sentences",
@@ -1020,12 +1022,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "主要针对 doc comment 句式。",
-      "last_verified_at": "2026-05-23",
+      "notes": "主要针对 doc comment 句式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.doc-comments",
@@ -1049,12 +1051,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "工具只检查存在性和机械格式；注释是否真正有用另走 review。",
-      "last_verified_at": "2026-05-23",
+      "notes": "工具只检查存在性和机械格式；注释是否真正有用另走 review。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.no-panic",
@@ -1079,12 +1081,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "main/init/test helper 例外需配置。",
-      "last_verified_at": "2026-05-23",
+      "notes": "main/init/test helper 例外需配置。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.error-strings",
@@ -1107,12 +1109,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "明确启用 revive 对应规则后处理。",
-      "last_verified_at": "2026-05-23",
+      "notes": "明确启用 revive 对应规则后处理。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.indent-error-flow",
@@ -1135,12 +1137,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可检测 else-after-return 等模式。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可检测 else-after-return 等模式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.initialisms",
@@ -1163,12 +1165,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "维护 initialism 列表。",
-      "last_verified_at": "2026-05-23",
+      "notes": "维护 initialism 列表。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.named-results",
@@ -1192,12 +1194,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文档化返回值和 defer 修改场景例外。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文档化返回值和 defer 修改场景例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.naked-returns",
@@ -1220,12 +1222,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "阈值配置。",
-      "last_verified_at": "2026-05-23",
+      "notes": "阈值配置。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.package-comments",
@@ -1249,12 +1251,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "package 文档。",
-      "last_verified_at": "2026-05-23",
+      "notes": "package 文档。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.package-names",
@@ -1278,12 +1280,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "util/common/helper 等可列黑名单。",
-      "last_verified_at": "2026-05-23",
+      "notes": "util/common/helper 等可列黑名单。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.no-assert-libraries",
@@ -1307,12 +1309,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "若团队允许 testify 则不启用。",
-      "last_verified_at": "2026-05-23",
+      "notes": "若团队允许 testify 则不启用。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.underscores",
@@ -1335,12 +1337,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试函数/生成代码例外。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试函数/生成代码例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.package-names",
@@ -1364,12 +1366,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 package names 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 package names 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.initialisms",
@@ -1392,12 +1394,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.getters",
@@ -1420,12 +1422,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "不默认 Get 前缀。",
-      "last_verified_at": "2026-05-23",
+      "notes": "不默认 Get 前缀。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.single-letter-vars",
@@ -1448,12 +1450,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "短作用域可允许。",
-      "last_verified_at": "2026-05-23",
+      "notes": "短作用域可允许。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.commentary.comment-sentences",
@@ -1477,12 +1479,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "句式规则。",
-      "last_verified_at": "2026-05-23",
+      "notes": "句式规则。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.commentary.named-results",
@@ -1505,12 +1507,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.imports.renaming",
@@ -1534,12 +1536,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "必要 alias 才允许。",
-      "last_verified_at": "2026-05-23",
+      "notes": "必要 alias 才允许。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.errors.error-strings",
@@ -1562,12 +1564,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 error strings 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 error strings 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.errors.indent-error-flow",
@@ -1590,12 +1592,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.conditionals-loops",
@@ -1619,12 +1621,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "简化控制流。",
-      "last_verified_at": "2026-05-23",
+      "notes": "简化控制流。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.no-panic",
@@ -1648,12 +1650,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.switch-break",
@@ -1677,12 +1679,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "冗余 break 可检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "冗余 break 可检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.assertions",
@@ -1706,12 +1708,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与 Go Test Comments 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与 Go Test Comments 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.got-before-want",
@@ -1735,12 +1737,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与 Go Test Comments 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与 Go Test Comments 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.naming-conventions",
@@ -1763,12 +1765,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可覆盖机械命名子集。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可覆盖机械命名子集。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.util-packages",
@@ -1792,12 +1794,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "util/common 命名治理。",
-      "last_verified_at": "2026-05-23",
+      "notes": "util/common 命名治理。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.godoc-formatting",
@@ -1821,12 +1823,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "机械格式。",
-      "last_verified_at": "2026-05-23",
+      "notes": "机械格式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.var-initialization",
@@ -1850,12 +1852,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可覆盖零值初始化子集。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可覆盖零值初始化子集。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.string-builder",
@@ -1879,12 +1881,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "性能 profile。",
-      "last_verified_at": "2026-05-23",
+      "notes": "性能 profile。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.pointer-to-interface",
@@ -1908,12 +1910,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "*interface 可稳定检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "*interface 可稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.no-panic",
@@ -1937,12 +1939,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.atomic",
@@ -1966,12 +1968,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否采用 uber atomic 由团队决定。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否采用 uber atomic 由团队决定。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.mutable-globals",
@@ -1994,12 +1996,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "例外清单必要。",
-      "last_verified_at": "2026-05-23",
+      "notes": "例外清单必要。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.public-embedded-types",
@@ -2023,12 +2025,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "public API 识别。",
-      "last_verified_at": "2026-05-23",
+      "notes": "public API 识别。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.no-init",
@@ -2051,12 +2053,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "registry/main/test 例外。",
-      "last_verified_at": "2026-05-23",
+      "notes": "registry/main/test 例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.perf.no-repeated-string-byte",
@@ -2080,12 +2082,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "性能 profile。",
-      "last_verified_at": "2026-05-23",
+      "notes": "性能 profile。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.package-names",
@@ -2109,12 +2111,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.reduce-nesting",
@@ -2138,12 +2140,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "else-after-return 等。",
-      "last_verified_at": "2026-05-23",
+      "notes": "else-after-return 等。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.struct-embedding",
@@ -2167,12 +2169,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与 public embedded 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与 public embedded 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.zero-struct-var",
@@ -2196,12 +2198,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "机械子集。",
-      "last_verified_at": "2026-05-23",
+      "notes": "机械子集。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.struct-references",
@@ -2225,12 +2227,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可读性。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可读性。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.maps",
@@ -2254,12 +2256,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "容量和空 map。",
-      "last_verified_at": "2026-05-23",
+      "notes": "容量和空 map。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.format-strings",
@@ -2283,12 +2285,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "printf 风险。",
-      "last_verified_at": "2026-05-23",
+      "notes": "printf 风险。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.printf-names",
@@ -2311,12 +2313,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "自定义 printf 函数。",
-      "last_verified_at": "2026-05-23",
+      "notes": "自定义 printf 函数。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.pattern.parallel-tests",
@@ -2339,12 +2341,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "团队决定是否强制。",
-      "last_verified_at": "2026-05-23",
+      "notes": "团队决定是否强制。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-golangci-config"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.examples",
@@ -2367,12 +2369,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "“是否必须写示例”属于文档策略，不由该工具状态承诺。",
-      "last_verified_at": "2026-05-23",
+      "notes": "“是否必须写示例”属于文档策略，不由该工具状态承诺。已通过 go.test step 承接，验证已存在测试/example 能参与 go test。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-go-test"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.commentary.examples",
@@ -2395,12 +2397,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "仅验证已存在示例能运行；是否需要示例不阻断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "仅验证已存在示例能运行；是否需要示例不阻断。已通过 go.test step 承接，验证已存在测试/example 能参与 go test。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-go-test"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.use-package-testing",
@@ -2423,12 +2425,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "基础测试框架。",
-      "last_verified_at": "2026-05-23",
+      "notes": "基础测试框架。已通过 go.test step 承接，验证已存在测试/example 能参与 go test。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "tool-go-test"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.import-blank",
@@ -2479,12 +2481,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "由 go.official.import-blank 同一内置 analyzer 覆盖语义；当前报告 rule_id 统一输出 go.official.import-blank，未单独标 implemented。",
+      "notes": "由 go.official.import-blank 同一内置 analyzer 覆盖语义；报告 rule_id 统一输出 go.official.import-blank。",
       "last_verified_at": "2026-05-24",
       "tags": [
         "tool-semantic"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.libs.custom-contexts",
@@ -2535,7 +2537,7 @@
       },
       "status": "active",
       "notes": "配置使用该 catalog id 时，报告 rule_id 保持一致。",
-      "last_verified_at": "2026-05-22",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "semantic",
         "complexity"
@@ -2664,8 +2666,10 @@
         "section": "go.official.contexts"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2673,12 +2677,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "context 包含多条子规则；只把能稳定拆出的子规则单独工具化。",
-      "last_verified_at": "2026-05-23",
+      "notes": "context 包含多条子规则；只把能稳定拆出的子规则单独工具化。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.copying",
@@ -2690,8 +2694,10 @@
         "section": "go.official.copying"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2699,12 +2705,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "锁、buffer、slice/map 所有权需上下文。",
-      "last_verified_at": "2026-05-23",
+      "notes": "锁、buffer、slice/map 所有权需上下文。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.empty-slices",
@@ -2716,8 +2722,10 @@
         "section": "go.official.empty-slices"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2725,12 +2733,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API/JSON 语义可能需要非 nil slice，不做默认工具 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API/JSON 语义可能需要非 nil slice，不做默认工具 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.goroutine-lifetimes",
@@ -2742,8 +2750,10 @@
         "section": "go.official.goroutine-lifetimes"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2751,12 +2761,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "生命周期语义很难稳定静态判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "生命周期语义很难稳定静态判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.in-band-errors",
@@ -2768,8 +2778,10 @@
         "section": "go.official.in-band-errors"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2777,12 +2789,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否要额外 error 返回值依赖 API 语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否要额外 error 返回值依赖 API 语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.interfaces",
@@ -2794,8 +2806,10 @@
         "section": "go.official.interfaces"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2803,12 +2817,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "“接口由使用方定义”误判风险高。",
-      "last_verified_at": "2026-05-23",
+      "notes": "“接口由使用方定义”误判风险高。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.line-length",
@@ -2820,8 +2834,10 @@
         "section": "go.official.line-length"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2829,12 +2845,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "Go 官方不设固定列宽。",
-      "last_verified_at": "2026-05-23",
+      "notes": "Go 官方不设固定列宽。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.pass-values",
@@ -2846,8 +2862,10 @@
         "section": "go.official.pass-values"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2855,12 +2873,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "值/指针传递取决于大小、可变性、接口。",
-      "last_verified_at": "2026-05-23",
+      "notes": "值/指针传递取决于大小、可变性、接口。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.receiver-names",
@@ -2872,8 +2890,10 @@
         "section": "go.official.receiver-names"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2881,12 +2901,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "单纯命名和一致性误判较多；具体一致性 analyzer 成熟后再工具化。",
-      "last_verified_at": "2026-05-23",
+      "notes": "单纯命名和一致性误判较多；具体一致性 analyzer 成熟后再工具化。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.receiver-type",
@@ -2898,8 +2918,10 @@
         "section": "go.official.receiver-type"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2907,12 +2929,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "值/指针 receiver 取决于语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "值/指针 receiver 取决于语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.sync-functions",
@@ -2924,8 +2946,10 @@
         "section": "go.official.sync-functions"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2933,12 +2957,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 是否异步取决于设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 是否异步取决于设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.useful-test-failures",
@@ -2950,8 +2974,10 @@
         "section": "go.official.useful-test-failures"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2959,12 +2985,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "got/want、输入、函数名等可做弱检测。",
-      "last_verified_at": "2026-05-23",
+      "notes": "got/want、输入、函数名等可做弱检测。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.human-readable-subtests",
@@ -2976,8 +3002,10 @@
         "section": "go.test.human-readable-subtests"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -2985,12 +3013,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "静态硬判价值低。",
-      "last_verified_at": "2026-05-23",
+      "notes": "静态硬判价值低。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.compare-full-structures",
@@ -3002,8 +3030,10 @@
         "section": "go.test.compare-full-structures"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3011,12 +3041,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可用 go-cmp 建议。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可用 go-cmp 建议。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.compare-stable-results",
@@ -3028,8 +3058,10 @@
         "section": "go.test.compare-stable-results"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3037,12 +3069,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "稳定性依赖被测对象。",
-      "last_verified_at": "2026-05-23",
+      "notes": "稳定性依赖被测对象。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.equality-diffs",
@@ -3054,8 +3086,10 @@
         "section": "go.test.equality-diffs"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3063,12 +3097,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "推荐 diff 信息，不适合硬 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "推荐 diff 信息，不适合硬 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.got-before-want",
@@ -3080,8 +3114,10 @@
         "section": "go.test.got-before-want"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3089,12 +3125,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "只有部分断言库能稳定检测；默认宽松处理。",
-      "last_verified_at": "2026-05-23",
+      "notes": "只有部分断言库能稳定检测；默认宽松处理。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.identify-function",
@@ -3106,8 +3142,10 @@
         "section": "go.test.identify-function"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3115,12 +3153,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "失败信息语义判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "失败信息语义判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.identify-input",
@@ -3132,8 +3170,10 @@
         "section": "go.test.identify-input"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3141,12 +3181,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "失败信息语义判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "失败信息语义判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.keep-going",
@@ -3158,8 +3198,10 @@
         "section": "go.test.keep-going"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3167,12 +3209,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "t.Error/t.Fatal 取舍依赖上下文。",
-      "last_verified_at": "2026-05-23",
+      "notes": "t.Error/t.Fatal 取舍依赖上下文。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.print-diffs",
@@ -3184,8 +3226,10 @@
         "section": "go.test.print-diffs"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3193,12 +3237,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "推荐 cmp.Diff 等。",
-      "last_verified_at": "2026-05-23",
+      "notes": "推荐 cmp.Diff 等。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.table-driven-vs-multiple",
@@ -3210,8 +3254,10 @@
         "section": "go.test.table-driven-vs-multiple"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3219,12 +3265,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试结构设计判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试结构设计判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.test.error-semantics",
@@ -3236,8 +3282,10 @@
         "section": "go.test.error-semantics"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3245,12 +3293,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "错误语义比较需上下文。",
-      "last_verified_at": "2026-05-23",
+      "notes": "错误语义比较需上下文。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.receiver-names",
@@ -3262,8 +3310,10 @@
         "section": "google.naming.receiver-names"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3271,12 +3321,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 receiver 规则合并，默认不硬 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 receiver 规则合并，默认不硬 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.naming.repetition",
@@ -3288,8 +3338,10 @@
         "section": "google.naming.repetition"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3297,12 +3349,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "包名/类型名/变量名重复语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "包名/类型名/变量名重复语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.commentary.comment-line-length",
@@ -3314,8 +3366,10 @@
         "section": "google.commentary.comment-line-length"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3323,12 +3377,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "不做固定列宽。",
-      "last_verified_at": "2026-05-23",
+      "notes": "不做固定列宽。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.commentary.doc-comments",
@@ -3340,8 +3394,10 @@
         "section": "google.commentary.doc-comments"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3349,12 +3405,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "内容质量不是稳定机器判断；存在性可另作为工具子规则。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内容质量不是稳定机器判断；存在性可另作为工具子规则。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.commentary.package-comments",
@@ -3366,8 +3422,10 @@
         "section": "google.commentary.package-comments"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3375,12 +3433,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "内容质量默认不硬 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "内容质量默认不硬 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.errors.returning-errors",
@@ -3392,8 +3450,10 @@
         "section": "google.errors.returning-errors"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3401,12 +3461,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 是否返回 error 依赖语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 是否返回 error 依赖语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.errors.in-band-errors",
@@ -3418,8 +3478,10 @@
         "section": "google.errors.in-band-errors"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3427,12 +3489,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.zero-value-fields",
@@ -3444,8 +3506,10 @@
         "section": "google.language.zero-value-fields"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3453,12 +3517,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可读性和显式性取舍较主观，默认宽松处理。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可读性和显式性取舍较主观，默认宽松处理。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.nil-slices",
@@ -3470,8 +3534,10 @@
         "section": "google.language.nil-slices"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3479,12 +3545,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 empty slices 合并，默认不硬 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 empty slices 合并，默认不硬 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.copying",
@@ -3496,8 +3562,10 @@
         "section": "google.language.copying"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3505,12 +3573,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 copying 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 copying 合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.must-functions",
@@ -3522,8 +3590,10 @@
         "section": "google.language.must-functions"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3531,12 +3601,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否允许 Must 依赖 API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否允许 Must 依赖 API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.goroutine-lifetimes",
@@ -3548,8 +3618,10 @@
         "section": "google.language.goroutine-lifetimes"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3557,12 +3629,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.interfaces",
@@ -3574,8 +3646,10 @@
         "section": "google.language.interfaces"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3583,12 +3657,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.generics",
@@ -3600,8 +3674,10 @@
         "section": "google.language.generics"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3609,12 +3685,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否过度泛型化依赖设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否过度泛型化依赖设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.pass-values",
@@ -3626,8 +3702,10 @@
         "section": "google.language.pass-values"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3635,12 +3713,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.receiver-type",
@@ -3652,8 +3730,10 @@
         "section": "google.language.receiver-type"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3661,12 +3741,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.sync-functions",
@@ -3678,8 +3758,10 @@
         "section": "google.language.sync-functions"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3687,12 +3769,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.type-aliases",
@@ -3704,8 +3786,10 @@
         "section": "google.language.type-aliases"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3713,12 +3797,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否需要 alias 依赖迁移/兼容。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否需要 alias 依赖迁移/兼容。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.language.use-q",
@@ -3730,8 +3814,10 @@
         "section": "google.language.use-q"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3739,12 +3825,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "错误/日志可读性。",
-      "last_verified_at": "2026-05-23",
+      "notes": "错误/日志可读性。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.libs.flags",
@@ -3756,8 +3842,10 @@
         "section": "google.libs.flags"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3765,12 +3853,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "CLI 设计语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "CLI 设计语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.libs.logging",
@@ -3782,8 +3870,10 @@
         "section": "google.libs.logging"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3791,12 +3881,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "项目日志策略。",
-      "last_verified_at": "2026-05-23",
+      "notes": "项目日志策略。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.libs.contexts",
@@ -3808,8 +3898,10 @@
         "section": "google.libs.contexts"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3817,12 +3909,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "context 包含多条子规则；只把能稳定拆出的子规则单独工具化。",
-      "last_verified_at": "2026-05-23",
+      "notes": "context 包含多条子规则；只把能稳定拆出的子规则单独工具化。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.identify-function",
@@ -3834,8 +3926,10 @@
         "section": "google.test.identify-function"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3843,12 +3937,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "失败信息质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "失败信息质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.identify-input",
@@ -3860,8 +3954,10 @@
         "section": "google.test.identify-input"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3869,12 +3965,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "失败信息质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "失败信息质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.full-structure",
@@ -3886,8 +3982,10 @@
         "section": "google.test.full-structure"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3895,12 +3993,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "推荐 cmp/diff。",
-      "last_verified_at": "2026-05-23",
+      "notes": "推荐 cmp/diff。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.stable-results",
@@ -3912,8 +4010,10 @@
         "section": "google.test.stable-results"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3921,12 +4021,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "稳定性语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "稳定性语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.keep-going",
@@ -3938,8 +4038,10 @@
         "section": "google.test.keep-going"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3947,12 +4049,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "t.Error/t.Fatal 取舍。",
-      "last_verified_at": "2026-05-23",
+      "notes": "t.Error/t.Fatal 取舍。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.equality-diffs",
@@ -3964,8 +4066,10 @@
         "section": "google.test.equality-diffs"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3973,12 +4077,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "diff 质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "diff 质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.level-of-detail",
@@ -3990,8 +4094,10 @@
         "section": "google.test.level-of-detail"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -3999,12 +4105,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "失败信息粒度。",
-      "last_verified_at": "2026-05-23",
+      "notes": "失败信息粒度。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.print-diffs",
@@ -4016,8 +4122,10 @@
         "section": "google.test.print-diffs"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4025,12 +4133,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与 Go Test Comments 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与 Go Test Comments 合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.error-semantics",
@@ -4042,8 +4150,10 @@
         "section": "google.test.error-semantics"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4051,12 +4161,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "错误语义比较。",
-      "last_verified_at": "2026-05-23",
+      "notes": "错误语义比较。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.subtests",
@@ -4068,8 +4178,10 @@
         "section": "google.test.subtests"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4077,12 +4189,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试结构判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试结构判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.subtest-names",
@@ -4094,8 +4206,10 @@
         "section": "google.test.subtest-names"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4103,12 +4217,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "名称可读性。",
-      "last_verified_at": "2026-05-23",
+      "notes": "名称可读性。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.table-driven",
@@ -4120,8 +4234,10 @@
         "section": "google.test.table-driven"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4129,12 +4245,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "表驱动是否合适。",
-      "last_verified_at": "2026-05-23",
+      "notes": "表驱动是否合适。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.data-driven-cases",
@@ -4146,8 +4262,10 @@
         "section": "google.test.data-driven-cases"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4155,12 +4273,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "用例结构。",
-      "last_verified_at": "2026-05-23",
+      "notes": "用例结构。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.identifying-row",
@@ -4172,8 +4290,10 @@
         "section": "google.test.identifying-row"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4181,12 +4301,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "case 名。",
-      "last_verified_at": "2026-05-23",
+      "notes": "case 名。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.package-same",
@@ -4198,8 +4318,10 @@
         "section": "google.test.package-same"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4207,12 +4329,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试包选择依赖目标。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试包选择依赖目标。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.test.package-external",
@@ -4224,8 +4346,10 @@
         "section": "google.test.package-external"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4233,12 +4357,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "同上。",
-      "last_verified_at": "2026-05-23",
+      "notes": "同上。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.function-method-names",
@@ -4250,8 +4374,10 @@
         "section": "google.bp.function-method-names"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4259,12 +4385,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义命名。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义命名。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.avoid-repetition",
@@ -4276,8 +4402,10 @@
         "section": "google.bp.avoid-repetition"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4285,12 +4413,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与 naming repetition 合并。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与 naming repetition 合并。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.test-double-packages",
@@ -4302,8 +4430,10 @@
         "section": "google.bp.test-double-packages"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4311,12 +4441,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试架构。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试架构。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.package-size",
@@ -4328,8 +4458,10 @@
         "section": "google.bp.package-size"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4337,12 +4469,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "阈值项目化。",
-      "last_verified_at": "2026-05-23",
+      "notes": "阈值项目化。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.import-protobuf",
@@ -4354,8 +4486,10 @@
         "section": "google.bp.import-protobuf"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4363,12 +4497,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "依赖具体 protobuf 组织。",
-      "last_verified_at": "2026-05-23",
+      "notes": "依赖具体 protobuf 组织。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.error-structure",
@@ -4380,8 +4514,10 @@
         "section": "google.bp.error-structure"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4389,12 +4525,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.add-error-info",
@@ -4406,8 +4542,10 @@
         "section": "google.bp.add-error-info"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4415,12 +4553,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "错误上下文质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "错误上下文质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.sentinel-placement",
@@ -4432,8 +4570,10 @@
         "section": "google.bp.sentinel-placement"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4441,12 +4581,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.logging-errors",
@@ -4458,8 +4598,10 @@
         "section": "google.bp.logging-errors"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4467,12 +4609,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "避免重复处理，需上下文。",
-      "last_verified_at": "2026-05-23",
+      "notes": "避免重复处理，需上下文。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.program-init",
@@ -4484,8 +4626,10 @@
         "section": "google.bp.program-init"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4493,12 +4637,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "初始化策略。",
-      "last_verified_at": "2026-05-23",
+      "notes": "初始化策略。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.checks-panics",
@@ -4510,8 +4654,10 @@
         "section": "google.bp.checks-panics"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4519,12 +4665,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "panic 是否合理依赖语义；禁用特定调用可另建 tool 规则。",
-      "last_verified_at": "2026-05-23",
+      "notes": "panic 是否合理依赖语义；禁用特定调用可另建 tool 规则。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.when-to-panic",
@@ -4536,8 +4682,10 @@
         "section": "google.bp.when-to-panic"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4545,12 +4693,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.doc-conventions",
@@ -4562,8 +4710,10 @@
         "section": "google.bp.doc-conventions"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4571,12 +4721,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义完整性不作为确定性工具结论。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义完整性不作为确定性工具结论。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.doc-params-config",
@@ -4588,8 +4738,10 @@
         "section": "google.bp.doc-params-config"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4597,12 +4749,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文档质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文档质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.doc-contexts",
@@ -4614,8 +4766,10 @@
         "section": "google.bp.doc-contexts"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4623,12 +4777,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文档质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文档质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.doc-concurrency",
@@ -4640,8 +4794,10 @@
         "section": "google.bp.doc-concurrency"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4649,12 +4805,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文档质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文档质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.doc-cleanup",
@@ -4666,8 +4822,10 @@
         "section": "google.bp.doc-cleanup"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4675,12 +4833,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文档质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文档质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.doc-errors",
@@ -4692,8 +4850,10 @@
         "section": "google.bp.doc-errors"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4701,12 +4861,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文档质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文档质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.function-argument-lists",
@@ -4718,8 +4878,10 @@
         "section": "Function argument lists"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4727,13 +4889,13 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "“参数个数”可检测，但“是否应改成配置对象”不是稳定工具结论。",
-      "last_verified_at": "2026-05-22",
+      "notes": "“参数个数”可检测，但“是否应改成配置对象”不是稳定工具结论。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "api",
         "design"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.option-structure",
@@ -4745,8 +4907,10 @@
         "section": "google.bp.option-structure"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4754,12 +4918,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.variadic-options",
@@ -4771,8 +4935,10 @@
         "section": "google.bp.variadic-options"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4780,12 +4946,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.cli-complex",
@@ -4797,8 +4963,10 @@
         "section": "google.bp.cli-complex"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4806,12 +4974,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "产品/API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "产品/API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.test-in-test",
@@ -4823,8 +4991,10 @@
         "section": "google.bp.test-in-test"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4832,12 +5002,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "helper 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "helper 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.validation-apis",
@@ -4849,8 +5019,10 @@
         "section": "google.bp.validation-apis"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4858,12 +5030,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试 API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试 API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.real-transports",
@@ -4875,8 +5047,10 @@
         "section": "google.bp.real-transports"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4884,12 +5058,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试策略。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试策略。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.t-error-vs-fatal",
@@ -4901,8 +5075,10 @@
         "section": "google.bp.t-error-vs-fatal"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4910,12 +5086,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.test-helper-errors",
@@ -4927,8 +5103,10 @@
         "section": "google.bp.test-helper-errors"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4936,12 +5114,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试 helper 质量。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试 helper 质量。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.scoped-test-setup",
@@ -4953,8 +5131,10 @@
         "section": "google.bp.scoped-test-setup"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4962,12 +5142,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "测试组织。",
-      "last_verified_at": "2026-05-23",
+      "notes": "测试组织。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.testmain",
@@ -4979,8 +5159,10 @@
         "section": "google.bp.testmain"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -4988,12 +5170,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否需要 TestMain 依赖策略。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否需要 TestMain 依赖策略。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.string-plus",
@@ -5005,8 +5187,10 @@
         "section": "google.bp.string-plus"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5014,12 +5198,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "性能/可读性判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "性能/可读性判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.string-sprintf",
@@ -5031,8 +5215,10 @@
         "section": "google.bp.string-sprintf"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5040,12 +5226,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可读性判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可读性判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.constant-strings",
@@ -5057,8 +5243,10 @@
         "section": "google.bp.constant-strings"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5066,12 +5254,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否抽常量依赖语义和重复成本。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否抽常量依赖语义和重复成本。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.global-state",
@@ -5083,8 +5271,10 @@
         "section": "google.bp.global-state"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5092,12 +5282,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "设计原则不等同于确定性工具覆盖。",
-      "last_verified_at": "2026-05-23",
+      "notes": "设计原则不等同于确定性工具覆盖。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.default-instance",
@@ -5109,8 +5299,10 @@
         "section": "google.bp.default-instance"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5118,12 +5310,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.unnecessary-interfaces",
@@ -5135,8 +5327,10 @@
         "section": "google.bp.unnecessary-interfaces"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5144,12 +5338,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.interface-ownership",
@@ -5161,8 +5355,10 @@
         "section": "google.bp.interface-ownership"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5170,12 +5366,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "google.bp.effective-interfaces",
@@ -5187,8 +5383,10 @@
         "section": "google.bp.effective-interfaces"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5196,12 +5394,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "设计判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "设计判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.interface-compliance",
@@ -5213,8 +5411,10 @@
         "section": "uber.guideline.interface-compliance"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5222,12 +5422,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "是否需要断言依赖 API。",
-      "last_verified_at": "2026-05-23",
+      "notes": "是否需要断言依赖 API。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.receivers-interfaces",
@@ -5239,8 +5439,10 @@
         "section": "uber.guideline.receivers-interfaces"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5248,12 +5450,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "receiver/interface 语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "receiver/interface 语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.copy-boundaries",
@@ -5265,8 +5467,10 @@
         "section": "uber.guideline.copy-boundaries"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5274,12 +5478,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "所有权语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "所有权语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.use-time",
@@ -5291,8 +5495,10 @@
         "section": "uber.guideline.use-time"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5300,12 +5506,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API/schema 语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API/schema 语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.error-types",
@@ -5317,8 +5523,10 @@
         "section": "uber.guideline.error-types"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5326,12 +5534,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "错误 API 设计。",
-      "last_verified_at": "2026-05-23",
+      "notes": "错误 API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.handle-errors-once",
@@ -5343,8 +5551,10 @@
         "section": "uber.guideline.handle-errors-once"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5352,12 +5562,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "log/return 语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "log/return 语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.field-tags",
@@ -5369,8 +5579,10 @@
         "section": "uber.guideline.field-tags"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5378,12 +5590,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "序列化语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "序列化语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.guideline.no-fire-forget",
@@ -5395,8 +5607,10 @@
         "section": "uber.guideline.no-fire-forget"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5404,12 +5618,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "生命周期语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "生命周期语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.long-lines",
@@ -5421,8 +5635,10 @@
         "section": "uber.style.long-lines"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5430,12 +5646,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "不建议固定列宽。",
-      "last_verified_at": "2026-05-23",
+      "notes": "不建议固定列宽。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.consistency",
@@ -5447,8 +5663,10 @@
         "section": "uber.style.consistency"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5456,12 +5674,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "项目一致性。",
-      "last_verified_at": "2026-05-23",
+      "notes": "项目一致性。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.function-names",
@@ -5473,8 +5691,10 @@
         "section": "uber.style.function-names"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5482,12 +5702,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "语义命名。",
-      "last_verified_at": "2026-05-23",
+      "notes": "语义命名。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.import-aliasing",
@@ -5499,8 +5719,10 @@
         "section": "uber.style.import-aliasing"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5508,12 +5730,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "“必要性”依赖上下文，默认不硬 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "“必要性”依赖上下文，默认不硬 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.function-ordering",
@@ -5525,8 +5747,10 @@
         "section": "uber.style.function-ordering"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5534,12 +5758,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "文件组织主观性高。",
-      "last_verified_at": "2026-05-23",
+      "notes": "文件组织主观性高。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.top-level-vars",
@@ -5551,8 +5775,10 @@
         "section": "uber.style.top-level-vars"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5560,12 +5786,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "组织风格。",
-      "last_verified_at": "2026-05-23",
+      "notes": "组织风格。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.unexported-global-prefix",
@@ -5577,8 +5803,10 @@
         "section": "uber.style.unexported-global-prefix"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5586,12 +5814,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "Uber 风格项，是否采用由团队决定。",
-      "last_verified_at": "2026-05-23",
+      "notes": "Uber 风格项，是否采用由团队决定。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.nil-valid-slice",
@@ -5603,8 +5831,10 @@
         "section": "uber.style.nil-valid-slice"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5612,12 +5842,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "与官方 empty slices 合并，默认不硬 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "与官方 empty slices 合并，默认不硬 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.reduce-scope",
@@ -5629,8 +5859,10 @@
         "section": "uber.style.reduce-scope"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5638,12 +5870,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "作用域是否过大通常依赖可读性上下文。",
-      "last_verified_at": "2026-05-23",
+      "notes": "作用域是否过大通常依赖可读性上下文。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.naked-parameters",
@@ -5655,8 +5887,10 @@
         "section": "uber.style.naked-parameters"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5664,12 +5898,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "bool/int 参数语义。",
-      "last_verified_at": "2026-05-23",
+      "notes": "bool/int 参数语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.raw-strings",
@@ -5681,8 +5915,10 @@
         "section": "uber.style.raw-strings"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5690,12 +5926,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "可读性判断，不默认工具 gate。",
-      "last_verified_at": "2026-05-23",
+      "notes": "可读性判断，不默认工具 gate。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.style.omit-zero-fields",
@@ -5707,8 +5943,10 @@
         "section": "uber.style.omit-zero-fields"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5716,12 +5954,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "显式零值有时更清楚，默认宽松处理。",
-      "last_verified_at": "2026-05-23",
+      "notes": "显式零值有时更清楚，默认宽松处理。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.pattern.test-tables",
@@ -5733,8 +5971,10 @@
         "section": "uber.pattern.test-tables"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5742,12 +5982,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "表驱动结构。",
-      "last_verified_at": "2026-05-23",
+      "notes": "表驱动结构。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.pattern.table-complexity",
@@ -5759,8 +5999,10 @@
         "section": "uber.pattern.table-complexity"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5768,12 +6010,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "结构判断。",
-      "last_verified_at": "2026-05-23",
+      "notes": "结构判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "uber.pattern.functional-options",
@@ -5785,8 +6027,10 @@
         "section": "uber.pattern.functional-options"
       },
       "handling": "llm-review",
-      "adapter": "",
-      "tool_rules": [],
+      "adapter": "llm.review",
+      "tool_rules": [
+        "AGENTS.md"
+      ],
       "default_profile": "doc",
       "severity": "info",
       "autofix": {
@@ -5794,12 +6038,12 @@
         "safety": "none"
       },
       "status": "active",
-      "notes": "API 模式建议，不是硬规则。",
-      "last_verified_at": "2026-05-23",
+      "notes": "API 模式建议，不是硬规则。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。",
+      "last_verified_at": "2026-05-24",
       "tags": [
         "llm-review"
       ],
-      "implemented": false
+      "implemented": true
     },
     {
       "id": "go.official.variable-names",
