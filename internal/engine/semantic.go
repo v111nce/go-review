@@ -93,7 +93,7 @@ func (a SemanticAdapter) Run(_ context.Context, stepCtx StepContext) (Result, er
 	if err != nil {
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.config", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
-	for _, rule := range cfg.Rules {
+	for _, rule := range cfg.BuiltInRules {
 		analyzer, meta, err := a.builtInAnalyzer(rule)
 		if err != nil {
 			return a.semanticConfigFailure(stepCtx, err.Error()), nil
@@ -113,7 +113,7 @@ func (a SemanticAdapter) Run(_ context.Context, stepCtx StepContext) (Result, er
 			return result, err
 		}
 	}
-	ruleCount := len(cfg.Rules) + len(cfg.CustomRules)
+	ruleCount := len(cfg.BuiltInRules) + len(cfg.CustomRules)
 	return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "semantic.rules", Kind: ResultArtifact, Message: fmt.Sprintf("semantic analyzers passed (%d)", ruleCount), FixSafety: a.cfg.FixSafety, GateStatus: config.GatePass}, nil
 }
 
@@ -306,8 +306,8 @@ func semanticBuiltInRuleName(rule string) string {
 }
 
 type semanticConfig struct {
-	Rules       []string
-	CustomRules []semanticCustomRule
+	BuiltInRules []string
+	CustomRules  []semanticCustomRule
 }
 
 type semanticCustomRule struct {
@@ -321,31 +321,40 @@ type semanticCustomRule struct {
 }
 
 func (a SemanticAdapter) semanticConfig(stepCtx StepContext) (semanticConfig, error) {
-	// Parser is a backward-compatible selector for one built-in semantic analyzer;
-	// it is not a parser plugin or extension mechanism.
 	if strings.TrimSpace(a.cfg.Parser) != "" {
-		return semanticConfig{Rules: []string{strings.TrimSpace(a.cfg.Parser)}}, nil
+		return semanticConfig{}, fmt.Errorf("go.semantic does not support adapter parser; configure built-in rules in semantic/default.yaml")
 	}
-	paths := []string{
-		filepath.Join(filepath.Dir(stepCtx.ConfigPath), "semantic", "default.yaml"),
-		filepath.Join(filepath.Dir(stepCtx.ConfigPath), "semantic", "custom.yaml"),
+	configDir := filepath.Dir(stepCtx.ConfigPath)
+	paths := []struct {
+		path string
+		kind semanticConfigKind
+	}{
+		{path: filepath.Join(configDir, "semantic", "default.yaml"), kind: semanticConfigBuiltInRules},
+		{path: filepath.Join(configDir, "semantic", "custom.yaml"), kind: semanticConfigCustomRules},
 	}
 	var merged semanticConfig
-	for _, path := range paths {
-		loaded, err := loadSemanticConfig(path)
+	for _, source := range paths {
+		loaded, err := loadSemanticConfig(source.path, source.kind)
 		if err != nil {
 			return semanticConfig{}, err
 		}
-		merged.Rules = append(merged.Rules, loaded.Rules...)
+		merged.BuiltInRules = append(merged.BuiltInRules, loaded.BuiltInRules...)
 		merged.CustomRules = append(merged.CustomRules, loaded.CustomRules...)
 	}
-	if len(merged.Rules) == 0 && len(merged.CustomRules) == 0 {
-		merged.Rules = []string{"no-direct-os-getenv"}
+	if len(merged.BuiltInRules) == 0 && len(merged.CustomRules) == 0 {
+		merged.BuiltInRules = []string{"no-direct-os-getenv"}
 	}
 	return merged, nil
 }
 
-func loadSemanticConfig(path string) (semanticConfig, error) {
+type semanticConfigKind int
+
+const (
+	semanticConfigBuiltInRules semanticConfigKind = iota
+	semanticConfigCustomRules
+)
+
+func loadSemanticConfig(path string, kind semanticConfigKind) (semanticConfig, error) {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return semanticConfig{}, nil
@@ -369,18 +378,20 @@ func loadSemanticConfig(path string) (semanticConfig, error) {
 		}
 		switch key {
 		case "rules":
-			cfg.Rules = append(cfg.Rules, values...)
-			if len(values) == 0 {
-				more, next, err := parseSemanticRuleItems(path, lines, i+1, line.indent)
-				if err != nil {
-					return semanticConfig{}, err
+			if kind == semanticConfigBuiltInRules {
+				cfg.BuiltInRules = append(cfg.BuiltInRules, values...)
+				if len(values) == 0 {
+					more, next, err := parseSemanticBuiltInRuleItems(path, lines, i+1, line.indent)
+					if err != nil {
+						return semanticConfig{}, err
+					}
+					cfg.BuiltInRules = append(cfg.BuiltInRules, more...)
+					i = next - 1
 				}
-				cfg.Rules = append(cfg.Rules, more...)
-				i = next - 1
+				continue
 			}
-		case "custom_rules":
 			if len(values) != 0 {
-				return semanticConfig{}, fmt.Errorf("%s:%d: custom_rules must be a block list", path, line.num)
+				return semanticConfig{}, fmt.Errorf("%s:%d: custom semantic rules must be a block list", path, line.num)
 			}
 			rules, next, err := parseSemanticCustomRuleItems(path, lines, i+1, line.indent)
 			if err != nil {
@@ -417,13 +428,13 @@ func readSemanticConfigLines(path string, data []byte) ([]semanticConfigLine, er
 	return lines, nil
 }
 
-func parseSemanticRuleItems(path string, lines []semanticConfigLine, start, parentIndent int) ([]string, int, error) {
+func parseSemanticBuiltInRuleItems(path string, lines []semanticConfigLine, start, parentIndent int) ([]string, int, error) {
 	var rules []string
 	i := start
 	for i < len(lines) && lines[i].indent > parentIndent {
 		line := lines[i]
 		if !strings.HasPrefix(line.text, "- ") {
-			return nil, i, fmt.Errorf("%s:%d: expected rules list item", path, line.num)
+			return nil, i, fmt.Errorf("%s:%d: expected built-in rules list item", path, line.num)
 		}
 		value := cleanSemanticValue(strings.TrimSpace(strings.TrimPrefix(line.text, "- ")))
 		if value != "" {
@@ -440,7 +451,7 @@ func parseSemanticCustomRuleItems(path string, lines []semanticConfigLine, start
 	for i < len(lines) && lines[i].indent > parentIndent {
 		line := lines[i]
 		if !strings.HasPrefix(line.text, "- ") {
-			return nil, i, fmt.Errorf("%s:%d: expected custom_rules list item", path, line.num)
+			return nil, i, fmt.Errorf("%s:%d: expected custom rules list item", path, line.num)
 		}
 		rule := semanticCustomRule{}
 		next, err := parseSemanticCustomRuleItem(path, lines, i, &rule)
@@ -608,7 +619,7 @@ func semanticRuleID(id string) string {
 	if id == "" {
 		return "semantic.custom"
 	}
-	if strings.HasPrefix(id, "semantic.") {
+	if strings.Contains(id, ".") {
 		return id
 	}
 	return "semantic." + id

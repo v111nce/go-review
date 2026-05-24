@@ -2,6 +2,8 @@
 
 本基线定义通用 Go code-review 编排平台需要覆盖的检查类型、常用 adapter、自动修复策略和验证方式。它不定义产品范围，也不替代具体项目的业务测试。
 
+规则来源和自动化分流由结构化 JSON catalog `rules/go-rules.json` 维护，并渲染到 [go-rule-catalog.md](go-rule-catalog.md)；本基线只描述当前推荐执行层和门禁层。
+
 ## 覆盖矩阵
 
 | 检查类别 | 目标 | 推荐 adapter / 工具 | 自动修复 | 门禁级别 |
@@ -53,7 +55,8 @@
 | --- | --- |
 | Adapter ID | 稳定且可搜索 |
 | Step ID | 来源 pipeline step |
-| 规则 ID | 在 adapter 内稳定且可搜索 |
+| 规则 ID | 必须引用 JSON catalog 中稳定 `id`；底层工具规则另放 metadata/tool_rules |
+| 已实现标识 | JSON catalog 中 `implemented: true` 只允许用于已接入代码且有测试覆盖的规则 |
 | 位置 | 文件、行、列 |
 | 原因 | 说明违反了哪条规约 |
 | 建议 | 给出修复方向 |

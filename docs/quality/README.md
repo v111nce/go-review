@@ -7,6 +7,7 @@
 | 文档 | 内容 | 状态 |
 | --- | --- | --- |
 | [go-code-quality-baseline.md](go-code-quality-baseline.md) | Go 代码质量检查基线和工具矩阵 | draft |
+| [go-rule-catalog.md](go-rule-catalog.md) | Go 官方 / Google / Uber 规则 catalog、自动化分流和落地优先级 | draft |
 | [e2e-coverage-baseline.md](e2e-coverage-baseline.md) | 当前无 UI 面时的 E2E 覆盖占位基线 | draft |
 | [definition-of-done.md](definition-of-done.md) | 规约治理能力完成定义 | draft |
 

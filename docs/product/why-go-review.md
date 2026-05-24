@@ -60,7 +60,7 @@ go-review     = 多工具编排、报告、门禁和安全修复事务
 
 这类规则应该用 Go 官方生态的 `go/analysis` 编写 analyzer。`go/analysis` 负责 AST、type info、diagnostic 和 `SuggestedFix`；go-review 负责把 analyzer 结果映射成统一 review result，并放进 pipeline。
 
-当前实现中的 `.go-review/semantic/custom.yaml` 只支持有限的配置式 analyzer kind，例如 `no-direct-call` 和 `max-params`；这些规则由 `go/analysis` analyzer 执行。它不是完整的任意 YAML 规则语言；adapter 配置里的 `parser` 也只是兼容的内置规则选择入口，不是插件机制。当前 semantic step 遵循单结果契约，只报告首个 failing finding，review-only semantic 规则也不自动改写代码。更复杂规则、多 diagnostics 输出或 semantic autofix 仍需要新增 analyzer 实现和 safe fix transaction 设计。
+当前实现中的 `.go-review/semantic/custom.yaml` 只支持有限的配置式 analyzer kind，例如 `no-direct-call` 和 `max-params`；这些规则由 `go/analysis` analyzer 执行。它不是完整的任意 YAML 规则语言；`go.semantic` adapter 不使用 adapter 配置里的 `parser` 字段；内置规则放在 `.go-review/semantic/default.yaml`，`parser` 不是插件机制。当前 semantic step 遵循单结果契约，只报告首个 failing finding，review-only semantic 规则也不自动改写代码。更复杂规则、多 diagnostics 输出或 semantic autofix 仍需要新增 analyzer 实现和 safe fix transaction 设计。
 
 ## go-review 的产品边界
 

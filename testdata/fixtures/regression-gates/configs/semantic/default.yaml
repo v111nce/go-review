@@ -1,0 +1,3 @@
+# Fixture semantic built-in rules.
+rules:
+  - no-direct-os-getenv

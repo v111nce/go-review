@@ -159,8 +159,77 @@ profiles:
 	if got := summary.Results[0].GateStatus; got != config.GateFail {
 		t.Fatalf("format gate = %s", got)
 	}
+	if summary.Results[0].RuleID != "go.official.gofmt" {
+		t.Fatalf("format rule id = %q", summary.Results[0].RuleID)
+	}
 	if !summary.Results[0].FixAvailable {
 		t.Fatal("expected fix availability")
+	}
+}
+
+// 验证 go.lint adapter 在 goimports/gci formatter 配置下输出 catalog import rule_id。
+func TestGoLintCheckMapsImportFormatterRuleID(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte("package main\nfunc main(){\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: imports
+    type: go.lint
+    command: %s
+    args: [fmt, --no-config, --enable, goimports]
+    fix_safety: safe
+steps:
+  - id: import-step
+    adapter: imports
+profiles:
+  - name: fast
+    steps: [import-step]
+`, fakeGolangciLint(t)))
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "go.official.imports" || !got.FixAvailable {
+		t.Fatalf("import formatter result = %#v", got)
+	}
+}
+
+// 验证 go.lint adapter 能把 errcheck 输出映射成 catalog error-handling rule_id。
+func TestGoLintRunMapsErrcheckRuleID(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"fmt\"\nfunc main() {\n\tfmt.Errorf(\"ignored\")\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, fmt.Sprintf(`schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: lint
+    type: go.lint
+    command: %s
+    args: [run, --no-config, --enable, errcheck]
+steps:
+  - id: lint-step
+    adapter: lint
+profiles:
+  - name: fast
+    steps: [lint-step]
+`, fakeGolangciLint(t)))
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "go.official.handle-errors" || got.File != "main.go" || got.Line != 4 || got.Column != 12 {
+		t.Fatalf("errcheck result = %#v", got)
+	}
+	if !strings.Contains(got.Message, "Error return value") {
+		t.Fatalf("errcheck message = %q", got.Message)
 	}
 }
 
@@ -263,7 +332,6 @@ defaults:
 adapters:
   - id: semantic.no-env
     type: go.semantic
-    parser: no-direct-os-getenv
     fix_safety: review
 steps:
   - id: semantic-step
@@ -272,6 +340,12 @@ profiles:
   - name: fast
     steps: [semantic-step]
 `)
+	if err := os.MkdirAll(filepath.Join(dir, "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "semantic", "default.yaml"), []byte("rules:\n  - no-direct-os-getenv\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -522,7 +596,7 @@ profiles:
 	}
 }
 
-// 验证 custom_rules 的 no-direct-call 规则能识别别名 import（如 import f "fmt"）并正确报告违规。
+// 验证 custom.yaml 的 rules/no-direct-call 规则能识别别名 import（如 import f "fmt"）并正确报告违规。
 func TestSemanticAdapterLoadsCustomNoDirectCallRule(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-custom\n"), 0o644); err != nil {
@@ -555,7 +629,6 @@ profiles:
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
-custom_rules:
   - id: no-direct-fmt-println
     kind: no-direct-call
     package: fmt
@@ -578,7 +651,7 @@ custom_rules:
 	}
 }
 
-// 验证 custom_rules 配置了不支持的 kind 时，返回 fail 并提示 "unsupported custom rule kind"。
+// 验证 custom.yaml 的 rules 配置了不支持的 kind 时，返回 fail 并提示 "unsupported custom rule kind"。
 func TestSemanticAdapterCustomRuleConfigError(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-custom-error\n"), 0o644); err != nil {
@@ -606,7 +679,7 @@ profiles:
   - name: fast
     steps: [semantic-step]
 `)
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
   - id: unsupported
     kind: unknown
     package: fmt
@@ -624,8 +697,8 @@ profiles:
 	}
 }
 
-// 验证 parser 只是内置规则选择入口，不支持未知 parser/规则名。
-func TestSemanticAdapterUnsupportedParserRuleIsConfigError(t *testing.T) {
+// 验证 go.semantic 不再兼容 adapter parser 字段；内置规则必须写在 semantic/default.yaml。
+func TestSemanticAdapterRejectsAdapterParserField(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -636,7 +709,7 @@ defaults:
 adapters:
   - id: semantic.rules
     type: go.semantic
-    parser: unknown-rule
+    parser: no-direct-os-getenv
 steps:
   - id: semantic-step
     adapter: semantic.rules
@@ -649,8 +722,43 @@ profiles:
 		t.Fatalf("Run() error = %v", err)
 	}
 	got := summary.Results[0]
+	if got.GateStatus != config.GateFail || got.RuleID != "semantic.config" || !strings.Contains(got.Message, "does not support adapter parser") {
+		t.Fatalf("semantic parser rejection result = %#v", got)
+	}
+}
+
+// 验证 default.yaml 不支持未知内置规则名。
+func TestSemanticAdapterUnsupportedBuiltInRuleIsConfigError(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: semantic.rules
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.rules
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	if err := os.WriteFile(filepath.Join(dir, "semantic", "default.yaml"), []byte("rules:\n  - unknown-rule\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
 	if got.GateStatus != config.GateFail || got.RuleID != "semantic.config" || !strings.Contains(got.Message, `unsupported semantic rule "unknown-rule"`) {
-		t.Fatalf("unsupported parser rule result = %#v", got)
+		t.Fatalf("unsupported built-in rule result = %#v", got)
 	}
 }
 
@@ -666,13 +774,15 @@ func TestSemanticAdapterReportsFirstFindingOnly(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("package main\nimport \"os\"\nfunc B() string { return os.Getenv(\"B\") }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.MkdirAll(filepath.Join(dir, "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	cfg := writeConfig(t, dir, `schema_version: "1.0"
 defaults:
   workdir: .
 adapters:
   - id: semantic.rules
     type: go.semantic
-    parser: no-direct-os-getenv
     fix_safety: review
 steps:
   - id: semantic-step
@@ -681,6 +791,9 @@ profiles:
   - name: fast
     steps: [semantic-step]
 `)
+	if err := os.WriteFile(filepath.Join(dir, "semantic", "default.yaml"), []byte("rules:\n  - no-direct-os-getenv\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -694,7 +807,7 @@ profiles:
 	}
 }
 
-// 验证 rules 支持 scalar 与 custom_rules 的 pkg/func 字段别名。
+// 验证 custom.yaml 的 rules 支持 pkg/func 字段别名。
 func TestSemanticAdapterRuleScalarAndCustomPkgFuncAliases(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-alias-fields\n"), 0o644); err != nil {
@@ -722,7 +835,7 @@ profiles:
 	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules: no-direct-os-getenv\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
   - id: no-log-fatal
     pkg: log
     func: Fatal
@@ -739,7 +852,7 @@ profiles:
 	}
 }
 
-// 验证 custom_rules 的 max-params 规则能用 go/analysis 检测函数/方法参数数量上限。
+// 验证 custom.yaml 的 rules/max-params 规则能用 go/analysis 检测函数/方法参数数量上限。
 func TestSemanticAdapterLoadsCustomMaxParamsRule(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-max-params\n"), 0o644); err != nil {
@@ -768,8 +881,8 @@ profiles:
 	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
-  - id: max-four-params
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
+  - id: team.semantic.max-params
     kind: max-params
     max: 4
     message: 方法入参不能超过 4 个
@@ -782,7 +895,7 @@ profiles:
 		t.Fatalf("Run() error = %v", err)
 	}
 	got := summary.Results[0]
-	if got.GateStatus != config.GateFail || got.RuleID != "semantic.max-four-params" || got.File != "main.go" || got.Line == 0 {
+	if got.GateStatus != config.GateFail || got.RuleID != "team.semantic.max-params" || got.File != "main.go" || got.Line == 0 {
 		t.Fatalf("semantic max-params result = %#v", got)
 	}
 	if !strings.Contains(got.Message, "不能超过 4") || got.Suggestion != "拆分参数对象或引入配置结构" {
@@ -818,8 +931,8 @@ profiles:
 	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
-  - id: max-four-params
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
+  - id: team.semantic.max-params
     kind: max-params
     max: 4
 `), 0o644); err != nil {
@@ -843,12 +956,13 @@ func TestSemanticAdapterConfigValidationErrors(t *testing.T) {
 		want    string
 	}{
 		{name: "unsupported top-level field", content: "unknown: true\n", want: "unsupported semantic config field"},
-		{name: "unsupported custom field", content: "custom_rules:\n  - id: bad\n    package: fmt\n    function: Println\n    severity: high\n", want: "unsupported custom rule field"},
-		{name: "missing max", content: "custom_rules:\n  - id: max-params\n    kind: max-params\n", want: "requires positive max"},
-		{name: "invalid max", content: "custom_rules:\n  - id: max-params\n    kind: max-params\n    max: nope\n", want: "max must be a positive integer"},
-		{name: "missing id", content: "custom_rules:\n  - package: fmt\n    function: Println\n", want: "custom rule missing id"},
-		{name: "missing package", content: "custom_rules:\n  - id: missing-package\n    function: Println\n", want: "requires package and function"},
-		{name: "unsupported custom kind", content: "custom_rules:\n  - id: bad-kind\n    kind: unknown\n    package: fmt\n    function: Println\n", want: "unsupported custom rule kind"},
+		{name: "legacy custom_rules field", content: "custom_rules:\n  - id: legacy\n    package: fmt\n    function: Println\n", want: "unsupported semantic config field"},
+		{name: "unsupported custom field", content: "rules:\n  - id: bad\n    package: fmt\n    function: Println\n    severity: high\n", want: "unsupported custom rule field"},
+		{name: "missing max", content: "rules:\n  - id: max-params\n    kind: max-params\n", want: "requires positive max"},
+		{name: "invalid max", content: "rules:\n  - id: max-params\n    kind: max-params\n    max: nope\n", want: "max must be a positive integer"},
+		{name: "missing id", content: "rules:\n  - package: fmt\n    function: Println\n", want: "custom rule missing id"},
+		{name: "missing package", content: "rules:\n  - id: missing-package\n    function: Println\n", want: "requires package and function"},
+		{name: "unsupported custom kind", content: "rules:\n  - id: bad-kind\n    kind: unknown\n    package: fmt\n    function: Println\n", want: "unsupported custom rule kind"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -921,7 +1035,7 @@ profiles:
 	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "default.yaml"), []byte("rules:\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`custom_rules:
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "semantic", "custom.yaml"), []byte(`rules:
   - id: no-direct-fmt-println
     kind: no-direct-call
     package: fmt

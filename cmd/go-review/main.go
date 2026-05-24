@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strings"
 
 	"github.com/v111nce/go-review/internal/engine"
+	"github.com/v111nce/go-review/internal/rulecatalog"
 )
 
 var (
@@ -35,6 +39,8 @@ func run(args []string) int {
 			return runCommand(args[0], args[1:])
 		case "init":
 			return runInit(args[1:])
+		case "rules":
+			return runRules(args[1:])
 		}
 		if len(args[0]) > 0 && args[0][0] != '-' {
 			fmt.Fprintf(os.Stderr, "unknown command %q\n\n", args[0])
@@ -113,10 +119,76 @@ func initProject(workdir string) (string, error) {
 	if err := os.WriteFile(configPath, []byte(defaultConfig()), 0o644); err != nil {
 		return "", err
 	}
+	if err := writeDefaultRuleCatalog(filepath.Dir(configPath)); err != nil {
+		return "", err
+	}
 	if err := writeDefaultSemanticConfig(filepath.Dir(configPath)); err != nil {
 		return "", err
 	}
 	return configPath, nil
+}
+
+func writeDefaultRuleCatalog(configDir string) error {
+	path := filepath.Join(configDir, "rules.json")
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return rulecatalog.SaveFile(path, defaultRuleCatalog())
+}
+
+func defaultRuleCatalog() rulecatalog.Catalog {
+	return rulecatalog.Catalog{
+		SchemaVersion: rulecatalog.SchemaVersion,
+		Rules: []rulecatalog.Rule{
+			{
+				ID:             "go.official.gofmt",
+				Title:          "Go 代码格式化",
+				Description:    "代码必须使用 gofmt 统一格式化，避免人工风格争论。",
+				Source:         rulecatalog.Source{Name: "Go Code Review Comments", URL: "https://go.dev/wiki/CodeReviewComments", Section: "Gofmt"},
+				Handling:       "tool-golangci",
+				Adapter:        "go.lint",
+				ToolRules:      []string{"gofmt"},
+				DefaultProfile: "default",
+				Severity:       "error",
+				Autofix:        rulecatalog.Autofix{Supported: true, Safety: "safe"},
+				Status:         "active",
+				Implemented:    true,
+				Notes:          "机械格式化，可 safe fix；报告 rule_id 输出 go.official.gofmt。",
+			},
+			{
+				ID:             "go.official.imports",
+				Title:          "Import 整理",
+				Description:    "import 应自动整理、删除未用项并按 Go 习惯分组。",
+				Source:         rulecatalog.Source{Name: "Go Code Review Comments", URL: "https://go.dev/wiki/CodeReviewComments", Section: "Imports"},
+				Handling:       "tool-golangci",
+				Adapter:        "go.lint",
+				ToolRules:      []string{"goimports", "gci"},
+				DefaultProfile: "default",
+				Severity:       "error",
+				Autofix:        rulecatalog.Autofix{Supported: true, Safety: "safe"},
+				Status:         "active",
+				Implemented:    true,
+				Notes:          "配置 goimports/gci formatter 时，报告 rule_id 输出 go.official.imports。",
+			},
+			{
+				ID:             "team.semantic.max-params",
+				Title:          "函数参数上限",
+				Description:    "函数/方法入参个数不得超过配置阈值。",
+				Source:         rulecatalog.Source{Name: "Team semantic rules", Section: "max-params"},
+				Handling:       "tool-semantic",
+				Adapter:        "go.semantic",
+				ToolRules:      []string{"max-params"},
+				DefaultProfile: "strict",
+				Severity:       "medium",
+				Autofix:        rulecatalog.Autofix{Supported: false, Safety: "none"},
+				Status:         "active",
+				Implemented:    true,
+				Notes:          "确定性 AST 子规则；配置使用该 catalog id 时，报告 rule_id 保持一致。",
+			},
+		},
+	}
 }
 
 func writeDefaultSemanticConfig(configDir string) error {
@@ -250,30 +322,28 @@ profiles:
 }
 
 func defaultSemanticConfig() string {
-	return `rules:
+	return `# Framework-owned semantic rules live here.
+# This file's rules: entries are built-in rule names registered by go.semantic.
+rules:
   - no-direct-os-getenv
 `
 }
 
 func customSemanticConfig() string {
-	return `rules:
-# Team-owned semantic rules live here.
-# Keep built-in rule names under rules:, for example:
-#   - no-direct-os-getenv
-
-# User-defined semantic rules supported by go.semantic.
+	return `# Team-owned semantic rules live here.
+# This file's rules: entries are rule objects supported by go.semantic.
 # Currently supported kinds:
 # - no-direct-call: reports calls to an imported package function, including aliased imports.
 # - max-params: reports functions/methods whose parameter count is greater than max.
 # Example: ban direct fmt.Println and require injected logging instead.
-# custom_rules:
+rules:
 #   - id: no-direct-fmt-println
 #     kind: no-direct-call
 #     package: fmt
 #     function: Println
 #     message: "不要直接使用 fmt.Println"
 #     suggestion: "改用注入的 logger"
-#   - id: max-four-params
+#   - id: team.semantic.max-params
 #     kind: max-params
 #     max: 4
 #     message: "方法入参不能超过 4 个"
@@ -310,6 +380,275 @@ func defaultReportDir(configPath string) string {
 	return filepath.Join(dir, ".go-review", "reports")
 }
 
+func runRules(args []string) int {
+	if len(args) == 0 {
+		printRulesHelp()
+		return 0
+	}
+	switch args[0] {
+	case "list":
+		return runRulesList(args[1:])
+	case "get":
+		return runRulesGet(args[1:])
+	case "add":
+		return runRulesAdd(args[1:], false)
+	case "upsert":
+		return runRulesAdd(args[1:], true)
+	case "delete", "rm":
+		return runRulesDelete(args[1:])
+	case "validate":
+		return runRulesValidate(args[1:])
+	case "render-doc":
+		return runRulesRenderDoc(args[1:])
+	case "--help", "-h", "help":
+		printRulesHelp()
+		return 0
+	default:
+		fmt.Fprintf(os.Stderr, "unknown rules command %q\n\n", args[0])
+		printRulesHelp()
+		return 2
+	}
+}
+
+func runRulesList(args []string) int {
+	fs := rulesFlagSet("rules list")
+	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	catalog, err := loadRulesCatalog(*catalogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules list: %v\n", err)
+		return 2
+	}
+	for _, rule := range catalog.Rules {
+		fmt.Fprintf(os.Stdout, "%s\t%s\t%s\timplemented=%t\t%s\n", rule.ID, rule.Handling, emptyValue(rule.DefaultProfile), rule.Implemented, rule.Description)
+	}
+	return 0
+}
+
+func runRulesGet(args []string) int {
+	fs := rulesFlagSet("rules get")
+	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "go-review rules get: expected rule id")
+		return 2
+	}
+	catalog, err := loadRulesCatalog(*catalogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules get: %v\n", err)
+		return 2
+	}
+	rule, ok := catalog.Get(fs.Arg(0))
+	if !ok {
+		fmt.Fprintf(os.Stderr, "go-review rules get: rule %q not found\n", fs.Arg(0))
+		return 1
+	}
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(rule); err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules get: %v\n", err)
+		return 2
+	}
+	return 0
+}
+
+func runRulesAdd(args []string, upsert bool) int {
+	name := "add"
+	if upsert {
+		name = "upsert"
+	}
+	fs := rulesFlagSet("rules " + name)
+	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
+	filePath := fs.String("file", "", "path to JSON rule object or catalog")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	rules, err := readRulesInput(*filePath, fs.Args())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules %s: %v\n", name, err)
+		return 2
+	}
+	catalog, err := loadRulesCatalogOrEmpty(*catalogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules %s: %v\n", name, err)
+		return 2
+	}
+	for _, rule := range rules {
+		if upsert {
+			err = catalog.Upsert(rule)
+		} else {
+			err = catalog.Add(rule)
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "go-review rules %s: %v\n", name, err)
+			return 2
+		}
+	}
+	if err := rulecatalog.SaveFile(*catalogPath, catalog); err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules %s: %v\n", name, err)
+		return 2
+	}
+	fmt.Fprintf(os.Stdout, "%s %d rule(s) catalog=%s\n", name, len(rules), *catalogPath)
+	return 0
+}
+
+func runRulesDelete(args []string) int {
+	fs := rulesFlagSet("rules delete")
+	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "go-review rules delete: expected rule id")
+		return 2
+	}
+	catalog, err := loadRulesCatalog(*catalogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules delete: %v\n", err)
+		return 2
+	}
+	if err := catalog.Delete(fs.Arg(0)); err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules delete: %v\n", err)
+		return 1
+	}
+	if err := rulecatalog.SaveFile(*catalogPath, catalog); err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules delete: %v\n", err)
+		return 2
+	}
+	fmt.Fprintf(os.Stdout, "deleted %s catalog=%s\n", fs.Arg(0), *catalogPath)
+	return 0
+}
+
+func runRulesValidate(args []string) int {
+	fs := rulesFlagSet("rules validate")
+	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	catalog, err := loadRulesCatalog(*catalogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules validate: %v\n", err)
+		return 2
+	}
+	fmt.Fprintf(os.Stdout, "valid catalog=%s rules=%d\n", *catalogPath, len(catalog.Rules))
+	return 0
+}
+
+func runRulesRenderDoc(args []string) int {
+	fs := rulesFlagSet("rules render-doc")
+	catalogPath := fs.String("catalog", defaultRulesCatalogPath(), "path to rules JSON catalog")
+	outPath := fs.String("out", "", "path to write Markdown; defaults to stdout")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	catalog, err := loadRulesCatalog(*catalogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules render-doc: %v\n", err)
+		return 2
+	}
+	if strings.TrimSpace(*outPath) == "" {
+		if err := rulecatalog.RenderMarkdown(os.Stdout, catalog); err != nil {
+			fmt.Fprintf(os.Stderr, "go-review rules render-doc: %v\n", err)
+			return 2
+		}
+		return 0
+	}
+	f, err := os.Create(*outPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules render-doc: %v\n", err)
+		return 2
+	}
+	defer f.Close()
+	if err := rulecatalog.RenderMarkdown(f, catalog); err != nil {
+		fmt.Fprintf(os.Stderr, "go-review rules render-doc: %v\n", err)
+		return 2
+	}
+	fmt.Fprintf(os.Stdout, "rendered %s\n", *outPath)
+	return 0
+}
+
+func rulesFlagSet(name string) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	return fs
+}
+
+func defaultRulesCatalogPath() string {
+	return filepath.Join("rules", "go-rules.json")
+}
+
+func loadRulesCatalog(path string) (rulecatalog.Catalog, error) {
+	return rulecatalog.LoadFile(path)
+}
+
+func loadRulesCatalogOrEmpty(path string) (rulecatalog.Catalog, error) {
+	catalog, err := rulecatalog.LoadFile(path)
+	if os.IsNotExist(err) {
+		return rulecatalog.Empty(), nil
+	}
+	return catalog, err
+}
+
+func readRulesInput(filePath string, args []string) ([]rulecatalog.Rule, error) {
+	if strings.TrimSpace(filePath) != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, err
+		}
+		return parseRulesJSON(data)
+	}
+	if len(args) == 0 {
+		return nil, errors.New("expected --file or inline JSON rule")
+	}
+	return parseRulesJSON([]byte(strings.Join(args, " ")))
+}
+
+func parseRulesJSON(data []byte) ([]rulecatalog.Rule, error) {
+	var catalog rulecatalog.Catalog
+	if err := json.Unmarshal(data, &catalog); err == nil && len(catalog.Rules) > 0 {
+		catalog.Normalize()
+		if err := catalog.Validate(); err != nil {
+			return nil, err
+		}
+		return catalog.Rules, nil
+	}
+	var rule rulecatalog.Rule
+	if err := json.Unmarshal(data, &rule); err != nil {
+		return nil, err
+	}
+	rule.Normalize()
+	if err := rule.Validate(); err != nil {
+		return nil, err
+	}
+	return []rulecatalog.Rule{rule}, nil
+}
+
+func emptyValue(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "-"
+	}
+	return value
+}
+
+func printRulesHelp() {
+	fmt.Fprintln(os.Stdout, `go-review rules manages the JSON rule catalog.
+
+Usage:
+  go-review rules list [--catalog rules/go-rules.json]
+  go-review rules get <rule-id> [--catalog rules/go-rules.json]
+  go-review rules add --file <rule.json> [--catalog rules/go-rules.json]
+  go-review rules upsert --file <rule-or-catalog.json> [--catalog rules/go-rules.json]
+  go-review rules delete <rule-id> [--catalog rules/go-rules.json]
+  go-review rules validate [--catalog rules/go-rules.json]
+  go-review rules render-doc [--catalog rules/go-rules.json] [--out docs/quality/go-rule-catalog.md]
+
+Catalog JSON is the source of truth; Markdown docs are generated views.`)
+}
+
 func printHelp() {
 	fmt.Fprintln(os.Stdout, `go-review runs configured Go code-review quality gates.
 
@@ -317,12 +656,14 @@ Usage:
   go-review [check] [--config <path>] [--profile fast]
   go-review fix [--config <path>] [--profile fast]
   go-review init [--workdir <dir>]
+  go-review rules <list|get|add|upsert|delete|validate|render-doc>
   go-review version
 
 Commands:
   check    run configured adapters without applying edits (default; initializes missing config)
   fix      run configured adapters in fix mode when adapters support safe fixes such as golangci-lint fmt
   init     create .go-review/go-review.yaml without running checks
+  rules    manage JSON rule catalog and render Markdown docs
   version  print build version metadata
 
 Flags:

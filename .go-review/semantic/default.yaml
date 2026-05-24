@@ -1,2 +1,4 @@
+# Framework-owned semantic rules live here.
+# This file's rules: entries are built-in rule names registered by go.semantic.
 rules:
   - no-direct-os-getenv

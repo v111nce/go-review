@@ -48,7 +48,6 @@ adapters:
     type: go.semantic
     capabilities: [check]
     timeout: 30s
-    parser: no-direct-os-getenv
     fix_safety: review
 steps:
   - id: format-check

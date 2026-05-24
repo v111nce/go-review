@@ -1,16 +1,28 @@
 #!/bin/sh
 set -eu
 mode=check
+run_mode=fmt
 files=""
 for arg in "$@"; do
   case "$arg" in
+    run) run_mode=run ;;
     --diff) mode=diff ;;
-    -*|fmt|gofmt) ;;
+    -*|fmt|gofmt|goimports|gci|errcheck) ;;
     *) files="$files $arg" ;;
   esac
 done
 if [ -z "${files# }" ]; then
   files=$(find . -name '*.go' -type f | sort)
+fi
+if [ "$run_mode" = "run" ]; then
+  for file in $files; do
+    [ -f "$file" ] || continue
+    if grep -q 'fmt.Errorf("ignored")' "$file"; then
+      printf '%s:4:12: Error return value is not checked (errcheck)\n' "$file"
+      exit 1
+    fi
+  done
+  exit 0
 fi
 changed=0
 for file in $files; do

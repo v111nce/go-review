@@ -72,10 +72,12 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 		}
 	}
 	semanticDefault := filepath.Join(dir, ".go-review", "semantic", "default.yaml")
+	rulesCatalog := filepath.Join(dir, ".go-review", "rules.json")
 	for _, path := range []string{
 		filepath.Join(dir, ".go-review", "go-review.yaml"),
 		semanticDefault,
 		filepath.Join(dir, ".go-review", "semantic", "custom.yaml"),
+		rulesCatalog,
 		filepath.Join(dir, ".go-review", "reports", "latest.md"),
 		filepath.Join(dir, ".go-review", "reports", "latest.llm.md"),
 		filepath.Join(dir, ".go-review", "artifacts", "latest", "format-check-stdout.txt"),
@@ -84,6 +86,16 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 			t.Fatalf("expected generated path %s: %v", path, err)
 		}
 	}
+	rulesData, err := os.ReadFile(rulesCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"go-review.rules.v1", "go.official.gofmt", "team.semantic.max-params"} {
+		if !strings.Contains(string(rulesData), want) {
+			t.Fatalf("rules catalog missing %q:\n%s", want, rulesData)
+		}
+	}
+
 	semanticConfig, err := os.ReadFile(semanticDefault)
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +109,7 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 			t.Fatalf("semantic default config missing %q:\n%s", want, semanticConfig)
 		}
 	}
-	for _, want := range []string{"custom_rules:", "no-direct-call", "no-direct-fmt-println"} {
+	for _, want := range []string{"rules:", "no-direct-call", "no-direct-fmt-println"} {
 		if !strings.Contains(string(semanticCustom), want) {
 			t.Fatalf("semantic custom config missing %q:\n%s", want, semanticCustom)
 		}
@@ -189,6 +201,9 @@ func TestRunInitCreatesConfigOnly(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "semantic", "default.yaml")); err != nil {
 		t.Fatalf("expected semantic default config: %v", err)
 	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "rules.json")); err != nil {
+		t.Fatalf("expected rules catalog: %v", err)
+	}
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports")); !os.IsNotExist(err) {
 		t.Fatalf("init should not create reports before running checks, err=%v", err)
 	}
@@ -264,6 +279,60 @@ func captureRun(args []string) (stdout string, stderr string, code int) {
 	_, _ = io.Copy(&outBuf, outR)
 	_, _ = io.Copy(&errBuf, errR)
 	return outBuf.String(), errBuf.String(), code
+}
+
+func TestRulesCRUDAndRenderDoc(t *testing.T) {
+	dir := t.TempDir()
+	catalog := filepath.Join(dir, "rules.json")
+	rule := `{
+  "id": "team.semantic.max-params",
+  "title": "函数参数上限",
+  "description": "函数/方法入参个数不得超过配置阈值。",
+  "source": {"name": "Team semantic rules", "section": "max-params"},
+  "handling": "tool-semantic",
+  "adapter": "go.semantic",
+  "tool_rules": ["max-params"],
+  "default_profile": "strict",
+  "severity": "medium",
+  "autofix": {"supported": false, "safety": "none"},
+  "status": "active",
+  "implemented": true,
+  "notes": "确定性 AST 子规则。"
+}`
+	stdout, stderr, code := captureRun([]string{"rules", "add", "--catalog", catalog, rule})
+	if code != 0 {
+		t.Fatalf("rules add code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	stdout, stderr, code = captureRun([]string{"rules", "list", "--catalog", catalog})
+	if code != 0 || !strings.Contains(stdout, "team.semantic.max-params") || !strings.Contains(stdout, "implemented=true") || !strings.Contains(stdout, "函数/方法入参") {
+		t.Fatalf("rules list code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	stdout, stderr, code = captureRun([]string{"rules", "get", "--catalog", catalog, "team.semantic.max-params"})
+	if code != 0 || !strings.Contains(stdout, "\"handling\": \"tool-semantic\"") {
+		t.Fatalf("rules get code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	docPath := filepath.Join(dir, "catalog.md")
+	stdout, stderr, code = captureRun([]string{"rules", "render-doc", "--catalog", catalog, "--out", docPath})
+	if code != 0 {
+		t.Fatalf("rules render-doc code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	doc, err := os.ReadFile(docPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"由 JSON catalog 生成", "team.semantic.max-params", "函数/方法入参个数不得超过配置阈值", "yes"} {
+		if !strings.Contains(string(doc), want) {
+			t.Fatalf("rendered doc missing %q:\n%s", want, doc)
+		}
+	}
+	stdout, stderr, code = captureRun([]string{"rules", "delete", "--catalog", catalog, "team.semantic.max-params"})
+	if code != 0 {
+		t.Fatalf("rules delete code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	stdout, stderr, code = captureRun([]string{"rules", "validate", "--catalog", catalog})
+	if code != 0 || !strings.Contains(stdout, "rules=0") {
+		t.Fatalf("rules validate code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
 }
 
 func TestBuildMetadataPrefersLDFlags(t *testing.T) {
