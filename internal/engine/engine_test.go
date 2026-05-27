@@ -1298,3 +1298,116 @@ profiles:
 		t.Fatalf("format exclude result = %#v", got)
 	}
 }
+
+// 验证 llm.review adapter 在显式启用时会生成 prompt 并直接调用 codex exec。
+func TestLLMReviewAdapterRunsCodexDirectly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell fixture uses sh")
+	}
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.Mkdir(binDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	logPath := filepath.Join(dir, "codex.log")
+	writeExecutable(t, filepath.Join(binDir, "codex"), fmt.Sprintf("#!/bin/sh\nprintf 'args:%%s\n' \"$*\" >> %s\ncat > %s\necho codex-ok\nexit 0\n", shellArg(logPath), shellArg(filepath.Join(dir, "prompt.stdin"))))
+	if err := os.WriteFile(filepath.Join(dir, "llm-rules.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: llm.review
+    type: llm.review
+    args: [--rules, llm-rules.json]
+    capabilities: [report]
+    fix_safety: review
+steps:
+  - id: llm-review
+    adapter: llm.review
+    on_fail: continue
+profiles:
+  - name: review
+    steps: [llm-review]
+artifacts:
+  dir: artifacts
+`)
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "review"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GatePass || got.RuleID != "llm.review" {
+		t.Fatalf("llm review result = %#v", got)
+	}
+	promptPath := filepath.Join(dir, "artifacts", "llm-review-prompt.txt")
+	prompt, err := os.ReadFile(promptPath)
+	if err != nil {
+		t.Fatalf("expected prompt artifact %s: %v", promptPath, err)
+	}
+	for _, want := range []string{"LLM 审阅任务", "llm-rules.json", "latest.llm.md", "rule_id"} {
+		if !strings.Contains(string(prompt), want) {
+			t.Fatalf("prompt missing %q:\n%s", want, prompt)
+		}
+	}
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("expected codex log: %v", err)
+	}
+	for _, want := range []string{"exec", "--cd", dir, "-"} {
+		if !strings.Contains(string(logData), want) {
+			t.Fatalf("codex command missing %q:\n%s", want, logData)
+		}
+	}
+	stdoutArtifact, err := os.ReadFile(filepath.Join(dir, "artifacts", "llm-review-stdout.txt"))
+	if err != nil || !strings.Contains(string(stdoutArtifact), "codex-ok") {
+		t.Fatalf("stdout artifact = %q err=%v", stdoutArtifact, err)
+	}
+}
+
+func writeExecutable(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func shellArg(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
+}
+
+// 验证 disabled step 可以留在 profile 中，但执行计划会跳过它。
+func TestDisabledProfileStepIsSkippedByRunner(t *testing.T) {
+	dir := t.TempDir()
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: ok
+    type: cmd
+    command: sh
+    args: [-c, "echo ok"]
+  - id: disabled
+    type: cmd
+    command: sh
+    args: [-c, "exit 9"]
+steps:
+  - id: ok-step
+    adapter: ok
+  - id: disabled-step
+    adapter: disabled
+    enabled: false
+profiles:
+  - name: fast
+    steps: [ok-step, disabled-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if len(summary.Results) != 1 || summary.Results[0].StepID != "ok-step" {
+		t.Fatalf("results = %#v", summary.Results)
+	}
+}

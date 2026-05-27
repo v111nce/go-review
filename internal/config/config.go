@@ -114,6 +114,7 @@ type Adapter struct {
 type Step struct {
 	ID        string
 	AdapterID string
+	Enabled   bool
 	DependsOn []string
 	OnFail    OnFail
 	AllowFix  bool
@@ -548,7 +549,7 @@ func parseSteps(lines []yamlLine, start, parentIndent int) ([]Step, int, error) 
 		if !strings.HasPrefix(line.text, "- ") {
 			return steps, i, line.err("expected step list item")
 		}
-		step := Step{OnFail: OnFailStop}
+		step := Step{OnFail: OnFailStop, Enabled: true}
 		next, err := parseStepItem(lines, i, &step)
 		if err != nil {
 			return steps, i, err
@@ -577,6 +578,12 @@ func parseStepItem(lines []yamlLine, start int, step *Step) (int, error) {
 			step.ID = unquote(val)
 		case "adapter":
 			step.AdapterID = unquote(val)
+		case "enabled":
+			v, err := strconv.ParseBool(unquote(val))
+			if err != nil {
+				return i, fields[j].err("invalid enabled %q", val)
+			}
+			step.Enabled = v
 		case "depends_on":
 			step.DependsOn = parseStringListInline(val)
 		case "on_fail":

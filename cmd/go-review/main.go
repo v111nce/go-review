@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -21,6 +22,14 @@ var (
 	commit  = "unknown"
 	date    = "unknown"
 )
+
+// bundledRulesFS 打包 go-review 内置规则库。
+//
+// init 面向的是任意消费方项目，运行时不能假设当前目录还存在 go-review 源码仓库的
+// rules/go-rules.json。因此把发布时的规则源随二进制嵌入，用于生成消费方本地规则文件。
+//
+//go:embed assets/go-rules.json
+var bundledRulesFS embed.FS
 
 func main() {
 	os.Exit(run(os.Args[1:]))
@@ -110,6 +119,9 @@ func initProject(workdir string) (string, error) {
 		base = "."
 	}
 	if discovered, err := discoverConfig(base); err == nil {
+		if ensureErr := writeDefaultProjectFiles(filepath.Dir(discovered)); ensureErr != nil {
+			return "", ensureErr
+		}
 		return discovered, nil
 	}
 	configPath := filepath.Join(base, ".go-review", "go-review.yaml")
@@ -119,13 +131,25 @@ func initProject(workdir string) (string, error) {
 	if err := os.WriteFile(configPath, []byte(defaultConfig()), 0o644); err != nil {
 		return "", err
 	}
-	if err := writeDefaultRuleCatalog(filepath.Dir(configPath)); err != nil {
-		return "", err
-	}
-	if err := writeDefaultSemanticConfig(filepath.Dir(configPath)); err != nil {
+	if err := writeDefaultProjectFiles(filepath.Dir(configPath)); err != nil {
 		return "", err
 	}
 	return configPath, nil
+}
+
+// writeDefaultProjectFiles 写入 go-review 配置目录下的伴随规则文件。
+//
+// 这些文件都是“默认生成但用户可维护”的项目本地输入：rules.json 和 llm-rules.json
+// 只在不存在时创建，semantic/default.yaml 由框架默认覆盖，semantic/custom.yaml 只在
+// 不存在时创建。这样旧项目重新 init 能拿到新增文件，但不会覆盖用户自己的规则。
+func writeDefaultProjectFiles(configDir string) error {
+	if err := writeDefaultRuleCatalog(configDir); err != nil {
+		return err
+	}
+	if err := writeDefaultLLMRules(configDir); err != nil {
+		return err
+	}
+	return writeDefaultSemanticConfig(configDir)
 }
 
 // writeDefaultRuleCatalog 初始化消费方项目内的轻量规则 catalog。
@@ -140,6 +164,70 @@ func writeDefaultRuleCatalog(configDir string) error {
 		return err
 	}
 	return rulecatalog.SaveFile(path, defaultRuleCatalog())
+}
+
+// writeDefaultLLMRules 初始化消费方项目内的 LLM 审阅规则文件。
+//
+// 这些规则依赖上下文判断，不能伪装成确定性 gate；单独落到 llm-rules.json 后，
+// latest.llm.md 和可选 llm.review adapter 都能在任意项目里引用同一份本地规则清单。
+func writeDefaultLLMRules(configDir string) error {
+	path := filepath.Join(configDir, "llm-rules.json")
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return rulecatalog.SaveFile(path, defaultLLMRuleCatalog())
+}
+
+// defaultLLMRuleCatalog 返回内置规则库中的 C 类 LLM review 规则。
+func defaultLLMRuleCatalog() rulecatalog.Catalog {
+	catalog, err := bundledRuleCatalog()
+	if err != nil {
+		return rulecatalog.Catalog{SchemaVersion: rulecatalog.SchemaVersion, Rules: defaultFallbackLLMRules()}
+	}
+	llm := rulecatalog.Empty()
+	for _, rule := range catalog.Rules {
+		if rule.Handling == "llm-review" {
+			llm.Rules = append(llm.Rules, rule)
+		}
+	}
+	if len(llm.Rules) == 0 {
+		llm.Rules = defaultFallbackLLMRules()
+	}
+	llm.Normalize()
+	return llm
+}
+
+// bundledRuleCatalog 读取随二进制嵌入的完整规则库。
+func bundledRuleCatalog() (rulecatalog.Catalog, error) {
+	data, err := bundledRulesFS.ReadFile("assets/go-rules.json")
+	if err != nil {
+		return rulecatalog.Catalog{}, err
+	}
+	return rulecatalog.Load(strings.NewReader(string(data)))
+}
+
+// defaultFallbackLLMRules 是嵌入规则读取失败时的兜底最小清单。
+// 正常发布二进制会使用 assets/go-rules.json 中的全量 llm-review 规则。
+func defaultFallbackLLMRules() []rulecatalog.Rule {
+	return []rulecatalog.Rule{
+		{
+			ID:             "go.official.goroutine-lifetimes",
+			Title:          "Goroutine 生命周期",
+			Description:    "启动 goroutine 时要能说明退出条件和生命周期，避免泄漏。",
+			Source:         rulecatalog.Source{Name: "Go Code Review Comments", URL: "https://go.dev/wiki/CodeReviewComments", Section: "Goroutine Lifetimes"},
+			Handling:       "llm-review",
+			Adapter:        "llm.review",
+			ToolRules:      []string{".go-review/llm-rules.json"},
+			DefaultProfile: "review",
+			Severity:       "medium",
+			Autofix:        rulecatalog.Autofix{Supported: false, Safety: "none"},
+			Status:         "active",
+			Implemented:    true,
+			Notes:          "需要结合业务生命周期判断；默认由 LLM/人工 review，不作为确定性 gate。",
+		},
+	}
 }
 
 // defaultRuleCatalog 返回初始化模板中的最小规则集。
@@ -228,6 +316,7 @@ tools:
     go.lint: "system-golangci-lint"       # install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
     go.test: "go"
     go.semantic: "builtin"
+    llm.review: "codex"                 # optional runtime; disabled by default via steps[].enabled.
     # Optional adapters. Uncomment after installing the named tools.
     # go.vet: "go"                       # built in with Go; uncomment the adapter/step/profile entries below to enable.
     # staticcheck: "staticcheck"          # install: go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -271,6 +360,10 @@ adapters:
     type: go.semantic
     capabilities: [check]
     timeout: 30s
+    fix_safety: review
+  - id: llm.review
+    type: llm.review
+    capabilities: [report]
     fix_safety: review
   # Optional: go vet (no extra install; ships with Go).
   # - id: go.vet
@@ -321,6 +414,11 @@ steps:
   - id: semantic
     adapter: go.semantic
     on_fail: continue
+  # Set enabled: true after Codex CLI is installed and logged in.
+  - id: llm-review
+    adapter: llm.review
+    enabled: false
+    on_fail: continue
   # Optional steps. Uncomment the matching adapter above before enabling.
   # Each step uses on_fail: continue so one review area does not prevent others from running.
   # - id: vet
@@ -342,6 +440,8 @@ profiles:
     steps: [format-check, lint, test, semantic]
   - name: nightly
     steps: [format-check, lint, test, semantic]
+  - name: review
+    steps: [format-check, lint, test, semantic, llm-review]
   # Optional after enabling the matching steps above:
   # - name: full
   #   steps: [format-check, test, semantic, vet, staticcheck, vulncheck, security]

@@ -154,3 +154,32 @@ profiles:
 		t.Fatal("expected unknown step error")
 	}
 }
+
+func TestStepEnabledDefaultsTrueAndParsesFalse(t *testing.T) {
+	cfg, err := Load(strings.NewReader(`
+schema_version: "1.0"
+adapters:
+  - id: echo
+    type: cmd
+steps:
+  - id: default-step
+    adapter: echo
+  - id: disabled-step
+    adapter: echo
+    enabled: false
+profiles:
+  - name: fast
+    steps: [default-step, disabled-step]
+`))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	defaultStep, _ := cfg.Step("default-step")
+	if !defaultStep.Enabled {
+		t.Fatal("step without enabled should default to true")
+	}
+	disabledStep, _ := cfg.Step("disabled-step")
+	if disabledStep.Enabled {
+		t.Fatal("enabled: false should disable step")
+	}
+}

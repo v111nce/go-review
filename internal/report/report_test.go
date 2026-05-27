@@ -3,6 +3,8 @@ package report
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -62,12 +64,22 @@ func TestWriteMarkdown(t *testing.T) {
 }
 
 func TestWriteLLMMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, ".go-review", "go-review.yaml")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(configPath), "llm-rules.json"), []byte(`{"rules":[{"id":"go.official.goroutine-lifetimes","title":"Goroutine 生命周期","handling":"llm-review"}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	report := sampleReport()
+	report.ConfigPath = configPath
 	var buf bytes.Buffer
-	if err := WriteLLMMarkdown(&buf, sampleReport()); err != nil {
+	if err := WriteLLMMarkdown(&buf, report); err != nil {
 		t.Fatalf("WriteLLMMarkdown() error = %v", err)
 	}
 	out := buf.String()
-	for _, want := range []string{"# go-review LLM 修复上下文", "## 重要约束", "### 失败项 1", "规则：SA1000", "预期完成标准"} {
+	for _, want := range []string{"# go-review LLM 修复上下文", "## 重要约束", "## LLM 审阅规则", "go.official.goroutine-lifetimes", "### 失败项 1", "规则：SA1000", "预期完成标准"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("llm markdown output missing %q:\n%s", want, out)
 		}

@@ -125,6 +125,7 @@ func NewRegistry() *Registry {
 	r.Register("cmd", func(cfg config.Adapter) (Adapter, error) { return CommandAdapter{cfg: cfg}, nil })
 	r.Register("go.lint", func(cfg config.Adapter) (Adapter, error) { return GoLintAdapter{cfg: cfg}, nil })
 	r.Register("go.semantic", func(cfg config.Adapter) (Adapter, error) { return SemanticAdapter{cfg: cfg}, nil })
+	r.Register("llm.review", func(cfg config.Adapter) (Adapter, error) { return LLMReviewAdapter{cfg: cfg}, nil })
 	return r
 }
 
@@ -189,6 +190,11 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 			return summary, err
 		}
 		stepCtx := StepContext{Command: opts.Command, Step: step, Adapter: *adapterCfg, Config: cfg, ConfigPath: opts.Config, ProjectRoot: projectRoot}
+		if adapterCfg.Type == "llm.review" && opts.ReportDir != "" {
+			if err := report.WriteFiles(opts.ReportDir, summary.Report()); err != nil {
+				return summary, err
+			}
+		}
 		if transaction.shouldProtect(stepCtx) {
 			if err := transaction.snapshotProject(); err != nil {
 				return summary, err
@@ -329,6 +335,9 @@ func orderedProfileSteps(cfg *config.Config, profile *config.Profile, requested 
 		step, ok := cfg.Step(selectedStep.ID)
 		if !ok {
 			return nil, fmt.Errorf("profile %q references unknown step %q", profile.Name, selectedStep.ID)
+		}
+		if !step.Enabled {
+			continue
 		}
 		steps = append(steps, *step)
 	}

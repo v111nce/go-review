@@ -261,6 +261,10 @@ func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 - 如果规则的 fix_safety 是 safe，可以优先用 go-review fix 自动修复。
 - 如果规则的 fix_safety 是 review，需要谨慎手改并说明原因。
 
+## LLM 审阅规则
+
+{{llmRulesSection .}}
+
 ## 失败项
 
 {{if .Findings}}{{range $i, $f := .Findings}}### 失败项 {{inc $i}}
@@ -349,19 +353,20 @@ func writeOne(path string, r RunReport, write func(io.Writer, RunReport) error) 
 
 func executeTemplate(w io.Writer, name, tpl string, r RunReport) error {
 	t, err := template.New(name).Funcs(template.FuncMap{
-		"commandOrCheck": commandOrCheck,
-		"dash":           emptyDash,
-		"duration":       formatDuration,
-		"fix":            markdownFix,
-		"fixesApplied":   fixesApplied,
-		"inc":            func(i int) int { return i + 1 },
-		"location":       findingLocation,
-		"md":             escapeMarkdownCell,
-		"nextActions":    nextActions,
-		"recommendation": recommendation,
-		"resultSentence": resultSentence,
-		"stepFix":        stepFix,
-		"time":           formatTime,
+		"commandOrCheck":  commandOrCheck,
+		"dash":            emptyDash,
+		"duration":        formatDuration,
+		"fix":             markdownFix,
+		"fixesApplied":    fixesApplied,
+		"inc":             func(i int) int { return i + 1 },
+		"location":        findingLocation,
+		"llmRulesSection": llmRulesSection,
+		"md":              escapeMarkdownCell,
+		"nextActions":     nextActions,
+		"recommendation":  recommendation,
+		"resultSentence":  resultSentence,
+		"stepFix":         stepFix,
+		"time":            formatTime,
 	}).Parse(tpl)
 	if err != nil {
 		return err
@@ -498,6 +503,79 @@ func recommendation(f Finding) string {
 		return "该失败项标记为可安全自动修复。手动修改前，优先运行 `go-review fix`。"
 	}
 	return "根据上方规则、信息、位置和产物，做最小且保持行为不变的修改。"
+}
+
+func llmRulesSection(r RunReport) string {
+	path := llmRulesPath(r.ConfigPath)
+	if path == "" {
+		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 `.go-review/llm-rules.json`。"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "- 规则文件：`%s`\n", path)
+	if data, err := os.ReadFile(path); err == nil {
+		summary := summarizeLLMRules(data)
+		if summary != "" {
+			b.WriteString(summary)
+		} else {
+			b.WriteString("- 规则文件存在，但未能生成摘要；请直接读取该 JSON。\n")
+		}
+	} else {
+		fmt.Fprintf(&b, "- 当前未能读取规则文件：%v\n", err)
+	}
+	b.WriteString("- 审阅输出必须带 `rule_id`、文件位置、原因和建议；C 类规则默认不作为确定性硬 gate。\n")
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func llmRulesPath(configPath string) string {
+	configPath = strings.TrimSpace(configPath)
+	if configPath == "" || configPath == "-" {
+		return ""
+	}
+	dir := filepath.Dir(configPath)
+	return filepath.Join(dir, "llm-rules.json")
+}
+
+func summarizeLLMRules(data []byte) string {
+	var raw struct {
+		Rules []struct {
+			ID          string `json:"id"`
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Handling    string `json:"handling"`
+		} `json:"rules"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return ""
+	}
+	total := 0
+	var lines []string
+	for _, rule := range raw.Rules {
+		if rule.Handling != "llm-review" {
+			continue
+		}
+		total++
+		if len(lines) < 20 {
+			title := strings.TrimSpace(rule.Title)
+			if title == "" {
+				title = strings.TrimSpace(rule.Description)
+			}
+			lines = append(lines, fmt.Sprintf("  - `%s`：%s", rule.ID, emptyDash(title)))
+		}
+	}
+	if total == 0 {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "- LLM 规则数量：%d\n", total)
+	if len(lines) > 0 {
+		b.WriteString("- 规则摘要（前 20 条）：\n")
+		b.WriteString(strings.Join(lines, "\n"))
+		b.WriteString("\n")
+	}
+	if total > len(lines) {
+		fmt.Fprintf(&b, "- 其余 %d 条请读取规则文件。\n", total-len(lines))
+	}
+	return b.String()
 }
 
 func formatTime(t time.Time) string {
