@@ -5,7 +5,7 @@
 ## 执行原则
 
 - 报告必须使用中文。
-- 本项目 git commit message 必须使用中文；若使用 Lore trailer，字段名保持协议约定，字段值和说明使用中文。
+- 本项目 git commit message 必须遵守 `docs/quality/conventional-commits.md`；type/scope 等规范关键字使用英文，例如 `feat(agent):`、`fix(sidecar):`、`docs:`，冒号后的标题、正文和 trailers 内容默认必须使用中文。若使用 Lore trailer，字段名保持协议约定，字段值和说明使用中文。
 - 每条 LLM review 结论必须带稳定 `rule_id`，并能回到 `rules/go-rules.json` 查询来源。
 - 不要把 C 类结论描述成 gofmt、golangci-lint、go test 或 go.semantic 的工具检测结果。
 - C 类默认不阻断；只有用户或项目策略明确要求时，才升级为阻断项。
