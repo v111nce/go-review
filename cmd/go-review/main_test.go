@@ -170,6 +170,9 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 			t.Fatalf("project config should not enable default exclude line %q:\n%s", trimmed, projectConfig)
 		}
 	}
+	if strings.Contains(string(projectConfig), "dir: \".go-review/artifacts/latest\"") || strings.Contains(string(projectConfig), "dir: \"../.go-review/artifacts/latest\"") {
+		t.Fatalf("project config should keep artifacts relative to config dir, got:\n%s", projectConfig)
+	}
 	for _, want := range []string{
 		"# exclude:",
 		"# Optional: staticcheck. Install first:",
@@ -179,6 +182,7 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 		"llm.review: \"codex\"",
 		"type: llm.review",
 		"enabled: false",
+		"dir: \"artifacts/latest\"",
 		"steps: [format-check, lint, test, semantic, llm-review, llm-claude]",
 		"on_fail: continue",
 		"--config=.go-review/golangci.yml",

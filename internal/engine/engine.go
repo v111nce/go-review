@@ -565,7 +565,7 @@ func (a CommandAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, e
 		{Name: "stderr", Content: stderr.String()},
 	}
 	if dir := stepCtx.Config.Artifacts.Dir; dir != "" {
-		written, writeErr := writeArtifacts(resolveWorkdir(stepCtx.ProjectRoot, dir), stepCtx.Step.ID, artifacts)
+		written, writeErr := writeArtifacts(configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, dir), stepCtx.Step.ID, artifacts)
 		if writeErr == nil {
 			artifacts = written
 		}

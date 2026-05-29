@@ -97,7 +97,7 @@ func applyGolangciLintNoiseFilter(result *Result, stepCtx StepContext) {
 		return
 	}
 	if dir := stepCtx.Config.Artifacts.Dir; dir != "" {
-		if written, err := writeArtifacts(resolveWorkdir(stepCtx.ProjectRoot, dir), stepCtx.Step.ID, result.Artifacts); err == nil {
+		if written, err := writeArtifacts(configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, dir), stepCtx.Step.ID, result.Artifacts); err == nil {
 			result.Artifacts = written
 		}
 	}

@@ -187,6 +187,10 @@ go-review update
 
 `update` 是单一入口，不会默认自动升级。它会先访问 GitHub Release 检测最新版本：
 
+- 检测入口：`https://api.github.com/repos/v111nce/go-review/releases/latest`。
+- 版本来源：当前二进制的 `go-review version` 构建元数据，对比 latest release 的 `tag_name`。
+- 下载目标：根据当前 `GOOS/GOARCH` 选择 `go-review_<version>_<os>_<arch>.tar.gz` 或 `.zip`，并校验 `checksums.txt`。
+
 1. 如果当前已经是最新版，只输出当前版本状态。
 2. 如果发现新版本，先展示 release 概要。
 3. 询问 `是否升级？[y/N]`。
@@ -214,6 +218,43 @@ go-review update --yes
 ```bash
 go-review update --config path/to/go-review.yaml
 ```
+
+## 配置路径语义
+
+配置文件通常位于：
+
+```text
+.go-review/go-review.yaml
+```
+
+默认生成的产物目录是：
+
+```yaml
+artifacts:
+  dir: "artifacts/latest"
+```
+
+这个路径是**相对配置文件所在目录**，所以实际写入位置是：
+
+```text
+.go-review/artifacts/latest
+```
+
+不要写成：
+
+```yaml
+artifacts:
+  dir: ".go-review/artifacts/latest"
+```
+
+否则当配置文件已经在 `.go-review/` 目录下时，会变成 `.go-review/.go-review/artifacts/latest`。如果 Go module 在子目录，例如：
+
+```yaml
+defaults:
+  workdir: ../api
+```
+
+`workdir` 只影响 lint/test/semantic 的执行目录，不影响 artifact 输出目录；artifact 仍写到配置目录下。
 
 ## 默认 profile
 

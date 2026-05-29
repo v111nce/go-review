@@ -27,6 +27,8 @@ import (
 
 const defaultLatestReleaseURL = "https://api.github.com/repos/v111nce/go-review/releases/latest"
 
+var errNoPublishedRelease = errors.New("no published GitHub release found")
+
 // httpClientDo 是 update 命令的网络边界。测试会替换它，生产运行默认使用 http.DefaultClient。
 var httpClientDo = http.DefaultClient.Do
 
@@ -84,6 +86,12 @@ func runUpdate(args []string) int {
 
 	currentVersion, _, _ := buildMetadata()
 	plan, err := buildUpdatePlan(ctx, *releaseURL, currentVersion)
+	if errors.Is(err, errNoPublishedRelease) {
+		fmt.Fprintln(os.Stdout, "未发现可用的 GitHub Release，无法执行二进制升级。")
+		fmt.Fprintln(os.Stdout, "可能原因：仓库还没有发布 release，或 latest release 尚未公开可访问。")
+		fmt.Fprintf(os.Stdout, "检测地址：%s\n", *releaseURL)
+		return 0
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "go-review update: %v\n", err)
 		return 2
@@ -133,6 +141,10 @@ func runUpdate(args []string) int {
 func buildUpdatePlan(ctx context.Context, latestReleaseURL string, currentVersion string) (*updatePlan, error) {
 	var release githubRelease
 	if err := getJSON(ctx, latestReleaseURL, &release); err != nil {
+		var statusErr *httpStatusError
+		if errors.As(err, &statusErr) && statusErr.StatusCode == http.StatusNotFound {
+			return nil, errNoPublishedRelease
+		}
 		return nil, err
 	}
 	latest := strings.TrimSpace(release.TagName)
@@ -234,9 +246,28 @@ func getBytes(ctx context.Context, url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("GET %s: status %s", url, resp.Status)
+		return nil, &httpStatusError{URL: url, Status: resp.Status, StatusCode: resp.StatusCode, Body: readSmallBody(resp.Body)}
 	}
 	return io.ReadAll(resp.Body)
+}
+
+type httpStatusError struct {
+	URL        string
+	Status     string
+	StatusCode int
+	Body       string
+}
+
+func (e *httpStatusError) Error() string {
+	if e.StatusCode == http.StatusForbidden && strings.Contains(strings.ToLower(e.Body), "rate limit") {
+		return fmt.Sprintf("GET %s: GitHub API rate limit exceeded; please retry later", e.URL)
+	}
+	return fmt.Sprintf("GET %s: status %s", e.URL, e.Status)
+}
+
+func readSmallBody(r io.Reader) string {
+	data, _ := io.ReadAll(io.LimitReader(r, 4096))
+	return string(data)
 }
 
 func releaseArchiveName(version string, goos string, goarch string) string {

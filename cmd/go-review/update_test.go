@@ -127,6 +127,32 @@ func TestRunUpdateCancelDoesNotModifyFiles(t *testing.T) {
 	}
 }
 
+// TestRunUpdateNoPublishedReleaseIsFriendly 验证 GitHub latest release 404 时给出可理解提示，
+// 而不是把 404 当成普通失败退出。
+func TestRunUpdateNoPublishedReleaseIsFriendly(t *testing.T) {
+	oldVersion, oldCommit, oldDate := version, commit, date
+	oldDo := httpClientDo
+	t.Cleanup(func() {
+		version, commit, date = oldVersion, oldCommit, oldDate
+		httpClientDo = oldDo
+	})
+	version, commit, date = "v0.1.0", "test", "test"
+	httpClientDo = fakeHTTP(map[string]string{})
+
+	stdout, stderr, code := captureRun([]string{"update", "--release-url", "https://example.test/latest"})
+	if code != 0 {
+		t.Fatalf("update 404 code=%d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	for _, want := range []string{"未发现可用的 GitHub Release", "latest release 尚未公开可访问", "https://example.test/latest"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("stdout missing %q:\n%s", want, stdout)
+		}
+	}
+	if stderr != "" {
+		t.Fatalf("stderr=%q", stderr)
+	}
+}
+
 func fakeHTTP(responses map[string]string) func(*http.Request) (*http.Response, error) {
 	return func(req *http.Request) (*http.Response, error) {
 		body, ok := responses[req.URL.String()]

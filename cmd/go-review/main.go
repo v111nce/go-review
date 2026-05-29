@@ -355,7 +355,7 @@ defaults:
 #   - generated
 #   - third_party
 artifacts:
-  dir: ".go-review/artifacts/latest"
+  dir: "artifacts/latest"
 adapters:
   - id: go.lint.format
     type: go.lint

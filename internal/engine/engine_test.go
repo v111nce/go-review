@@ -1685,3 +1685,53 @@ profiles:
 		t.Fatalf("results = %#v", summary.Results)
 	}
 }
+
+// 验证 artifacts.dir 的相对路径语义固定为“相对配置文件所在目录”，而不是相对 defaults.workdir。
+// 这样配置放在 .go-review/go-review.yaml 时，只需要写 artifacts/latest，不需要写 ../.go-review。
+func TestArtifactsDirRelativeToConfigDir(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".go-review")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	moduleDir := filepath.Join(dir, "api")
+	if err := os.MkdirAll(moduleDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(configDir, "go-review.yaml")
+	if err := os.WriteFile(cfg, []byte(`schema_version: "1.0"
+defaults:
+  workdir: ../api
+artifacts:
+  dir: artifacts/latest
+adapters:
+  - id: echo
+    type: cmd
+    command: sh
+    args: [-c, "echo ok"]
+steps:
+  - id: echo-step
+    adapter: echo
+profiles:
+  - name: fast
+    steps: [echo-step]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if len(summary.Results) != 1 || len(summary.Results[0].Artifacts) == 0 {
+		t.Fatalf("missing artifact: %#v", summary.Results)
+	}
+	wantPrefix := filepath.Join(configDir, "artifacts", "latest")
+	got := summary.Results[0].Artifacts[0].Path
+	if !strings.HasPrefix(got, wantPrefix+string(os.PathSeparator)) {
+		t.Fatalf("artifact path = %s, want under %s", got, wantPrefix)
+	}
+	wrongPrefix := filepath.Join(moduleDir, "artifacts", "latest")
+	if strings.HasPrefix(got, wrongPrefix+string(os.PathSeparator)) {
+		t.Fatalf("artifact path should not be relative to workdir: %s", got)
+	}
+}
