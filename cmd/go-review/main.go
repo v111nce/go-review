@@ -50,6 +50,8 @@ func run(args []string) int {
 			return runInit(args[1:])
 		case "rules":
 			return runRules(args[1:])
+		case "update":
+			return runUpdate(args[1:])
 		}
 		if len(args[0]) > 0 && args[0][0] != '-' {
 			fmt.Fprintf(os.Stderr, "unknown command %q\n\n", args[0])
@@ -859,6 +861,7 @@ Usage:
   go-review fix [--config <path>] [--profile fast]
   go-review init [--workdir <dir>]
   go-review rules <list|get|add|upsert|delete|validate|render-doc>
+  go-review update [--yes]
   go-review version
 
 Commands:
@@ -866,6 +869,7 @@ Commands:
   fix      run configured adapters in fix mode when adapters support safe fixes such as golangci-lint fmt
   init     create .go-review/go-review.yaml without running checks
   rules    manage JSON rule catalog and render Markdown docs
+  update   check latest release, confirm upgrade, replace binary, and append missing config
   version  print build version metadata
 
 Flags:

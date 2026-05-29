@@ -587,6 +587,9 @@ func TestBuildMetadataPrefersLDFlags(t *testing.T) {
 
 func writeFile(t *testing.T, path string, data string) {
 	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		t.Fatal(err)
 	}

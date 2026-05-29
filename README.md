@@ -55,7 +55,7 @@ flowchart TD
 
 当前版本已经实现以下能力：
 
-1. `go-review` CLI：支持 `check`、`fix`、`init`、`rules`、`version`。
+1. `go-review` CLI：支持 `check`、`fix`、`init`、`rules`、`update`、`version`。
 2. 默认配置发现：优先读取 `.go-review/go-review.yaml`，其次读取 `go-review.yaml`；缺失时可自动初始化。
 3. `go.lint` adapter：通过 `golangci-lint fmt/run` 承接格式化和静态检查。
 4. `go.test` adapter：通过 `go test ./...` 执行测试。
@@ -66,6 +66,7 @@ flowchart TD
 9. 失败隔离：默认 `on_fail: continue`，一个部分失败不会阻止其它部分运行。
 10. 报告输出：生成面向人、LLM 和机器的 Markdown / JSON 报告。
 11. 规则 catalog：支持 JSON 规则库的校验、查询、增删改和 Markdown 渲染。
+12. 主动升级检测：`go-review update` 只在用户确认后替换执行文件，并只追加缺失的新配置。
 
 ## 安装
 
@@ -176,6 +177,42 @@ go-review check \
 
 ```bash
 go-review check --profile ci --report-dir /tmp/go-review-report
+```
+
+### 主动检测并升级
+
+```bash
+go-review update
+```
+
+`update` 是单一入口，不会默认自动升级。它会先访问 GitHub Release 检测最新版本：
+
+1. 如果当前已经是最新版，只输出当前版本状态。
+2. 如果发现新版本，先展示 release 概要。
+3. 询问 `是否升级？[y/N]`。
+4. 只有输入 `y` 或 `yes` 后才执行升级。
+
+确认升级后会做两类事情：
+
+- 替换当前 `go-review` 执行文件，并保留旧二进制备份。
+- 如果当前项目能发现 `.go-review/go-review.yaml` 或 `go-review.yaml`，则只追加新版本缺失的默认配置。
+
+配置合并遵守“只追加、不覆盖”：
+
+- 已有 adapter / step / profile 配置会跳过。
+- 用户改过的参数不会被替换。
+- 新增的 LLM/Claude 配置默认 `enabled: false`，不会改变老项目行为。
+
+非交互环境可以显式确认：
+
+```bash
+go-review update --yes
+```
+
+配置文件不在默认位置时，可以指定：
+
+```bash
+go-review update --config path/to/go-review.yaml
 ```
 
 ## 默认 profile
