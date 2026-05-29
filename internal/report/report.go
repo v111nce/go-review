@@ -350,7 +350,7 @@ func WriteProcessMarkdown(w io.Writer, r RunReport) error {
 
 ## 4. LLM 规则审阅与修复说明
 
-LLM 规则来源：.go-review/llm-rules.json。这些规则需要上下文判断，默认不作为确定性工具 gate；启用 LLM step 后，由配置中的执行模型根据规则文件和 latest.llm.md 修复或给出意见。
+LLM 规则来源：.go-review/llm/default.json 和 .go-review/llm/custom.json。default 由框架维护，custom 由用户维护；这些规则需要上下文判断，默认不作为确定性工具 gate。
 
 {{llmRulesSection .}}
 
@@ -568,36 +568,47 @@ func recommendation(f Finding) string {
 }
 
 func llmRulesSection(r RunReport) string {
-	path := llmRulesPath(r.ConfigPath)
-	if path == "" {
-		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 .go-review/llm-rules.json。"
+	paths := llmRulesPaths(r.ConfigPath)
+	if len(paths) == 0 {
+		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 .go-review/llm/default.json 和 .go-review/llm/custom.json。"
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "- 规则文件：`%s`\n", path)
-	if data, err := os.ReadFile(path); err == nil {
-		summary := summarizeLLMRules(data)
-		if summary != "" {
-			b.WriteString(summary)
+	fmt.Fprintln(&b, "- 规则文件：")
+	for _, source := range paths {
+		fmt.Fprintf(&b, "  - %s：`%s`\n", source.Name, source.Path)
+		if data, err := os.ReadFile(source.Path); err == nil {
+			summary := summarizeLLMRules(data, source.Name)
+			if summary != "" {
+				b.WriteString(summary)
+			} else {
+				fmt.Fprintf(&b, "    - %s 规则文件存在，但未能生成摘要；请直接读取该 JSON。\n", source.Name)
+			}
 		} else {
-			b.WriteString("- 规则文件存在，但未能生成摘要；请直接读取该 JSON。\n")
+			fmt.Fprintf(&b, "    - 当前未能读取 %s 规则文件：%v\n", source.Name, err)
 		}
-	} else {
-		fmt.Fprintf(&b, "- 当前未能读取规则文件：%v\n", err)
 	}
 	b.WriteString("- 审阅输出必须带 `rule_id`、文件位置、原因和建议；C 类规则默认不作为确定性硬 gate。\n")
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func llmRulesPath(configPath string) string {
-	configPath = strings.TrimSpace(configPath)
-	if configPath == "" || configPath == "-" {
-		return ""
-	}
-	dir := filepath.Dir(configPath)
-	return filepath.Join(dir, "llm-rules.json")
+type llmRuleSource struct {
+	Name string
+	Path string
 }
 
-func summarizeLLMRules(data []byte) string {
+func llmRulesPaths(configPath string) []llmRuleSource {
+	configPath = strings.TrimSpace(configPath)
+	if configPath == "" || configPath == "-" {
+		return nil
+	}
+	dir := filepath.Dir(configPath)
+	return []llmRuleSource{
+		{Name: "default", Path: filepath.Join(dir, "llm", "default.json")},
+		{Name: "custom", Path: filepath.Join(dir, "llm", "custom.json")},
+	}
+}
+
+func summarizeLLMRules(data []byte, sourceName string) string {
 	var raw struct {
 		Rules []struct {
 			ID          string `json:"id"`
@@ -621,21 +632,18 @@ func summarizeLLMRules(data []byte) string {
 			if title == "" {
 				title = strings.TrimSpace(rule.Description)
 			}
-			lines = append(lines, fmt.Sprintf("  - `%s`：%s", rule.ID, emptyDash(title)))
+			lines = append(lines, fmt.Sprintf("    - `%s`：%s", rule.ID, emptyDash(title)))
 		}
 	}
-	if total == 0 {
-		return ""
-	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "- LLM 规则数量：%d\n", total)
+	fmt.Fprintf(&b, "    - %s LLM 规则数量：%d\n", sourceName, total)
 	if len(lines) > 0 {
-		b.WriteString("- 规则摘要（前 20 条）：\n")
+		fmt.Fprintf(&b, "    - %s 规则摘要（前 20 条）：\n", sourceName)
 		b.WriteString(strings.Join(lines, "\n"))
 		b.WriteString("\n")
 	}
 	if total > len(lines) {
-		fmt.Fprintf(&b, "- 其余 %d 条请读取规则文件。\n", total-len(lines))
+		fmt.Fprintf(&b, "    - %s 其余 %d 条请读取规则文件。\n", sourceName, total-len(lines))
 	}
 	return b.String()
 }

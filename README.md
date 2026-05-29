@@ -8,7 +8,7 @@
 ```mermaid
 flowchart TD
     A[启动 go-review check/fix] --> B{发现 .go-review/go-review.yaml?}
-    B -- 否 --> B1[自动 init 默认配置\n生成 rules / llm-rules / semantic 配置]
+    B -- 否 --> B1[自动 init 默认配置\n生成 rules / llm default+custom / semantic 配置]
     B -- 是 --> C[加载配置和 profile]
     B1 --> C
 
@@ -104,7 +104,8 @@ go-review init
 ```text
 .go-review/go-review.yaml
 .go-review/rules.json
-.go-review/llm-rules.json
+.go-review/llm/default.json
+.go-review/llm/custom.json
 .go-review/semantic/default.yaml
 .go-review/semantic/custom.yaml
 ```
@@ -332,7 +333,8 @@ go-review check --profile ci
 LLM 审阅规则会初始化到：
 
 ```text
-.go-review/llm-rules.json
+.go-review/llm/default.json  # 框架默认规则，init/update 可覆盖
+.go-review/llm/custom.json   # 用户/团队自定义规则，只在不存在时创建
 ```
 
 `llm.review` 默认关闭，不会隐式调用模型。需要启用时，在 `.go-review/go-review.yaml` 中把对应 step 改成：
@@ -371,7 +373,7 @@ codex exec --cd <project> -
 claude -p --permission-mode acceptEdits '<go-review 生成的复审提示词>'
 ```
 
-`llm-claude` 会读取 `latest.llm.md`、`.go-review/llm-rules.json` 以及 `llm-review` 的 stdout/stderr 产物。它是可选第二模型复审，不替代确定性 lint / semantic / test 验证。Claude 的复审 stdout 会追加到统一过程文档 `.go-review/reports/latest.process.md`，并参与 `.go-review/reports/runs/<timestamp>.process.md` 归档。
+`llm-claude` 会读取 `latest.llm.md`、`.go-review/llm/default.json`、`.go-review/llm/custom.json` 以及 `llm-review` 的 stdout/stderr 产物。它是可选第二模型复审，不替代确定性 lint / semantic / test 验证。Claude 的复审 stdout 会追加到统一过程文档 `.go-review/reports/latest.process.md`，并参与 `.go-review/reports/runs/<timestamp>.process.md` 归档。
 
 ## 报告位置
 

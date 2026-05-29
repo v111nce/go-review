@@ -69,7 +69,14 @@ func TestWriteLLMMarkdown(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(filepath.Dir(configPath), "llm-rules.json"), []byte(`{"rules":[{"id":"go.official.goroutine-lifetimes","title":"Goroutine 生命周期","handling":"llm-review"}]}`), 0o644); err != nil {
+	llmDir := filepath.Join(filepath.Dir(configPath), "llm")
+	if err := os.MkdirAll(llmDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(llmDir, "default.json"), []byte(`{"rules":[{"id":"go.official.goroutine-lifetimes","title":"Goroutine 生命周期","handling":"llm-review"}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(llmDir, "custom.json"), []byte(`{"rules":[{"id":"team.custom.llm","title":"团队自定义规则","handling":"llm-review"}]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	report := sampleReport()
@@ -79,7 +86,7 @@ func TestWriteLLMMarkdown(t *testing.T) {
 		t.Fatalf("WriteLLMMarkdown() error = %v", err)
 	}
 	out := buf.String()
-	for _, want := range []string{"# go-review LLM 修复上下文", "## 重要约束", "## LLM 审阅规则", "go.official.goroutine-lifetimes", "### 失败项 1", "规则：SA1000", "预期完成标准"} {
+	for _, want := range []string{"# go-review LLM 修复上下文", "## 重要约束", "## LLM 审阅规则", "go.official.goroutine-lifetimes", "team.custom.llm", "### 失败项 1", "规则：SA1000", "预期完成标准"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("llm markdown output missing %q:\n%s", want, out)
 		}

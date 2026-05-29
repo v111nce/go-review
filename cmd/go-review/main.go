@@ -145,9 +145,9 @@ func initProject(workdir string) (string, error) {
 
 // writeDefaultProjectFiles 写入 go-review 配置目录下的伴随规则文件。
 //
-// 这些文件都是“默认生成但用户可维护”的项目本地输入：rules.json 和 llm-rules.json
-// 只在不存在时创建，semantic/default.yaml 由框架默认覆盖，semantic/custom.yaml 只在
-// 不存在时创建。这样旧项目重新 init 能拿到新增文件，但不会覆盖用户自己的规则。
+// 这些文件都是 go-review 配置目录下的项目本地输入：rules.json 提供轻量规则索引；
+// llm/default.json 由框架默认覆盖，llm/custom.json 只在不存在时创建；semantic/default.yaml
+// 由框架默认覆盖，semantic/custom.yaml 只在不存在时创建。这样默认规则可升级，用户规则不被覆盖。
 func writeDefaultProjectFiles(configDir string) error {
 	if err := writeDefaultRuleCatalog(configDir); err != nil {
 		return err
@@ -177,16 +177,38 @@ func writeDefaultRuleCatalog(configDir string) error {
 
 // writeDefaultLLMRules 初始化消费方项目内的 LLM 审阅规则文件。
 //
-// 这些规则依赖上下文判断，不能伪装成确定性 gate；单独落到 llm-rules.json 后，
-// latest.llm.md 和可选 llm.review adapter 都能在任意项目里引用同一份本地规则清单。
+// default.json 是框架默认规则，允许 init/update 覆盖；custom.json 是用户团队规则，
+// 只在不存在时创建。两者共同构成 LLM 审阅输入；旧 llm-rules.json 会被删除且不再读取。
 func writeDefaultLLMRules(configDir string) error {
-	path := filepath.Join(configDir, "llm-rules.json")
-	if _, err := os.Stat(path); err == nil {
-		return nil
+	llmDir := filepath.Join(configDir, "llm")
+	if err := os.MkdirAll(llmDir, 0o755); err != nil {
+		return err
+	}
+	if err := rulecatalog.SaveFile(filepath.Join(llmDir, "default.json"), defaultLLMRuleCatalog()); err != nil {
+		return err
+	}
+	customPath := filepath.Join(llmDir, "custom.json")
+	if _, err := os.Stat(customPath); err == nil {
+		return removeLegacyLLMRules(configDir)
 	} else if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	return rulecatalog.SaveFile(path, defaultLLMRuleCatalog())
+	if err := rulecatalog.SaveFile(customPath, rulecatalog.Empty()); err != nil {
+		return err
+	}
+	return removeLegacyLLMRules(configDir)
+}
+
+// removeLegacyLLMRules 删除已废弃的单文件 LLM 规则。
+//
+// 当前配置契约只认 llm/default.json 和 llm/custom.json；保留旧 llm-rules.json
+// 容易让用户误以为它还会被读取，所以初始化/升级时直接清理。
+func removeLegacyLLMRules(configDir string) error {
+	err := os.Remove(filepath.Join(configDir, "llm-rules.json"))
+	if err == nil || os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 // defaultLLMRuleCatalog 返回内置规则库中的 C 类 LLM review 规则。
@@ -228,7 +250,7 @@ func defaultFallbackLLMRules() []rulecatalog.Rule {
 			Source:         rulecatalog.Source{Name: "Go Code Review Comments", URL: "https://go.dev/wiki/CodeReviewComments", Section: "Goroutine Lifetimes"},
 			Handling:       "llm-review",
 			Adapter:        "llm.review",
-			ToolRules:      []string{".go-review/llm-rules.json"},
+			ToolRules:      []string{".go-review/llm/default.json", ".go-review/llm/custom.json"},
 			DefaultProfile: "review",
 			Severity:       "medium",
 			Autofix:        rulecatalog.Autofix{Supported: false, Safety: "none"},

@@ -35,8 +35,8 @@ func (a LLMReviewAdapter) Run(ctx context.Context, stepCtx StepContext) (Result,
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "llm.review.codex", Kind: ResultViolation, Message: fmt.Sprintf("llm.review requires %s in PATH", codexCommand), Suggestion: "安装并登录 Codex CLI 后再启用 llm.review adapter", FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
 
-	rulesPath := llmReviewRulesPath(a.cfg, stepCtx)
-	promptPath, prompt, err := writeLLMReviewPrompt(stepCtx, rulesPath)
+	rulesPaths := defaultLLMRulePaths(stepCtx.ConfigPath)
+	promptPath, prompt, err := writeLLMReviewPrompt(stepCtx, rulesPaths)
 	if err != nil {
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "llm.review.prompt", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
@@ -85,20 +85,7 @@ func llmReviewCodexCommand(cfg config.Adapter) string {
 	return "codex"
 }
 
-func llmReviewRulesPath(cfg config.Adapter, stepCtx StepContext) string {
-	for i := 0; i < len(cfg.Args); i++ {
-		arg := strings.TrimSpace(cfg.Args[i])
-		if arg == "--rules" && i+1 < len(cfg.Args) {
-			return configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, cfg.Args[i+1])
-		}
-		if strings.HasPrefix(arg, "--rules=") {
-			return configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, strings.TrimPrefix(arg, "--rules="))
-		}
-	}
-	return absPath(filepath.Join(filepath.Dir(stepCtx.ConfigPath), "llm-rules.json"))
-}
-
-func writeLLMReviewPrompt(stepCtx StepContext, rulesPath string) (string, string, error) {
+func writeLLMReviewPrompt(stepCtx StepContext, rulesPaths []string) (string, string, error) {
 	reportPath := latestLLMReportPath(stepCtx.ConfigPath)
 	promptPath := filepath.Join(configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, stepCtx.Config.Artifacts.Dir), stepCtx.Step.ID+"-prompt.md")
 	if stepCtx.Config.Artifacts.Dir == "" {
@@ -109,16 +96,17 @@ func writeLLMReviewPrompt(stepCtx StepContext, rulesPath string) (string, string
 你正在审阅一个 Go 项目。请读取下列文件：
 
 - LLM 修复上下文：%s
-- LLM 规则文件：%s
+- LLM 默认规则文件：%s
+- LLM 自定义规则文件：%s
 
 要求：
 
 1. 优先修复 latest.llm.md 中确定性工具报告的失败项。
-2. 按 llm-rules.json 中 handling=llm-review 的规则审阅当前项目或当前改动。
+2. 按 llm/default.json 和 llm/custom.json 中 handling=llm-review 的规则审阅当前项目或当前改动。
 3. 输出和修改说明必须带 rule_id、文件位置、原因、建议。
 4. 不要修改 .go-review/artifacts/ 或 .go-review/reports/ 下的生成产物。
 5. 完成后运行合适的 go-review check 或 go test 验证。
-`, reportPath, rulesPath)
+`, reportPath, firstLLMRulePath(rulesPaths), secondLLMRulePath(rulesPaths))
 	if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
 		return "", "", err
 	}
@@ -139,7 +127,7 @@ func latestLLMReportPath(configPath string) string {
 // llmReviewRoot 返回 Codex 进程的工作目录。
 //
 // 普通工具 step 会在 defaults.workdir 下执行，方便定位 Go module；但 llm.review 需要读取
-// 仓库级 .go-review/reports/latest.llm.md 和 llm-rules.json。若配置文件位于仓库根的
+// 仓库级 .go-review/reports/latest.llm.md 和 llm/default.json 和 llm/custom.json。若配置文件位于仓库根的
 // .go-review/go-review.yaml，则让 Codex 从仓库根启动，避免像 ailx-agent 这类 workdir=api
 // 的项目在 api/.go-review 下找不到报告和规则。
 func llmReviewRoot(stepCtx StepContext) string {
@@ -166,4 +154,26 @@ func absPath(path string) string {
 		return filepath.Clean(path)
 	}
 	return filepath.Clean(abs)
+}
+
+func defaultLLMRulePaths(configPath string) []string {
+	base := filepath.Join(filepath.Dir(configPath), "llm")
+	return []string{
+		absPath(filepath.Join(base, "default.json")),
+		absPath(filepath.Join(base, "custom.json")),
+	}
+}
+
+func firstLLMRulePath(paths []string) string {
+	if len(paths) == 0 {
+		return ""
+	}
+	return paths[0]
+}
+
+func secondLLMRulePath(paths []string) string {
+	if len(paths) < 2 {
+		return ""
+	}
+	return paths[1]
 }

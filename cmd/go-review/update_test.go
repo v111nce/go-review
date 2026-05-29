@@ -48,7 +48,7 @@ func TestRunUpdateAppliesBinaryAndMissingConfig(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("update code=%d stderr=%q stdout=%q", code, stderr, stdout)
 	}
-	for _, want := range []string{"发现新版本", "UPDATED go-review v0.1.0 -> v0.2.0", "adapters[id=llm.claude]", "steps[id=llm-claude]", "profiles[review].steps += llm-claude"} {
+	for _, want := range []string{"发现新版本", "UPDATED go-review v0.1.0 -> v0.2.0", "adapters[id=llm.claude]", "steps[id=llm-claude]", "profiles[review].steps += llm-claude", "llm/default.json", "llm/custom.json"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q:\n%s", want, stdout)
 		}
@@ -71,6 +71,14 @@ func TestRunUpdateAppliesBinaryAndMissingConfig(t *testing.T) {
 		if !strings.Contains(string(configData), want) {
 			t.Fatalf("config missing %q:\n%s", want, configData)
 		}
+	}
+	for _, path := range []string{filepath.Join(dir, ".go-review", "llm", "default.json"), filepath.Join(dir, ".go-review", "llm", "custom.json")} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected upgraded llm rules file %s: %v", path, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "llm-rules.json")); !os.IsNotExist(err) {
+		t.Fatalf("legacy llm-rules.json should be removed, err=%v", err)
 	}
 }
 

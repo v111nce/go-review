@@ -77,14 +77,16 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	semanticDefault := filepath.Join(dir, ".go-review", "semantic", "default.yaml")
 	golangciConfig := filepath.Join(dir, ".go-review", "golangci.yml")
 	rulesCatalog := filepath.Join(dir, ".go-review", "rules.json")
-	llmRules := filepath.Join(dir, ".go-review", "llm-rules.json")
+	llmDefaultRules := filepath.Join(dir, ".go-review", "llm", "default.json")
+	llmCustomRules := filepath.Join(dir, ".go-review", "llm", "custom.json")
 	for _, path := range []string{
 		filepath.Join(dir, ".go-review", "go-review.yaml"),
 		golangciConfig,
 		semanticDefault,
 		filepath.Join(dir, ".go-review", "semantic", "custom.yaml"),
 		rulesCatalog,
-		llmRules,
+		llmDefaultRules,
+		llmCustomRules,
 		filepath.Join(dir, ".go-review", "reports", "latest.md"),
 		filepath.Join(dir, ".go-review", "reports", "latest.llm.md"),
 		filepath.Join(dir, ".go-review", "reports", "latest.process.md"),
@@ -104,21 +106,28 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 		}
 	}
 
-	llmRulesData, err := os.ReadFile(llmRules)
+	llmDefaultRulesData, err := os.ReadFile(llmDefaultRules)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"go-review.rules.v1", "llm-review", "go.official.goroutine-lifetimes", "uber.guideline.no-fire-forget"} {
-		if !strings.Contains(string(llmRulesData), want) {
-			t.Fatalf("llm rules missing %q:\n%s", want, llmRulesData)
+		if !strings.Contains(string(llmDefaultRulesData), want) {
+			t.Fatalf("llm default rules missing %q:\n%s", want, llmDefaultRulesData)
 		}
+	}
+	llmCustomRulesData, err := os.ReadFile(llmCustomRules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(llmCustomRulesData), "go-review.rules.v1") || strings.Contains(string(llmCustomRulesData), "llm-review") {
+		t.Fatalf("llm custom rules should be an empty user catalog:\n%s", llmCustomRulesData)
 	}
 
 	llmReport, err := os.ReadFile(filepath.Join(dir, ".go-review", "reports", "latest.llm.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"## LLM 审阅规则", ".go-review/llm-rules.json", "LLM 规则数量", "rule_id"} {
+	for _, want := range []string{"## LLM 审阅规则", "llm/default.json", "llm/custom.json", "LLM 规则数量", "rule_id"} {
 		if !strings.Contains(string(llmReport), want) {
 			t.Fatalf("llm report missing %q:\n%s", want, llmReport)
 		}
@@ -252,7 +261,7 @@ func TestRunInitCreatesConfigOnly(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "rules.json")); err != nil {
 		t.Fatalf("expected rules catalog: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".go-review", "llm-rules.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, ".go-review", "llm", "default.json")); err != nil {
 		t.Fatalf("expected llm rules catalog: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports")); !os.IsNotExist(err) {
@@ -276,7 +285,8 @@ func TestRunInitKeepsExistingConfig(t *testing.T) {
 	}
 	for _, path := range []string{
 		filepath.Join(dir, ".go-review", "rules.json"),
-		filepath.Join(dir, ".go-review", "llm-rules.json"),
+		filepath.Join(dir, ".go-review", "llm", "default.json"),
+		filepath.Join(dir, ".go-review", "llm", "custom.json"),
 		filepath.Join(dir, ".go-review", "semantic", "default.yaml"),
 		filepath.Join(dir, ".go-review", "semantic", "custom.yaml"),
 	} {

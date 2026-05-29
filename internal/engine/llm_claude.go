@@ -15,7 +15,7 @@ import (
 
 // ClaudeReviewAdapter 负责在 Codex LLM review 之后做可选的第二模型复审。
 //
-// 它的定位不是替代 latest.llm.md，而是消费 latest.llm.md、llm-rules.json 和 Codex
+// 它的定位不是替代 latest.llm.md，而是消费 latest.llm.md、llm/default.json、llm/custom.json 和 Codex
 // 产物，对当前代码质量修复做“独立点评 + 必要修复”。默认配置保持 disabled，只有用户
 // 已安装并登录 Claude CLI 且显式开启 llm-claude step 时才运行。
 type ClaudeReviewAdapter struct {
@@ -37,8 +37,8 @@ func (a ClaudeReviewAdapter) Run(ctx context.Context, stepCtx StepContext) (Resu
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "llm.claude.cli", Kind: ResultViolation, Message: fmt.Sprintf("llm.claude requires %s in PATH", claudeCommand), Suggestion: "安装并登录 Claude Code CLI 后再启用 llm.claude adapter", FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
 
-	rulesPath := llmReviewRulesPath(a.cfg, stepCtx)
-	promptPath, prompt, err := writeClaudeReviewPrompt(stepCtx, rulesPath)
+	rulesPaths := defaultLLMRulePaths(stepCtx.ConfigPath)
+	promptPath, prompt, err := writeClaudeReviewPrompt(stepCtx, rulesPaths)
 	if err != nil {
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "llm.claude.prompt", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
@@ -95,7 +95,7 @@ func llmClaudeArgs(cfg config.Adapter, prompt string) []string {
 	return []string{"-p", "--permission-mode", "acceptEdits", prompt}
 }
 
-func writeClaudeReviewPrompt(stepCtx StepContext, rulesPath string) (string, string, error) {
+func writeClaudeReviewPrompt(stepCtx StepContext, rulesPaths []string) (string, string, error) {
 	reportPath := latestLLMReportPath(stepCtx.ConfigPath)
 	promptPath := filepath.Join(configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, stepCtx.Config.Artifacts.Dir), stepCtx.Step.ID+"-prompt.md")
 	if stepCtx.Config.Artifacts.Dir == "" {
@@ -109,20 +109,21 @@ func writeClaudeReviewPrompt(stepCtx StepContext, rulesPath string) (string, str
 你正在作为第二模型复审一个 Go 项目的代码质量修复。请读取下列文件：
 
 - 机器生成的 LLM 修复上下文：%s
-- LLM 规则文件：%s
+- LLM 默认规则文件：%s
+- LLM 自定义规则文件：%s
 - Codex stdout 产物：%s
 - Codex stderr 产物：%s
 
 要求：
 
 1. 先判断 Codex 对当前代码质量问题的修复是否完整、是否引入回归或过度修改。
-2. 继续按 llm-rules.json 中 handling=llm-review 的规则审阅当前项目或当前改动。
+2. 继续按 llm/default.json 和 llm/custom.json 中 handling=llm-review 的规则审阅当前项目或当前改动。
 3. 对能安全修复的问题直接修改；对不确定的问题只输出点评，不要盲改。
 4. 输出和修改说明必须使用中文，并带 rule_id、文件位置、原因、建议。
 5. 不要修改 .go-review/artifacts/ 或 .go-review/reports/ 下的生成产物。
 6. 完成后运行合适的 go-review check 或 go test 验证；如果无法运行，说明原因。
 7. go-review 会把你的 stdout 追加进统一过程文档：%s。
-`, reportPath, rulesPath, codexStdout, codexStderr, processReport)
+`, reportPath, firstLLMRulePath(rulesPaths), secondLLMRulePath(rulesPaths), codexStdout, codexStderr, processReport)
 	if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
 		return "", "", err
 	}
