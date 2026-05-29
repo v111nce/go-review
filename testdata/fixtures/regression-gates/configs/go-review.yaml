@@ -13,7 +13,8 @@ artifacts:
 adapters:
   - id: go.lint
     type: go.lint
-        capabilities: [check, fix]
+    command: ../scripts/fake-golangci-lint
+    capabilities: [check, fix]
     timeout: 30s
     fix_safety: safe
   - id: go.test

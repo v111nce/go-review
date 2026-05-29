@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -42,6 +44,7 @@ func TestRunHelpMentionsDefaultCheck(t *testing.T) {
 }
 
 func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
+	installFakeGolangciLint(t)
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/default-check\n")
 	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
@@ -62,6 +65,7 @@ func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
 // TestRunAutoInitializesMissingConfig 验证首次运行时会自动生成默认配置、semantic 配置、
 // 本地规则 catalog 和报告目录，并且默认配置中只把用户自有 exclude 作为注释提示。
 func TestRunAutoInitializesMissingConfig(t *testing.T) {
+	installFakeGolangciLint(t)
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/auto-init\n")
 	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
@@ -203,6 +207,7 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 }
 
 func TestRunBareAutoInitializesFromProjectRoot(t *testing.T) {
+	installFakeGolangciLint(t)
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/bare-auto-init\n")
 	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
@@ -607,6 +612,39 @@ func writeFile(t *testing.T, path string, data string) {
 	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func installFakeGolangciLint(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("fake golangci-lint fixture is a POSIX shell script")
+	}
+	binDir := t.TempDir()
+	fake := fakeGolangciLintPath(t)
+	wrapper := filepath.Join(binDir, "golangci-lint")
+	body := fmt.Sprintf("#!/bin/sh\nexec %s \"$@\"\n", shellQuote(fake))
+	if err := os.WriteFile(wrapper, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func fakeGolangciLintPath(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(file), "..", "..", "internal", "engine", "testdata", "bin", "fake-golangci-lint")
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return abs
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
 func minimalConfig() string {
