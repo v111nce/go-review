@@ -313,6 +313,63 @@ func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 	return executeTemplate(w, "llm-markdown", tpl, r)
 }
 
+// WriteProcessMarkdown 写入统一过程文档。
+//
+// 这个文档是 review/fix 的主阅读入口：它按执行过程解释哪些 safe fix 已应用、哪些
+// lint/semantic/test 只提供检测意见、后续 LLM step 的修改/复盘输出在哪里。latest.llm.md
+// 继续保留为模型输入上下文，但不承担人类主报告职责。
+func WriteProcessMarkdown(w io.Writer, r RunReport) error {
+	r.Normalize()
+	const tpl = `# go-review 过程文档
+
+## 0. 运行摘要
+
+| 字段 | 值 |
+| --- | --- |
+| 状态 | {{.GateStatus}} |
+| 命令 | {{dash .Command}} |
+| Profile | {{dash .Profile}} |
+| 工作目录 | {{dash .Workdir}} |
+| 配置 | {{dash .ConfigPath}} |
+| 开始时间 | {{time .StartedAt}} |
+| 耗时 | {{duration .Duration}} |
+
+## 1. Safe fix 执行结果
+
+{{safeFixSection .}}
+
+## 2. 工具检测结果：lint / semantic / test
+
+{{toolDetectionSection .}}
+
+说明：只检测不修复的规则不会自动改代码；它们通过本节给出 rule_id、步骤、文件位置、失败信息和建议。若 gate 为 fail，终端会显示 FAILED，并在 latest.md / latest.process.md 中保留具体失败项。
+
+## 3. 第一模型执行结果
+
+{{llmStepSection . "llm-review"}}
+
+## 4. LLM 规则审阅与修复说明
+
+LLM 规则来源：.go-review/llm-rules.json。这些规则需要上下文判断，默认不作为确定性工具 gate；启用 LLM step 后，由配置中的执行模型根据规则文件和 latest.llm.md 修复或给出意见。
+
+{{llmRulesSection .}}
+
+## 5. 第二模型复盘结果
+
+{{llmStepSection . "llm-claude"}}
+
+## 6. 产物索引
+
+{{if .Artifacts}}| 步骤 | 名称 | 路径 |
+| --- | --- | --- |
+{{- range .Artifacts}}
+| {{md .StepID}} | {{md .Name}} | {{md .Path}} |
+{{- end}}
+{{else}}没有写入产物。{{end}}
+`
+	return executeTemplate(w, "process-markdown", tpl, r)
+}
+
 // WriteFiles 同时写入 latest 和带时间戳的人类、LLM、JSON 报告。
 func WriteFiles(dir string, r RunReport) error {
 	if strings.TrimSpace(dir) == "" {
@@ -329,9 +386,11 @@ func WriteFiles(dir string, r RunReport) error {
 	}{
 		{filepath.Join(dir, "latest.md"), WriteMarkdown},
 		{filepath.Join(dir, "latest.llm.md"), WriteLLMMarkdown},
+		{filepath.Join(dir, "latest.process.md"), WriteProcessMarkdown},
 		{filepath.Join(dir, "latest.json"), WriteJSON},
 		{filepath.Join(dir, "runs", stamp+".md"), WriteMarkdown},
 		{filepath.Join(dir, "runs", stamp+".llm.md"), WriteLLMMarkdown},
+		{filepath.Join(dir, "runs", stamp+".process.md"), WriteProcessMarkdown},
 		{filepath.Join(dir, "runs", stamp+".json"), WriteJSON},
 	}
 	for _, file := range files {
@@ -353,20 +412,23 @@ func writeOne(path string, r RunReport, write func(io.Writer, RunReport) error) 
 
 func executeTemplate(w io.Writer, name, tpl string, r RunReport) error {
 	t, err := template.New(name).Funcs(template.FuncMap{
-		"commandOrCheck":  commandOrCheck,
-		"dash":            emptyDash,
-		"duration":        formatDuration,
-		"fix":             markdownFix,
-		"fixesApplied":    fixesApplied,
-		"inc":             func(i int) int { return i + 1 },
-		"location":        findingLocation,
-		"llmRulesSection": llmRulesSection,
-		"md":              escapeMarkdownCell,
-		"nextActions":     nextActions,
-		"recommendation":  recommendation,
-		"resultSentence":  resultSentence,
-		"stepFix":         stepFix,
-		"time":            formatTime,
+		"commandOrCheck":       commandOrCheck,
+		"dash":                 emptyDash,
+		"duration":             formatDuration,
+		"fix":                  markdownFix,
+		"fixesApplied":         fixesApplied,
+		"inc":                  func(i int) int { return i + 1 },
+		"location":             findingLocation,
+		"llmRulesSection":      llmRulesSection,
+		"md":                   escapeMarkdownCell,
+		"nextActions":          nextActions,
+		"recommendation":       recommendation,
+		"safeFixSection":       safeFixSection,
+		"toolDetectionSection": toolDetectionSection,
+		"llmStepSection":       llmStepSection,
+		"resultSentence":       resultSentence,
+		"stepFix":              stepFix,
+		"time":                 formatTime,
 	}).Parse(tpl)
 	if err != nil {
 		return err
@@ -508,7 +570,7 @@ func recommendation(f Finding) string {
 func llmRulesSection(r RunReport) string {
 	path := llmRulesPath(r.ConfigPath)
 	if path == "" {
-		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 `.go-review/llm-rules.json`。"
+		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 .go-review/llm-rules.json。"
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "- 规则文件：`%s`\n", path)
@@ -616,4 +678,101 @@ func reportStamp(r RunReport) string {
 		t = time.Now().UTC()
 	}
 	return t.UTC().Format("20060102T150405Z")
+}
+
+func safeFixSection(r RunReport) string {
+	var rows []string
+	for _, step := range r.Steps {
+		if step.FixSafety == "safe" || step.FixAvailable || step.FixApplied {
+			rows = append(rows, fmt.Sprintf("| %s | %s | %s | %s | %s |", escapeMarkdownCell(step.ID), escapeMarkdownCell(dash(step.AdapterID)), escapeMarkdownCell(string(step.Status)), escapeMarkdownCell(stepFix(step)), escapeMarkdownCell(dash(step.Message))))
+		}
+	}
+	if len(rows) == 0 {
+		return "本次没有 safe fix 步骤或没有应用 safe fix。"
+	}
+	return "| 步骤 | Adapter | 状态 | 修复 | 信息 |\n| --- | --- | --- | --- | --- |\n" + strings.Join(rows, "\n")
+}
+
+func toolDetectionSection(r RunReport) string {
+	var b strings.Builder
+	var stepRows []string
+	for _, step := range r.Steps {
+		if isLLMStep(step) {
+			continue
+		}
+		stepRows = append(stepRows, fmt.Sprintf("| %s | %s | %s | %s | %s |", escapeMarkdownCell(step.ID), escapeMarkdownCell(dash(step.AdapterID)), escapeMarkdownCell(string(step.Status)), escapeMarkdownCell(stepFix(step)), escapeMarkdownCell(dash(step.Message))))
+	}
+	if len(stepRows) == 0 {
+		b.WriteString("没有工具检测步骤。\n")
+	} else {
+		b.WriteString("### 步骤结果\n\n| 步骤 | Adapter | 状态 | 修复 | 信息 |\n| --- | --- | --- | --- | --- |\n")
+		b.WriteString(strings.Join(stepRows, "\n"))
+		b.WriteString("\n")
+	}
+	var findingRows []string
+	for _, finding := range r.Findings {
+		if strings.HasPrefix(finding.AdapterID, "llm.") || strings.HasPrefix(finding.StepID, "llm-") {
+			continue
+		}
+		findingRows = append(findingRows, fmt.Sprintf("| %s | %s | %s | %s | %s |", escapeMarkdownCell(finding.StepID), escapeMarkdownCell(dash(finding.RuleID)), escapeMarkdownCell(findingLocation(finding)), escapeMarkdownCell(finding.Message), escapeMarkdownCell(dash(finding.Suggestion))))
+	}
+	if len(findingRows) == 0 {
+		b.WriteString("\n### 失败/意见\n\n没有工具检测失败项。")
+	} else {
+		b.WriteString("\n### 失败/意见\n\n| 步骤 | 规则 | 位置 | 信息 | 建议 |\n| --- | --- | --- | --- | --- |\n")
+		b.WriteString(strings.Join(findingRows, "\n"))
+	}
+	return b.String()
+}
+
+func llmStepSection(r RunReport, stepID string) string {
+	step, ok := findProcessStep(r, stepID)
+	if !ok {
+		return fmt.Sprintf("未配置或未运行 `%s`。", stepID)
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "- 步骤：`%s`\n", step.ID)
+	fmt.Fprintf(&b, "- Adapter：`%s`\n", dash(step.AdapterID))
+	fmt.Fprintf(&b, "- 状态：`%s`\n", step.Status)
+	fmt.Fprintf(&b, "- 信息：%s\n", dash(step.Message))
+	if step.FixApplied {
+		fmt.Fprintf(&b, "- 修复：已应用\n")
+	}
+	paths := artifactPathsForStep(r, stepID)
+	if len(paths) == 0 {
+		b.WriteString("- 产物：无\n")
+	} else {
+		b.WriteString("- 产物：\n")
+		for _, artifact := range paths {
+			fmt.Fprintf(&b, "  - `%s`: %s\n", artifact.Name, artifact.Path)
+		}
+	}
+	return b.String()
+}
+
+func findProcessStep(r RunReport, stepID string) (Step, bool) {
+	for _, step := range r.Steps {
+		if step.ID == stepID {
+			return step, true
+		}
+	}
+	return Step{}, false
+}
+
+func artifactPathsForStep(r RunReport, stepID string) []ArtifactRef {
+	var out []ArtifactRef
+	for _, artifact := range r.Artifacts {
+		if artifact.StepID == stepID {
+			out = append(out, artifact)
+		}
+	}
+	return out
+}
+
+func isLLMStep(step Step) bool {
+	return strings.HasPrefix(step.AdapterID, "llm.") || strings.HasPrefix(step.ID, "llm-")
+}
+
+func dash(value string) string {
+	return emptyDash(value)
 }

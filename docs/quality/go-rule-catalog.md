@@ -52,7 +52,7 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 | --- | ---: | --- |
 | lint / 现成工具框架 | 85 | 优先复用 `golangci-lint`、`go test`、`gosec`、`govulncheck` 等；能稳定映射 `rule_id` 后再标 `implemented: true`。 |
 | 自定义开发 / go.semantic | 8 | 现成工具覆盖不了，但 AST、import、type info 或确定性控制流能稳定判断时，开发 `go/analysis` analyzer。 |
-| LLM / 人工 review | 121 | 需要设计意图、API 语义、并发生命周期、测试诊断质量或项目上下文；进入报告和 checklist，默认不硬阻断。 |
+| LLM / 人工 review | 122 | 需要设计意图、API 语义、并发生命周期、测试诊断质量或项目上下文；进入报告和 checklist，默认不硬阻断。 |
 | Candidate | 8 | 待验证底层工具能力、误判率、配置成本和是否值得阻断；确认后迁入前三类。 |
 
 ### A. 走 lint / 现成工具框架
@@ -61,24 +61,24 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 
 | Rule ID | 规则说明 | 处理方式 | 推荐承接 | 默认 | 已实现 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `go.official.comment-sentences` | 注释应像完整句子，尤其 exported API 注释要可读。 | `tool-golangci-config` | go.lint / godoclint, godot, revive | ci | yes | 主要针对 doc comment 句式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `go.official.comment-sentences` | 注释应像完整句子，尤其 exported API 注释要可读。 | `tool-golangci-config` | go.lint / godoclint, godot, revive | strict | yes | 主要针对 doc comment 句式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `go.official.crypto-rand` | 安全随机场景必须使用 crypto/rand，不用 math/rand。 | `tool-golangci` | go.lint / gosec | ci | yes | gosec 输出已由 go.lint 映射为 go.official.crypto-rand，并有 adapter 测试覆盖。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.doc-comments` | exported API 和 package 至少应具备符合 Go 文档约定的注释。 | `tool-golangci-config` | go.lint / godoclint, revive | ci | yes | 工具只检查存在性和机械格式；注释是否真正有用另走 review。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.error-strings` | error 文本不要无故大写开头或以标点结尾，便于组合。 | `tool-golangci-config` | go.lint / revive error-strings | ci | yes | 明确启用 revive 对应规则后处理。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.examples` | example test 一旦存在，必须可编译、可运行并参与 go test。 | `tool-go-test` | go.test / go test | strict | yes | “是否必须写示例”属于文档策略，不由该工具状态承诺。已通过 go.test step 承接，验证已存在测试/example 能参与 go test。 |
 | `go.official.gofmt` | 代码必须使用 gofmt 统一格式化，避免人工风格争论。 | `tool-golangci` | go.lint / gofmt | default | yes | 机械格式化，可 safe fix；报告 rule_id 输出 go.official.gofmt。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.handle-errors` | error 不应被静默丢弃；应处理、返回或明确忽略。 | `tool-golangci` | go.lint / errcheck, govet | default | yes | errcheck 输出会映射为 go.official.handle-errors。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `go.official.identifier-style` | Go 标识符使用 Go 风格大小写，不用 snake_case 或 ALL_CAPS。 | `tool-golangci` | go.lint / revive | ci | yes | revive 输出已由 go.lint 映射为 go.official.identifier-style，并有 adapter 测试覆盖。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `go.official.import-dot` | 避免 dot import，除非测试等少数合理场景。 | `tool-golangci` | go.lint / depguard, revive | ci | yes | 少数测试场景可豁免。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `go.official.identifier-style` | Go 标识符使用 Go 风格大小写，不用 snake_case 或 ALL_CAPS。 | `tool-golangci` | go.lint / revive | strict | yes | revive 输出已由 go.lint 映射为 go.official.identifier-style，并有 adapter 测试覆盖。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
+| `go.official.import-dot` | 避免 dot import，除非测试等少数合理场景。 | `tool-golangci` | go.lint / depguard, revive | strict | yes | 少数测试场景可豁免。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `go.official.imports` | import 应自动整理、删除未用项并按 Go 习惯分组。 | `tool-golangci` | go.lint / gci, goimports | default | yes | 配置 goimports/gci formatter 时，报告 rule_id 输出 go.official.imports。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.indent-error-flow` | 先处理错误并提前返回，让正常路径减少缩进。 | `tool-golangci-config` | go.lint / revive | ci | yes | 可检测 else-after-return 等模式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.initialisms` | URL、ID、HTTP 等缩写大小写要一致。 | `tool-golangci-config` | go.lint / revive naming | ci | yes | 维护 initialism 列表。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `go.official.naked-returns` | 中等或较长函数避免裸 return，显式返回更清楚。 | `tool-golangci-config` | go.lint / nakedret | ci | yes | 阈值配置。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `go.official.named-results` | 不要为了省局部变量而滥用命名返回值；命名应服务文档或 defer 语义。 | `tool-golangci-config` | go.lint / nonamedreturns, revive | strict | yes | 文档化返回值和 defer 修改场景例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `go.official.naked-returns` | 中等或较长函数避免裸 return，显式返回更清楚。 | `tool-golangci-config` | go.lint / nakedret | strict | yes | 阈值配置。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
+| `go.official.named-results` | 不要为了省局部变量而滥用命名返回值；命名应服务文档或 defer 语义。 | `tool-golangci-config` | go.lint / nonamedreturns, revive | strict | yes | 文档化返回值和 defer 修改场景例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `go.official.no-panic` | 正常错误流程不要 panic，应返回 error 或显式处理。 | `tool-golangci-config` | go.lint / forbidigo, go.semantic, revive | strict | yes | main/init/test helper 例外需配置。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.package-comments` | package 应有说明整体用途的 package comment。 | `tool-golangci-config` | go.lint / godoclint, revive | ci | yes | package 文档。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `go.official.package-names` | package 名应短小写、有意义，避免 util/common/helper 这类空泛名称。 | `tool-golangci-config` | go.lint / denylist, revive | strict | yes | util/common/helper 等可列黑名单。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `go.test.mark-helpers` | 测试 helper 应调用 t.Helper()，让失败位置指向调用处。 | `tool-golangci` | go.lint / thelper | ci | yes | 稳定检测 t.Helper()。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `go.test.mark-helpers` | 测试 helper 应调用 t.Helper()，让失败位置指向调用处。 | `tool-golangci` | go.lint / thelper | strict | yes | 稳定检测 t.Helper()。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `go.test.no-assert-libraries` | 避免断言库隐藏控制流或产生不足的失败信息。 | `tool-golangci-config` | go.lint / forbidigo, testifylint | strict | yes | 若团队允许 testify 则不启用。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.bp.composite-literals` | 复合字面量应清晰，必要时使用字段名。 | `tool-golangci` | go.lint / gofmt, gofumpt, govet | ci | yes | field names 等。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.bp.error-w-placement` | 包装错误时 %w 的位置和数量应符合 errors.Is/As 语义。 | `tool-golangci` | go.lint / errorlint | ci | yes | %w 语义可检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
@@ -96,7 +96,7 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 | `google.errors.error-strings` | 错误文本应便于组合，不大写开头、不带多余标点。 | `tool-golangci-config` | go.lint / revive | ci | yes | 与官方 error strings 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.errors.handle-errors` | 错误应被处理、返回或明确忽略。 | `tool-golangci` | go.lint / errcheck | default | yes | 与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.errors.indent-error-flow` | 错误分支提前返回，减少正常路径缩进。 | `tool-golangci-config` | go.lint / revive | ci | yes | 与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `google.imports.dot` | 避免 dot import，防止命名来源不清。 | `tool-golangci` | go.lint / revive | ci | yes | 与官方 dot import 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `google.imports.dot` | 避免 dot import，防止命名来源不清。 | `tool-golangci` | go.lint / revive | strict | yes | 与官方 dot import 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `google.imports.grouping` | import 应按 Go 习惯分组。 | `tool-golangci` | go.lint / gci, goimports | default | yes | 可 safe fix。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.imports.renaming` | import alias 只在必要时使用，并保持一致。 | `tool-golangci-config` | go.lint / importas, revive | strict | yes | 必要 alias 才允许。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.language.conditionals-loops` | 条件和循环应简洁，避免不必要嵌套。 | `tool-golangci-config` | go.lint / gocritic, revive | ci | yes | 简化控制流。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
@@ -108,29 +108,29 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 | `google.language.repeated-type-names` | 复合字面量中避免重复类型名，提升可读性。 | `tool-golangci` | go.lint / gofmt, gofumpt | default | yes | 复合字面量格式。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.language.switch-break` | switch 中避免无意义 break 等冗余控制流。 | `tool-golangci-config` | go.lint / gocritic, revive | ci | yes | 冗余 break 可检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.libs.crypto-rand` | 安全随机场景应使用 crypto/rand。 | `tool-golangci` | go.lint / gosec | ci | yes | 与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `google.naming.constant-names` | 常量名使用 MixedCaps，不用 ALL_CAPS 或 kFoo。 | `tool-golangci` | go.lint / revive | ci | yes | MixedCaps，不用 ALL_CAPS/kFoo。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `google.naming.constant-names` | 常量名使用 MixedCaps，不用 ALL_CAPS 或 kFoo。 | `tool-golangci` | go.lint / revive | strict | yes | MixedCaps，不用 ALL_CAPS/kFoo。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `google.naming.getters` | getter 通常不加 Get 前缀。 | `tool-golangci-config` | go.lint / revive | strict | yes | 不默认 Get 前缀。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.naming.initialisms` | 常见缩写大小写保持一致。 | `tool-golangci-config` | go.lint / revive | ci | yes | 与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.naming.package-names` | package 名应短小写、有领域含义。 | `tool-golangci-config` | go.lint / denylist, revive | strict | yes | 与官方 package names 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `google.naming.single-letter-vars` | 单字母变量只适合很短且含义明显的作用域。 | `tool-golangci-config` | go.lint / varnamelen | strict | yes | 短作用域可允许。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `google.naming.single-letter-vars` | 单字母变量只适合很短且含义明显的作用域。 | `tool-golangci-config` | go.lint / varnamelen | strict | yes | 短作用域可允许。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `google.naming.underscores` | 标识符通常不用下划线，测试函数和少数底层场景例外。 | `tool-golangci-config` | go.lint / revive | strict | yes | 测试函数/生成代码例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.test.assertions` | 断言库不应隐藏失败上下文或阻断后续检查。 | `tool-golangci-config` | go.lint / forbidigo, testifylint | strict | yes | 与 Go Test Comments 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `google.test.got-before-want` | 测试输出按 got 在前、want 在后。 | `tool-golangci-config` | go.lint / semantic, testifylint | strict | yes | 与 Go Test Comments 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `google.test.helpers` | 测试 helper 应标记 t.Helper 并给出好错误。 | `tool-golangci` | go.lint / thelper | ci | yes | t.Helper 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `google.test.helpers` | 测试 helper 应标记 t.Helper 并给出好错误。 | `tool-golangci` | go.lint / thelper | strict | yes | t.Helper 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `google.test.use-package-testing` | Go 测试应使用标准 testing 包生态。 | `tool-go-test` | go.test / go test | default | yes | 基础测试框架。已通过 go.test step 承接，验证已存在测试/example 能参与 go test。 |
 | `uber.guideline.atomic` | 并发原子值可用封装类型提升类型安全。 | `tool-golangci-config` | go.lint / atomic linters, dep policy | strict | yes | 是否采用 uber atomic 由团队决定。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.builtin-names` | 不要用内置标识符名作为变量或参数名。 | `tool-golangci` | go.lint / predeclared, revive | ci | yes | 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.defer-cleanup` | 获取资源后尽快 defer 释放，避免遗漏清理。 | `tool-golangci` | go.lint / bodyclose, revive | ci | yes | 资源 close 子集可稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.error-naming` | sentinel error 用 Err 前缀，error 类型用 Error 后缀。 | `tool-golangci` | go.lint / errname | ci | yes | Err 前缀 / Error 后缀。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.error-wrapping` | 错误包装应使用 Go 1.13 的 %w、errors.Is/As 语义。 | `tool-golangci` | go.lint / errorlint | ci | yes | %w/Is/As。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `uber.guideline.mutable-globals` | 避免可变全局状态，降低测试和并发风险。 | `tool-golangci-config` | go.lint / gochecknoglobals | strict | yes | 例外清单必要。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `uber.guideline.no-init` | 避免 init 中复杂逻辑，提升可测试性和可控性。 | `tool-golangci-config` | go.lint / gochecknoinits | strict | yes | registry/main/test 例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `uber.guideline.mutable-globals` | 避免可变全局状态，降低测试和并发风险。 | `tool-golangci-config` | go.lint / gochecknoglobals | strict | yes | 例外清单必要。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
+| `uber.guideline.no-init` | 避免 init 中复杂逻辑，提升可测试性和可控性。 | `tool-golangci-config` | go.lint / gochecknoinits | strict | yes | registry/main/test 例外。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `uber.guideline.no-panic` | 正常流程不要 panic。 | `tool-golangci-config` | go.lint / forbidigo, revive | strict | yes | 与官方合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.pointer-to-interface` | 几乎不要使用 *interface，interface 应按值传递。 | `tool-golangci-config` | go.lint / revive, semantic | strict | yes | *interface 可稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.public-embedded-types` | 公开 struct 避免嵌入类型导致 API 泄漏。 | `tool-golangci-config` | go.lint / revive, semantic | strict | yes | public API 识别。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.guideline.type-assertion-ok` | 类型断言应检查 ok，避免非预期 panic。 | `tool-golangci` | go.lint / forcetypeassert | ci | yes | 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.linting.runners` | 使用统一 lint runner 确保本地和 CI 一致。 | `tool-golangci` | go.lint / go.lint | default | yes | 本项目通过 go.lint 编排。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `uber.pattern.parallel-tests` | 并行测试要正确处理 loop variable 和共享状态。 | `tool-golangci-config` | go.lint / paralleltest | strict | yes | 团队决定是否强制。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `uber.pattern.parallel-tests` | 并行测试要正确处理 loop variable 和共享状态。 | `tool-golangci-config` | go.lint / paralleltest | strict | yes | 团队决定是否强制。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `uber.perf.no-repeated-string-byte` | 避免在循环中重复 string/[]byte 转换。 | `tool-golangci-config` | go.lint / gocritic, perf linters | strict | yes | 性能 profile。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.perf.strconv` | 简单类型转换优先 strconv，避免 fmt 的额外开销。 | `tool-golangci` | go.lint / gocritic, perfsprint | strict | yes | 性能 profile。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.style.format-strings` | printf 格式字符串应尽量为常量，避免运行时格式错误。 | `tool-golangci-config` | go.lint / govet printf, revive | ci | yes | printf 风险。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
@@ -144,7 +144,7 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 | `uber.style.struct-embedding` | struct 嵌入应谨慎，避免不清晰 API。 | `tool-golangci-config` | go.lint / revive, semantic | strict | yes | 与 public embedded 合并。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.style.struct-field-names` | 初始化 struct 时字段名能提升可读性和抗变更能力。 | `tool-golangci` | go.lint / govet composites | ci | yes | 外部包 struct。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 | `uber.style.struct-references` | 初始化 struct 指针应保持清晰一致。 | `tool-golangci-config` | go.lint / gocritic, gofumpt | strict | yes | 可读性。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
-| `uber.style.unnecessary-else` | return/break 后不需要 else。 | `tool-golangci` | go.lint / gocritic, revive | ci | yes | 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
+| `uber.style.unnecessary-else` | return/break 后不需要 else。 | `tool-golangci` | go.lint / gocritic, revive | strict | yes | 稳定检测。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 已从通用默认 lint 中移出，保留为 strict/团队可选规则。 |
 | `uber.style.zero-struct-var` | 零值 struct 用 var 声明更清楚。 | `tool-golangci-config` | go.lint / gofumpt, staticcheck | ci | yes | 机械子集。已通过 go.lint/golangci-lint 编排承接；报告按 linter 或 adapter 输出稳定 rule_id。 |
 
 ### B. 走自定义开发 / go.semantic
@@ -266,6 +266,7 @@ go-review rules render-doc --catalog rules/go-rules.json --out docs/quality/go-r
 | `google.test.subtest-names` | 子测试名称应可读并描述场景。 | `llm-review` | llm.review / AGENTS.md | doc | yes | 名称可读性。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。 |
 | `google.test.subtests` | 子测试应让测试场景结构更清楚。 | `llm-review` | llm.review / AGENTS.md | doc | yes | 测试结构判断。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。 |
 | `google.test.table-driven` | 表驱动测试应提升清晰度，而不是制造复杂表格。 | `llm-review` | llm.review / AGENTS.md | doc | yes | 表驱动是否合适。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。 |
+| `team.observability.no-silent-drop` | debug、audit、trace、event、metrics、telemetry 等非阻塞观测写入通常不应影响主业务流程；如果调用返回 error，应优先记录降级日志、指标或使用项目已有安全封装，避免完全静默丢弃。只有项目明确允许忽略时，才应显式说明原因。 | `llm-review` | llm.review / AGENTS.md | review | yes | 已写入 AGENTS.md 的 C 类 LLM review checklist；LLM 修复时不应把观测失败升级为主流程失败；优先复用 recordDebugEvent、logIgnoredError、observeError 等项目既有封装；高频路径要避免日志风暴。 |
 | `uber.guideline.copy-boundaries` | slice/map 穿越 API 边界时要考虑拷贝，避免外部修改内部状态。 | `llm-review` | llm.review / AGENTS.md | doc | yes | 所有权语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。 |
 | `uber.guideline.error-types` | 错误类型设计应服务调用方匹配和处理。 | `llm-review` | llm.review / AGENTS.md | doc | yes | 错误 API 设计。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。 |
 | `uber.guideline.field-tags` | 会序列化的 struct 字段应有明确 tag。 | `llm-review` | llm.review / AGENTS.md | doc | yes | 序列化语义。已写入 AGENTS.md 的 C 类 LLM review checklist；中文报告需携带 rule_id，默认不阻断。 |

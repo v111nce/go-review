@@ -55,6 +55,7 @@ type Result struct {
 	FixApplied   bool
 	GateStatus   config.GateStatus
 	Artifacts    []Artifact
+	Superseded   bool
 }
 
 type Artifact struct {
@@ -64,18 +65,22 @@ type Artifact struct {
 }
 
 type RunSummary struct {
-	Command    Command
-	ConfigPath string
-	Profile    string
-	Workdir    string
-	StartedAt  time.Time
-	EndedAt    time.Time
-	Results    []Result
+	Command         Command
+	ConfigPath      string
+	Profile         string
+	Workdir         string
+	StartedAt       time.Time
+	EndedAt         time.Time
+	Results         []Result
+	ProgressPrinted bool
 }
 
 func (s RunSummary) GateStatus() config.GateStatus {
 	status := config.GatePass
 	for _, result := range s.Results {
+		if result.Superseded {
+			continue
+		}
 		switch result.GateStatus {
 		case config.GateFail:
 			return config.GateFail
@@ -118,6 +123,7 @@ type StepContext struct {
 	Config      *config.Config
 	ConfigPath  string
 	ProjectRoot string
+	ReportDir   string
 }
 
 func NewRegistry() *Registry {
@@ -126,6 +132,7 @@ func NewRegistry() *Registry {
 	r.Register("go.lint", func(cfg config.Adapter) (Adapter, error) { return GoLintAdapter{cfg: cfg}, nil })
 	r.Register("go.semantic", func(cfg config.Adapter) (Adapter, error) { return SemanticAdapter{cfg: cfg}, nil })
 	r.Register("llm.review", func(cfg config.Adapter) (Adapter, error) { return LLMReviewAdapter{cfg: cfg}, nil })
+	r.Register("llm.claude", func(cfg config.Adapter) (Adapter, error) { return ClaudeReviewAdapter{cfg: cfg}, nil })
 	return r
 }
 
@@ -178,8 +185,9 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		projectRoot = "."
 	}
 	projectRoot = resolveProjectRoot(opts.Config, projectRoot, opts.Workdir != "")
-	summary := RunSummary{Command: opts.Command, ConfigPath: opts.Config, Profile: profile.Name, Workdir: projectRoot, StartedAt: startedAt}
-	transaction := newFixTransaction(opts.Command, projectRoot)
+	summary := RunSummary{Command: opts.Command, ConfigPath: opts.Config, Profile: profile.Name, Workdir: projectRoot, StartedAt: startedAt, ProgressPrinted: true}
+	progress := newProgressLogger(opts.Stdout)
+	progress.StartProfile(summary.Profile, summary.Command)
 	for _, step := range steps {
 		adapterCfg, ok := cfg.Adapter(step.AdapterID)
 		if !ok {
@@ -189,14 +197,10 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		if err != nil {
 			return summary, err
 		}
-		stepCtx := StepContext{Command: opts.Command, Step: step, Adapter: *adapterCfg, Config: cfg, ConfigPath: opts.Config, ProjectRoot: projectRoot}
+		stepCtx := StepContext{Command: opts.Command, Step: step, Adapter: *adapterCfg, Config: cfg, ConfigPath: opts.Config, ProjectRoot: projectRoot, ReportDir: opts.ReportDir}
+		progress.StartStep(step, *adapterCfg)
 		if adapterCfg.Type == "llm.review" && opts.ReportDir != "" {
 			if err := report.WriteFiles(opts.ReportDir, summary.Report()); err != nil {
-				return summary, err
-			}
-		}
-		if transaction.shouldProtect(stepCtx) {
-			if err := transaction.snapshotProject(); err != nil {
 				return summary, err
 			}
 		}
@@ -216,17 +220,49 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 		if result.Kind == "" {
 			result.Kind = ResultArtifact
 		}
-		if result.FixApplied {
-			transaction.markApplied()
-		}
+		progress.EndStep(result)
 		summary.Results = append(summary.Results, result)
-		if result.GateStatus == config.GateFail {
-			if rollback := transaction.rollbackAfterFailure(result); rollback.Message != "" {
-				summary.Results = append(summary.Results, rollback)
-			}
-		}
 		if result.GateStatus == config.GateFail && step.OnFail == config.OnFailStop {
 			break
+		}
+	}
+	if opts.Command == CommandFix && shouldRevalidateAfterLLM(summary) {
+		markSupersededFailures(&summary)
+		for _, step := range steps {
+			adapterCfg, ok := cfg.Adapter(step.AdapterID)
+			if !ok {
+				return summary, fmt.Errorf("step %q references unknown adapter %q", step.ID, step.AdapterID)
+			}
+			if adapterCfg.Type == "llm.review" {
+				continue
+			}
+			adapter, err := r.Registry.Resolve(*adapterCfg)
+			if err != nil {
+				return summary, err
+			}
+			stepCtx := StepContext{Command: CommandCheck, Step: step, Adapter: *adapterCfg, Config: cfg, ConfigPath: opts.Config, ProjectRoot: projectRoot, ReportDir: opts.ReportDir}
+			progress.StartStep(step, *adapterCfg)
+			result, runErr := adapter.Run(ctx, stepCtx)
+			if runErr != nil && result.Message == "" {
+				result = Result{AdapterID: adapterCfg.ID, StepID: step.ID, RuleID: adapterCfg.ID, Kind: ResultViolation, Message: runErr.Error(), FixSafety: adapterCfg.FixSafety, GateStatus: config.GateFail}
+			}
+			if result.AdapterID == "" {
+				result.AdapterID = adapterCfg.ID
+			}
+			if result.StepID == "" {
+				result.StepID = step.ID
+			}
+			if result.FixSafety == "" {
+				result.FixSafety = adapterCfg.FixSafety
+			}
+			if result.Kind == "" {
+				result.Kind = ResultArtifact
+			}
+			progress.EndStep(result)
+			summary.Results = append(summary.Results, result)
+			if result.GateStatus == config.GateFail && step.OnFail == config.OnFailStop {
+				break
+			}
 		}
 	}
 	summary.EndedAt = time.Now()
@@ -238,11 +274,53 @@ func (r Runner) Run(ctx context.Context, opts Options) (RunSummary, error) {
 	return summary, nil
 }
 
+type progressLogger struct {
+	out     *os.File
+	enabled bool
+}
+
+func newProgressLogger(out *os.File) progressLogger {
+	if out == nil {
+		out = os.Stdout
+	}
+	return progressLogger{out: out, enabled: true}
+}
+
+func (l progressLogger) StartProfile(profile string, command Command) {
+	if !l.enabled {
+		return
+	}
+	fmt.Fprintf(l.out, "START profile=%s command=%s\n", profile, command)
+}
+
+func (l progressLogger) StartStep(step config.Step, adapter config.Adapter) {
+	if !l.enabled {
+		return
+	}
+	fmt.Fprintf(l.out, "START step=%s adapter=%s type=%s\n", step.ID, step.AdapterID, adapter.Type)
+	if adapter.Type == "llm.review" {
+		fmt.Fprintf(l.out, "INFO step=%s message=%q\n", step.ID, "starting codex exec; this may take a while")
+	}
+	if adapter.Type == "llm.claude" {
+		fmt.Fprintf(l.out, "INFO step=%s message=%q\n", step.ID, "starting claude review; this may take a while")
+	}
+}
+
+func (l progressLogger) EndStep(result Result) {
+	if !l.enabled {
+		return
+	}
+	fmt.Fprintf(l.out, "END step=%s status=%s\n", result.StepID, result.GateStatus)
+}
+
 func (s RunSummary) Report() report.RunReport {
 	reportSteps := make([]report.Step, 0, len(s.Results))
 	findings := make([]report.Finding, 0, len(s.Results))
 	artifacts := make([]report.ArtifactRef, 0)
 	for _, result := range s.Results {
+		if result.Superseded {
+			continue
+		}
 		step := report.Step{
 			ID:            result.StepID,
 			AdapterID:     result.AdapterID,
@@ -292,6 +370,28 @@ func (s RunSummary) Report() report.RunReport {
 		Steps:      reportSteps,
 		Findings:   findings,
 		Artifacts:  artifacts,
+	}
+}
+
+func shouldRevalidateAfterLLM(summary RunSummary) bool {
+	hasSupersedableFailure := false
+	hasSuccessfulLLM := false
+	for _, result := range summary.Results {
+		if result.AdapterID == "llm.review" && result.GateStatus == config.GatePass {
+			hasSuccessfulLLM = true
+		}
+		if result.GateStatus == config.GateFail && result.AdapterID != "llm.review" {
+			hasSupersedableFailure = true
+		}
+	}
+	return hasSuccessfulLLM && hasSupersedableFailure
+}
+
+func markSupersededFailures(summary *RunSummary) {
+	for i := range summary.Results {
+		if summary.Results[i].GateStatus == config.GateFail {
+			summary.Results[i].Superseded = true
+		}
 	}
 }
 
@@ -348,16 +448,12 @@ func PrintSummary(summary RunSummary, stdout *os.File) {
 	if stdout == nil {
 		stdout = os.Stdout
 	}
-	fmt.Fprintf(stdout, "START profile=%s command=%s\n", summary.Profile, summary.Command)
-	for _, result := range summary.Results {
-		if result.AdapterID == "fix.transaction" {
-			continue
+	if !summary.ProgressPrinted {
+		fmt.Fprintf(stdout, "START profile=%s command=%s\n", summary.Profile, summary.Command)
+		for _, result := range summary.Results {
+			fmt.Fprintf(stdout, "START step=%s\n", result.StepID)
+			fmt.Fprintf(stdout, "END step=%s status=%s\n", result.StepID, result.GateStatus)
 		}
-		fmt.Fprintf(stdout, "START step=%s\n", result.StepID)
-		fmt.Fprintf(stdout, "END step=%s status=%s\n", result.StepID, result.GateStatus)
-	}
-	if rollback := rollbackResult(summary); rollback != nil {
-		fmt.Fprintf(stdout, "ROLLBACK reason=%s\n", rollback.Message)
 	}
 	if summary.GateStatus() == config.GatePass {
 		fmt.Fprintf(stdout, "SUCCESS profile=%s\n", summary.Profile)
@@ -377,16 +473,10 @@ func PrintSummary(summary RunSummary, stdout *os.File) {
 
 func firstFailedResult(summary RunSummary) *Result {
 	for i := range summary.Results {
-		if summary.Results[i].GateStatus == config.GateFail && summary.Results[i].AdapterID != "fix.transaction" {
-			return &summary.Results[i]
+		if summary.Results[i].Superseded {
+			continue
 		}
-	}
-	return nil
-}
-
-func rollbackResult(summary RunSummary) *Result {
-	for i := range summary.Results {
-		if summary.Results[i].AdapterID == "fix.transaction" {
+		if summary.Results[i].GateStatus == config.GateFail {
 			return &summary.Results[i]
 		}
 	}

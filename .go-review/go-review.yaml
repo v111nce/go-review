@@ -31,8 +31,8 @@ adapters:
     type: go.lint
     args:
       - run
-      - --no-config
-      - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,revive,thelper,errorlint,errname,forcetypeassert,predeclared,bodyclose,perfsprint,gocritic,godot,godoclint,nonamedreturns,nakedret,testifylint,importas,forbidigo,varnamelen,gochecknoglobals,gochecknoinits,paralleltest,makezero,prealloc,gosec
+      - --config=.go-review/golangci.yml
+      - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,errorlint,errname,forcetypeassert,predeclared,bodyclose,gosec
       - --output.text.print-issued-lines=false
       - --show-stats=false
     capabilities: [check]

@@ -9,7 +9,7 @@ The authoritative docs define a generic Go code-review orchestration platform ra
 
 Sources:
 
-- `docs/README.md` platform boundary: adapter access, config loading, orchestration, result normalization, fix transactions, reports, and gates.
+- `docs/README.md` platform boundary: adapter access, config loading, orchestration, result normalization, safe fix application, reports, and gates.
 - `docs/backend/rule-engine-and-autofix.md` adapter, pipeline DAG, normalized result, and safe-fix contracts.
 - `docs/quality/go-code-quality-baseline.md` fast, PR/CI, main, and nightly gate layering.
 - `.omx/plans/ralplan-docs-implementation-20260519T091728Z.md` recommends Option B: contract-first vertical core, then grouped capability lanes.

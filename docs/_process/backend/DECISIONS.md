@@ -20,7 +20,7 @@ Status: accepted
 
 Status: accepted
 
-决策：平台第一版提供自己的 `go-review` CLI、adapter 运行时和 pipeline 调度器。`golangci-lint` 不作为平台本体，而是由 `go.lint` / format 类 adapter 调用；`go-review` 继续负责 profile、step、`on_fail`、artifact、中文/LLM 报告和 safe fix transaction。
+决策：平台第一版提供自己的 `go-review` CLI、adapter 运行时和 pipeline 调度器。`golangci-lint` 不作为平台本体，而是由 `go.lint` / format 类 adapter 调用；`go-review` 继续负责 profile、step、`on_fail`、artifact、中文/LLM 报告和 safe fix application。
 
 理由：独立 CLI 能统一调度格式化、lint、架构、安全、测试、语义规则和报告输出。`golangci-lint module plugin` 更适合扩展 golangci-lint 本身，但会把平台能力绑定到 golangci-lint 的构建和版本体系。把 `golangci-lint` 作为 adapter 调用能复用成熟 lint/format 能力，同时保留平台的通用 review 编排价值。
 
@@ -44,6 +44,6 @@ Status: accepted
 
 Status: accepted
 
-决策：Backend 总入口和核心后端主题文档必须包含 Mermaid 架构图，用运行对象、adapter registry、pipeline planner、DAG scheduler、result normalizer、fix transaction manager 和 report writers 表达技术结构。
+决策：Backend 总入口和核心后端主题文档必须包含 Mermaid 架构图，用运行对象、adapter registry、pipeline planner、DAG scheduler、result normalizer、safe fix application manager 和 report writers 表达技术结构。
 
 理由：后端契约涉及多个运行对象和回流路径。Mermaid 图能在不引入额外图片资产的前提下保持可读、可 diff、可维护，并方便 GitHub 直接渲染。

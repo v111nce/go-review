@@ -25,7 +25,7 @@
 | `internal/config/` | `go-review.yaml` 的轻量 YAML 解析、schema 校验和默认值归一。 | adapter/step/profile/artifact 配置、`args` 列表解析、`on_fail` / `fix_safety` 解析。 | 运行时调度或工具执行。 |
 | `internal/engine/` | adapter runtime 和 pipeline 执行核心。 | `cmd` adapter、`go.lint`、`go.semantic`、DAG 执行、artifact 写入、结果归一。 | CLI 参数解析和文档生成。 |
 | `internal/engine/testdata/` | engine 测试专用 fixture 和假工具。 | `fake-golangci-lint`。 | 正式默认配置或用户文档。 |
-| `internal/fix/` | 自动修复事务边界。 | 快照、回滚、修复前后校验。 | 非安全修复策略。 |
+| `internal/fix/` | 自动修复事务边界。 | 单次编辑快照、执行失败回滚、修复前后校验。 | 非安全修复策略。 |
 | `internal/pipeline/` | pipeline 计划和依赖顺序。 | step 依赖、跳过策略、失败传播。 | adapter 具体执行。 |
 | `internal/report/` | 报告渲染。 | Markdown / LLM report、中文说明、summary。 | 规则检测逻辑。 |
 | `internal/result/` | 统一结果模型。 | gate status、fix safety、artifact、violation。 | 工具配置解析。 |
@@ -47,7 +47,7 @@
 | `docs/glossary.md` | 术语表 | 稳定术语、缩写和项目内专有名词。 |
 | `docs/open-questions.md` | 未决问题 | 当前仍需确认的问题，关闭后应迁回正式文档或 ADR。 |
 | `docs/release.md` | 发布流程 | tag、二进制、checksum、version stamping。 |
-| `docs/quickstart.md` | 快速上手 | 本地安装、初始化和首次运行路径。 |
+| `README.md` | 根目录入口 / 快速上手 | 中文项目入口、本地安装、初始化和首次运行路径。 |
 
 ## 质量规则落地目录关系
 

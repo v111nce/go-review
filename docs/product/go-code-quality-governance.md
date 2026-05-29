@@ -200,7 +200,7 @@ nightly:
 | Story Key | 用户价值 | 范围 | 验收信号 | 依赖 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | `policy-and-autofix-safety-levels` | 用户知道哪些违规会被自动修、哪些只报告 | 定义 `safe`、`review`、`report-only` 三档策略 | 每个 adapter 和规则都有明确修复策略 | Backend / Quality | ready |
-| `policy-and-autofix-transaction` | 用户可以安全应用自动修复 | 支持预览、应用、格式化、验证和失败回滚 | 修复失败不会留下半完成状态 | Backend / Quality | ready |
+| `policy-and-autofix-transaction` | 用户可以安全应用自动修复 | 支持预览、应用、格式化和后续验证失败报告 | safe fix 会保留，后续失败会清晰报告 | Backend / Quality | ready |
 
 ## 回归门禁
 

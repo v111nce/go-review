@@ -19,7 +19,7 @@ The framework does not need to know the consumer repository layout beyond `--wor
 - Use `golangci-lint` as the preferred runner for common lint and formatter checks when a project wants broad lint coverage.
 - Use the currently supported `go/analysis` semantic rule kind for simple direct-call bans; add analyzers or external tools for project-specific semantic rules that need deeper AST and type information.
 - Keep `go test` as an independent step; `golangci-lint` does not replace test execution, coverage, or race checks.
-- Keep `go-review` responsible for profiles, `on_fail` behavior, artifacts, reports, safe fix transactions, and LLM repair context.
+- Keep `go-review` responsible for profiles, `on_fail` behavior, artifacts, reports, safe fix application, and LLM repair context.
 
 ## Minimal developer commands
 
@@ -61,11 +61,12 @@ Every `check` and `fix` run writes deterministic reports. By default, reports ar
   reports/
     latest.md        # human-readable summary
     latest.llm.md    # repair context designed to paste into an LLM
+    latest.process.md # unified process: safe fix, findings, LLM edits, second-pass review
     latest.json      # machine-readable result contract
     runs/            # timestamped copies of each run
 ```
 
-`latest.md` answers "did it pass, what failed, can it auto-fix, and what do I do next?". `latest.llm.md` repeats the same deterministic results in a repair-oriented prompt shape with file/line/column, rule, message, suggestion, fix safety, and artifact paths. No LLM is required to generate either report.
+`latest.md` answers "did it pass, what failed, can it auto-fix, and what do I do next?". `latest.llm.md` repeats the same deterministic results in a repair-oriented prompt shape with file/line/column, rule, message, suggestion, fix safety, and artifact paths. No LLM is required to generate either report. When `llm.review` or `llm.claude` is enabled, those adapters consume `latest.llm.md` as stable context; it also remains useful for manual review and historical audit. Human readers should use `latest.process.md` as the unified process document: it records safe fixes, deterministic findings, first-model output, LLM-rule review context, and second-pass review output.
 
 ## Safe fix behavior
 

@@ -110,9 +110,9 @@ var semanticBuiltInAnalyzers = map[string]semanticAnalyzerFactory{
 			Package:    "os",
 			Function:   "Getenv",
 			Message:    "direct os.Getenv access bypasses injectable configuration",
-			Suggestion: "read environment values through an injected config/env provider",
+			Suggestion: "read environment values through an injected config/env provider; package main startup code and *_test.go are ignored by the default rule",
 		}
-		return noDirectCallAnalyzer(rule, "no_direct_os_getenv"), semanticMeta(rule, "semantic no-direct-os-getenv passed")
+		return noDirectOSGetenvAnalyzer(rule, "no_direct_os_getenv"), semanticMeta(rule, "semantic no-direct-os-getenv passed")
 	},
 }
 
@@ -469,6 +469,48 @@ func noDirectCallAnalyzer(rule semanticCustomRule, name string) *analysis.Analyz
 		RunDespiteErrors: true,
 		Run: func(pass *analysis.Pass) (any, error) {
 			for _, file := range pass.Files {
+				packageNames := importedNames(file, rule.Package)
+				ast.Inspect(file, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					sel, ok := call.Fun.(*ast.SelectorExpr)
+					if !ok || sel.Sel == nil || sel.Sel.Name != rule.Function {
+						return true
+					}
+					if !isPackageFunctionSelector(pass.TypesInfo, packageNames, rule.Package, rule.Function, sel) {
+						return true
+					}
+					diagnostic := analysis.Diagnostic{Pos: call.Pos(), Category: semanticRuleID(rule.ID), Message: rule.Message}
+					if rule.Suggestion != "" {
+						diagnostic.SuggestedFixes = []analysis.SuggestedFix{{Message: rule.Suggestion}}
+					}
+					pass.Report(diagnostic)
+					return true
+				})
+			}
+			return nil, nil
+		},
+	}
+}
+
+// noDirectOSGetenvAnalyzer 是内置 no-direct-os-getenv 的低噪音版本。
+//
+// 普通业务包直接读取环境变量会绕过配置注入，导致测试和部署行为难以控制，因此默认报告。
+// 但启动入口 package main 往往负责把部署环境变量转换成配置，集成测试也常用环境变量接入
+// 外部资源；这两个场景在 ailx-agent 这类 go-zero 项目里是合理用法，所以默认放行。
+func noDirectOSGetenvAnalyzer(rule semanticCustomRule, name string) *analysis.Analyzer {
+	return &analysis.Analyzer{
+		Name:             name,
+		Doc:              "reports direct os.Getenv calls outside startup and test files",
+		RunDespiteErrors: true,
+		Run: func(pass *analysis.Pass) (any, error) {
+			for _, file := range pass.Files {
+				filename := pass.Fset.Position(file.Package).Filename
+				if (file.Name != nil && file.Name.Name == "main") || strings.HasSuffix(filename, "_test.go") {
+					continue
+				}
 				packageNames := importedNames(file, rule.Package)
 				ast.Inspect(file, func(node ast.Node) bool {
 					call, ok := node.(*ast.CallExpr)

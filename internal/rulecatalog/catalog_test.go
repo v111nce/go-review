@@ -102,7 +102,7 @@ func TestRepositoryCatalogImplementsAllNonCandidateRules(t *testing.T) {
 			t.Fatalf("unexpected non-candidate handling %s for %s", rule.Handling, rule.ID)
 		}
 	}
-	want := map[string]int{"tool-golangci": 35, "tool-golangci-config": 47, "tool-go-test": 3, "tool-semantic": 8, "llm-review": 121, "candidate": 8}
+	want := map[string]int{"tool-golangci": 35, "tool-golangci-config": 47, "tool-go-test": 3, "tool-semantic": 8, "llm-review": 122, "candidate": 8}
 	for handling, n := range want {
 		if counts[handling] != n {
 			t.Fatalf("handling %s count=%d, want %d", handling, counts[handling], n)

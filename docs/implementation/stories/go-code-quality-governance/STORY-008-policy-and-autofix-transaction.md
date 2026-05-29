@@ -10,7 +10,7 @@
 
 ## 目标
 
-用户可以安全应用自动修复；修复失败不会留下半完成状态。
+用户可以安全应用自动修复；safe fix 会保留，后续失败会清晰报告。
 
 ## 范围
 
@@ -21,7 +21,7 @@
 - 事务式应用。
 - 格式化后验证。
 - 依赖 step 重跑。
-- 失败回滚。
+- 失败报告。
 
 不包含：
 
@@ -32,23 +32,23 @@
 ## 依赖
 
 - Backend: Fix Transaction Manager、pipeline 依赖重跑。
-- Quality: golden file 和失败回滚测试。
+- Quality: golden file 和失败报告测试。
 
 ## 任务
 
-- 定义 fix transaction 数据结构。
+- 定义 safe fix application 数据结构。
 - 实现 text edit 冲突检测。
 - 实现应用前预览输出。
 - 应用 safe fixes 后运行 formatter。
 - 重新运行受影响 steps。
-- 任一验证失败时回滚。
+- 任一验证失败时保留已完成 safe fix，并报告失败。
 
 ## 验收标准
 
 - 无冲突 safe fixes 可以应用。
 - 重叠 text edits 被拒绝。
-- 格式化失败时回滚。
-- 依赖 step 失败时回滚或标记失败，不声称修复完成。
+- 格式化失败时报告失败。
+- 依赖 step 失败时标记失败，不声称整体完成；已完成的 safe fix 保留。
 
 ## 测试
 

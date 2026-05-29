@@ -60,7 +60,7 @@ go-review     = 多工具编排、报告、门禁和安全修复事务
 
 这类规则应该用 Go 官方生态的 `go/analysis` 编写 analyzer。`go/analysis` 负责 AST、type info、diagnostic 和 `SuggestedFix`；go-review 负责把 analyzer 结果映射成统一 review result，并放进 pipeline。
 
-当前实现中的 `.go-review/semantic/custom.yaml` 只支持有限的配置式 analyzer kind，例如 `no-direct-call` 和 `max-params`；这些规则由 `go/analysis` analyzer 执行。它不是完整的任意 YAML 规则语言；`go.semantic` adapter 不使用 adapter 配置里的 `parser` 字段；内置规则放在 `.go-review/semantic/default.yaml`，`parser` 不是插件机制。当前 semantic step 遵循单结果契约，只报告首个 failing finding，review-only semantic 规则也不自动改写代码。更复杂规则、多 diagnostics 输出或 semantic autofix 仍需要新增 analyzer 实现和 safe fix transaction 设计。
+当前实现中的 `.go-review/semantic/custom.yaml` 只支持有限的配置式 analyzer kind，例如 `no-direct-call` 和 `max-params`；这些规则由 `go/analysis` analyzer 执行。它不是完整的任意 YAML 规则语言；`go.semantic` adapter 不使用 adapter 配置里的 `parser` 字段；内置规则放在 `.go-review/semantic/default.yaml`，`parser` 不是插件机制。当前 semantic step 遵循单结果契约，只报告首个 failing finding，review-only semantic 规则也不自动改写代码。更复杂规则、多 diagnostics 输出或 semantic autofix 仍需要新增 analyzer 实现和 safe fix application 设计。
 
 ## go-review 的产品边界
 
@@ -68,7 +68,7 @@ go-review     = 多工具编排、报告、门禁和安全修复事务
 | --- | --- | --- |
 | `golangci-lint` | 通用 lint、formatter、部分 safe fix | 不跑测试，不生成 go-review 统一报告，不管理跨工具 pipeline |
 | `go/analysis` | 编写 Go 语义 analyzer，产出 diagnostic / SuggestedFix | 不负责 profile、artifact、报告归一或 CI 门禁 |
-| `go-review` | adapter、steps、profiles、`on_fail`、artifact、safe fix transaction、中文/LLM 报告 | 不重复造通用 lint 规则，不把所有 semantic 规则硬编码进 runner |
+| `go-review` | adapter、steps、profiles、`on_fail`、artifact、safe fix application、中文/LLM 报告 | 不重复造通用 lint 规则，不把所有 semantic 规则硬编码进 runner |
 
 ## 推荐运行模型
 
@@ -124,7 +124,7 @@ profiles:
 | 独立失败收集 | `on_fail: continue` 让 format、test、semantic、安全扫描互不遮挡 |
 | 成熟工具复用 | 通用 lint/format 不重写，优先复用 `golangci-lint` |
 | 自定义规则可演进 | 团队规则当前可用已支持的 `go/analysis` semantic kind 或 `cmd` 外部工具接入；复杂规则需要新增 analyzer |
-| 安全修复边界 | safe fix 可以自动应用，review / none 只报告，失败可回滚 |
+| 安全修复边界 | safe fix 可以自动应用，review / none 只报告；执行失败才回滚该次写入，后续验证失败保留 safe fix 并报告 |
 
 ## 关联产品模块
 
@@ -135,7 +135,7 @@ profiles:
 | `tool-adapter-platform` | 解释为什么所有工具都通过 adapter 接入，而不是绑定单一 linter |
 | `review-pipeline` | 解释为什么需要 profile、step、失败策略和跨工具编排 |
 | `custom-rule-adapters` | 解释为什么团队 semantic 规则需要已实现 `go/analysis` analyzer kind 或外部工具承载 |
-| `policy-and-autofix` | 解释为什么 safe fix、review-only 和 rollback 要统一治理 |
+| `policy-and-autofix` | 解释为什么 safe fix、review-only、执行失败回滚和后续失败报告要统一治理 |
 | `regression-gates` | 解释为什么本地、CI、nightly 需要复用同一套门禁配置 |
 
 ## 与核心能力的关系

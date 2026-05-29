@@ -41,8 +41,9 @@ func (a LLMReviewAdapter) Run(ctx context.Context, stepCtx StepContext) (Result,
 		return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "llm.review.prompt", Kind: ResultViolation, Message: err.Error(), FixSafety: config.FixNone, GateStatus: config.GateFail}, nil
 	}
 
-	cmd := exec.CommandContext(ctx, codexCommand, "exec", "--cd", stepCtx.ProjectRoot, "-")
-	cmd.Dir = stepCtx.ProjectRoot
+	reviewRoot := llmReviewRoot(stepCtx)
+	cmd := exec.CommandContext(ctx, codexCommand, "exec", "--cd", reviewRoot, "-")
+	cmd.Dir = reviewRoot
 	cmd.Env = mergeEnv(os.Environ(), a.cfg.Env)
 	cmd.Stdin = strings.NewReader(prompt)
 	var stdout, stderr bytes.Buffer
@@ -56,14 +57,22 @@ func (a LLMReviewAdapter) Run(ctx context.Context, stepCtx StepContext) (Result,
 		status = config.GateFail
 		message = err.Error()
 	}
+	processPath, processWriteErr := appendLLMProcessSection(stepCtx, "第一模型执行结果", stepCtx.Step.ID, stdout.String(), stderr.String(), status, message)
+	if processWriteErr != nil && status == config.GatePass {
+		status = config.GateFail
+		message = processWriteErr.Error()
+	}
 	artifacts := []Artifact{
 		{Name: "prompt", Path: promptPath, Content: prompt},
 		{Name: "stdout", Content: stdout.String()},
 		{Name: "stderr", Content: stderr.String()},
 	}
+	if processPath != "" {
+		artifacts = append(artifacts, Artifact{Name: "process", Path: processPath, Content: stdout.String()})
+	}
 	if dir := stepCtx.Config.Artifacts.Dir; dir != "" {
-		if written, writeErr := writeArtifacts(resolveWorkdir(stepCtx.ProjectRoot, dir), stepCtx.Step.ID, artifacts); writeErr == nil {
-			artifacts = written
+		if written, writeErr := writeArtifacts(configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, dir), stepCtx.Step.ID, artifactsWithoutPresetPath(artifacts)); writeErr == nil {
+			artifacts = append(written, artifactsWithPresetPath(artifacts)...)
 		}
 	}
 	return Result{AdapterID: a.cfg.ID, StepID: stepCtx.Step.ID, RuleID: "llm.review", Kind: ResultArtifact, Message: message, FixSafety: a.cfg.FixSafety, GateStatus: status, Artifacts: artifacts}, nil
@@ -80,18 +89,18 @@ func llmReviewRulesPath(cfg config.Adapter, stepCtx StepContext) string {
 	for i := 0; i < len(cfg.Args); i++ {
 		arg := strings.TrimSpace(cfg.Args[i])
 		if arg == "--rules" && i+1 < len(cfg.Args) {
-			return resolveWorkdir(stepCtx.ProjectRoot, cfg.Args[i+1])
+			return configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, cfg.Args[i+1])
 		}
 		if strings.HasPrefix(arg, "--rules=") {
-			return resolveWorkdir(stepCtx.ProjectRoot, strings.TrimPrefix(arg, "--rules="))
+			return configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, strings.TrimPrefix(arg, "--rules="))
 		}
 	}
-	return filepath.Join(filepath.Dir(stepCtx.ConfigPath), "llm-rules.json")
+	return absPath(filepath.Join(filepath.Dir(stepCtx.ConfigPath), "llm-rules.json"))
 }
 
 func writeLLMReviewPrompt(stepCtx StepContext, rulesPath string) (string, string, error) {
 	reportPath := latestLLMReportPath(stepCtx.ConfigPath)
-	promptPath := filepath.Join(resolveWorkdir(stepCtx.ProjectRoot, stepCtx.Config.Artifacts.Dir), stepCtx.Step.ID+"-prompt.md")
+	promptPath := filepath.Join(configRelativePath(stepCtx.ConfigPath, stepCtx.ProjectRoot, stepCtx.Config.Artifacts.Dir), stepCtx.Step.ID+"-prompt.md")
 	if stepCtx.Config.Artifacts.Dir == "" {
 		promptPath = filepath.Join(filepath.Dir(stepCtx.ConfigPath), "artifacts", "latest", stepCtx.Step.ID+"-prompt.md")
 	}
@@ -122,7 +131,39 @@ func writeLLMReviewPrompt(stepCtx StepContext, rulesPath string) (string, string
 func latestLLMReportPath(configPath string) string {
 	dir := filepath.Dir(configPath)
 	if filepath.Base(dir) == ".go-review" {
-		return filepath.Join(dir, "reports", "latest.llm.md")
+		return absPath(filepath.Join(dir, "reports", "latest.llm.md"))
 	}
-	return filepath.Join(dir, ".go-review", "reports", "latest.llm.md")
+	return absPath(filepath.Join(dir, ".go-review", "reports", "latest.llm.md"))
+}
+
+// llmReviewRoot 返回 Codex 进程的工作目录。
+//
+// 普通工具 step 会在 defaults.workdir 下执行，方便定位 Go module；但 llm.review 需要读取
+// 仓库级 .go-review/reports/latest.llm.md 和 llm-rules.json。若配置文件位于仓库根的
+// .go-review/go-review.yaml，则让 Codex 从仓库根启动，避免像 ailx-agent 这类 workdir=api
+// 的项目在 api/.go-review 下找不到报告和规则。
+func llmReviewRoot(stepCtx StepContext) string {
+	configDir := filepath.Dir(absPath(stepCtx.ConfigPath))
+	if filepath.Base(configDir) == ".go-review" {
+		return filepath.Dir(configDir)
+	}
+	return configDir
+}
+
+func configRelativePath(configPath, projectRoot, value string) string {
+	if value == "" {
+		return projectRoot
+	}
+	if filepath.IsAbs(value) {
+		return filepath.Clean(value)
+	}
+	return absPath(filepath.Join(filepath.Dir(configPath), value))
+}
+
+func absPath(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return filepath.Clean(path)
+	}
+	return filepath.Clean(abs)
 }

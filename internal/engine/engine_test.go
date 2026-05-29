@@ -144,6 +144,7 @@ adapters:
   - id: format
     type: go.lint
     command: %s
+    args: [fmt]
     fix_safety: safe
 steps:
   - id: format-step
@@ -230,6 +231,73 @@ profiles:
 	}
 	if !strings.Contains(got.Message, "Error return value") {
 		t.Fatalf("errcheck message = %q", got.Message)
+	}
+}
+
+// 验证 golangci-lint 的 --config 相对路径按 go-review.yaml 所在目录解析，而不是按 adapter workdir 解析。
+func TestGoLintRunConfigPathIsRelativeToGoReviewConfig(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "api"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "api", "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	logPath := filepath.Join(dir, "args.log")
+	writeExecutable(t, filepath.Join(dir, "golangci"), fmt.Sprintf("#!/bin/sh\nprintf '%%s\n' \"$@\" > %s\nexit 0\n", shellArg(logPath)))
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), fmt.Sprintf(`schema_version: "1.0"
+defaults:
+  workdir: ../api
+adapters:
+  - id: lint
+    type: go.lint
+    command: %s
+    args: [run, --config=.go-review/golangci.yml, --enable-only=staticcheck]
+steps:
+  - id: lint-step
+    adapter: lint
+profiles:
+  - name: fast
+    steps: [lint-step]
+`, filepath.Join(dir, "golangci")))
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if got := summary.Results[0].GateStatus; got != config.GatePass {
+		t.Fatalf("lint gate = %s", got)
+	}
+	args, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(args), "--config=../.go-review/golangci.yml") {
+		t.Fatalf("golangci config path was not rewritten relative to workdir:\n%s", args)
+	}
+}
+
+// 验证默认降噪会过滤 go-zero optional 标签和测试子进程 G204，同时保留真实 lint 问题。
+func TestGoLintRunFiltersKnownNoisyFindings(t *testing.T) {
+	result := Result{GateStatus: config.GateFail, Artifacts: []Artifact{{
+		Name: "stdout",
+		Content: strings.Join([]string{
+			"internal/config/config.go:13:23: SA5008: invalid appearance of unknown `optional` tag option (staticcheck)",
+			"internal/plannerclient/contract_test.go:99:9: G204: Subprocess launched with variable (gosec)",
+			"chat.go:36:17: Error return value of `ctx.Close` is not checked (errcheck)",
+		}, "\n"),
+	}}}
+	applyGolangciLintNoiseFilter(&result, StepContext{Step: config.Step{ID: "lint"}, Config: &config.Config{}})
+	got := result.Artifacts[0].Content
+	for _, noisy := range []string{"SA5008", "G204"} {
+		if strings.Contains(got, noisy) {
+			t.Fatalf("noise %s was not filtered:\n%s", noisy, got)
+		}
+	}
+	if !strings.Contains(got, "ctx.Close") || result.GateStatus != config.GateFail {
+		t.Fatalf("real finding was not preserved: status=%s content=%q", result.GateStatus, got)
 	}
 }
 
@@ -332,8 +400,8 @@ profiles:
 	}
 }
 
-// 验证 fix 应用后若后续校验（如测试）失败，会自动回滚文件到修改前的状态。
-func TestFixRollsBackWhenDependentValidationFails(t *testing.T) {
+// 验证 fix 应用后若后续校验（如测试）失败，会保留已完成的 safe fix，并报告后续失败。
+func TestFixKeepsSafeFixWhenDependentValidationFails(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "bad.go"), []byte("package main\nfunc main(){println(Message())}\nfunc Message() string { return \"wrong\" }\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -348,6 +416,7 @@ adapters:
   - id: format
     type: go.lint
     command: %s
+    args: [fmt]
     fix_safety: safe
   - id: test
     type: cmd
@@ -368,22 +437,30 @@ profiles:
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if len(summary.Results) < 3 || summary.Results[len(summary.Results)-1].AdapterID != "fix.transaction" {
-		t.Fatalf("expected rollback evidence, results=%#v", summary.Results)
+	if got := summary.GateStatus(); got != config.GateFail {
+		t.Fatalf("summary gate = %s, want fail", got)
+	}
+	for _, result := range summary.Results {
+		if result.AdapterID == "fix.transaction" {
+			t.Fatalf("unexpected rollback result: %#v", result)
+		}
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "bad.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "main(){println") {
-		t.Fatalf("rollback did not restore original formatting: %s", data)
+	if !strings.Contains(string(data), "func main() {") {
+		t.Fatalf("safe format fix was not kept: %s", data)
 	}
 }
 
 // 验证内置规则 no-direct-os-getenv 能检测到直接调用 os.Getenv，并报告正确的文件、行号和修复建议。
 func TestSemanticAdapterDetectsDirectOSGetenv(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, "internal"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "internal", "env.go"), []byte("package internal\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg := writeConfig(t, dir, `schema_version: "1.0"
@@ -411,8 +488,50 @@ profiles:
 		t.Fatalf("Run() error = %v", err)
 	}
 	got := summary.Results[0]
-	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "main.go" || got.Line == 0 || got.Suggestion == "" {
+	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "internal/env.go" || got.Line == 0 || got.Suggestion == "" {
 		t.Fatalf("semantic result = %#v", got)
+	}
+}
+
+// 验证 no-direct-os-getenv 默认放行启动入口和测试文件，避免把部署环境覆盖和集成测试 DSN 误判为业务违规。
+func TestSemanticAdapterIgnoresOSGetenvInMainAndTests(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"go.mod":      "module example.com/semantic-env-ignore\n",
+		"main.go":     "package main\nimport \"os\"\nfunc main() { _ = os.Getenv(\"APP_DSN\") }\n",
+		"env_test.go": "package main\nimport \"os\"\nfunc TestEnv() { _ = os.Getenv(\"APP_TEST_DSN\") }\n",
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "semantic"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "semantic", "default.yaml"), []byte("rules:\n  - no-direct-os-getenv\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, dir, `schema_version: "1.0"
+defaults:
+  workdir: .
+adapters:
+  - id: semantic.no-env
+    type: go.semantic
+steps:
+  - id: semantic-step
+    adapter: semantic.no-env
+profiles:
+  - name: fast
+    steps: [semantic-step]
+`)
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandCheck, Config: cfg, Profile: "fast"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GatePass {
+		t.Fatalf("semantic ignore result = %#v", got)
 	}
 }
 
@@ -617,7 +736,10 @@ func TestSemanticAdapterLoadsDefaultAndCustomRuleFiles(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-config\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, "internal"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "internal", "env.go"), []byte("package internal\nimport \"os\"\nfunc Message() string { return os.Getenv(\"MESSAGE\") }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
@@ -651,7 +773,7 @@ profiles:
 		t.Fatalf("Run() error = %v", err)
 	}
 	got := summary.Results[0]
-	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "main.go" {
+	if got.GateStatus != config.GateFail || got.RuleID != noDirectEnvRuleID || got.File != "internal/env.go" {
 		t.Fatalf("semantic config result = %#v", got)
 	}
 }
@@ -924,10 +1046,10 @@ func TestSemanticAdapterReportsFirstFindingOnly(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/semantic-first\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("package main\nimport \"os\"\nfunc A() string { return os.Getenv(\"A\") }\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("package app\nimport \"os\"\nfunc A() string { return os.Getenv(\"A\") }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("package main\nimport \"os\"\nfunc B() string { return os.Getenv(\"B\") }\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("package app\nimport \"os\"\nfunc B() string { return os.Getenv(\"B\") }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "semantic"), 0o755); err != nil {
@@ -1311,12 +1433,18 @@ func TestLLMReviewAdapterRunsCodexDirectly(t *testing.T) {
 	}
 	logPath := filepath.Join(dir, "codex.log")
 	writeExecutable(t, filepath.Join(binDir, "codex"), fmt.Sprintf("#!/bin/sh\nprintf 'args:%%s\n' \"$*\" >> %s\ncat > %s\necho codex-ok\nexit 0\n", shellArg(logPath), shellArg(filepath.Join(dir, "prompt.stdin"))))
-	if err := os.WriteFile(filepath.Join(dir, "llm-rules.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	cfg := writeConfig(t, dir, `schema_version: "1.0"
+	if err := os.Mkdir(filepath.Join(dir, "api"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "llm-rules.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
 defaults:
-  workdir: .
+  workdir: ../api
 adapters:
   - id: llm.review
     type: llm.review
@@ -1342,7 +1470,7 @@ artifacts:
 	if got.GateStatus != config.GatePass || got.RuleID != "llm.review" {
 		t.Fatalf("llm review result = %#v", got)
 	}
-	promptPath := filepath.Join(dir, "artifacts", "llm-review-prompt.txt")
+	promptPath := filepath.Join(dir, ".go-review", "artifacts", "llm-review-prompt.md")
 	prompt, err := os.ReadFile(promptPath)
 	if err != nil {
 		t.Fatalf("expected prompt artifact %s: %v", promptPath, err)
@@ -1361,10 +1489,156 @@ artifacts:
 			t.Fatalf("codex command missing %q:\n%s", want, logData)
 		}
 	}
-	stdoutArtifact, err := os.ReadFile(filepath.Join(dir, "artifacts", "llm-review-stdout.txt"))
+	stdoutArtifact, err := os.ReadFile(filepath.Join(dir, ".go-review", "artifacts", "llm-review-stdout.txt"))
 	if err != nil || !strings.Contains(string(stdoutArtifact), "codex-ok") {
 		t.Fatalf("stdout artifact = %q err=%v", stdoutArtifact, err)
 	}
+}
+
+// 验证 fix 模式中 LLM 成功修复旧 lint 失败后，会自动二次验证并让最终结果以新验证为准。
+func TestFixRevalidatesAfterSuccessfulLLMReview(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell fixture uses sh")
+	}
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.Mkdir(binDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeExecutable(t, filepath.Join(binDir, "codex"), "#!/bin/sh\ncat >/dev/null\npython3 - <<'PY'\nfrom pathlib import Path\np=Path('main.go')\np.write_text(p.read_text().replace('fmt.Errorf(\"ignored\")', 'fmt.Sprintf(\"ignored\")'))\nPY\n")
+	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "llm-rules.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/llm-revalidate\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"fmt\"\nfunc main() {\n\tfmt.Errorf(\"ignored\")\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), fmt.Sprintf(`schema_version: "1.0"
+defaults:
+  workdir: ..
+artifacts:
+  dir: artifacts
+adapters:
+  - id: lint
+    type: go.lint
+    command: %s
+    args: [run, --enable, errcheck]
+  - id: llm.review
+    type: llm.review
+    args: [--rules, llm-rules.json]
+steps:
+  - id: lint
+    adapter: lint
+    on_fail: continue
+  - id: llm-review
+    adapter: llm.review
+    on_fail: continue
+profiles:
+  - name: review
+    steps: [lint, llm-review]
+`, fakeGolangciLint(t)))
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "review"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if got := summary.GateStatus(); got != config.GatePass {
+		t.Fatalf("summary gate = %s results=%#v", got, summary.Results)
+	}
+	lintRuns := 0
+	for _, result := range summary.Results {
+		if result.StepID == "lint" {
+			lintRuns++
+		}
+	}
+	if lintRuns != 2 {
+		t.Fatalf("expected lint to run before and after llm, got %d results=%#v", lintRuns, summary.Results)
+	}
+}
+
+// 验证 llm.claude adapter 会消费 latest.llm.md、规则文件和 Codex 产物，并直接调用 Claude CLI。
+func TestClaudeReviewAdapterRunsClaudeDirectly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell fixture uses sh")
+	}
+	dir := t.TempDir()
+	binDir := filepath.Join(dir, "bin")
+	if err := os.Mkdir(binDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	logPath := filepath.Join(dir, "claude.log")
+	writeExecutable(t, filepath.Join(binDir, "claude"), fmt.Sprintf("#!/bin/sh\nprintf 'args:%%s\n' \"$*\" >> %s\necho claude-ok\nexit 0\n", shellArg(logPath)))
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "reports"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "reports", "latest.llm.md"), []byte("# latest llm"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "llm-rules.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
+defaults:
+  workdir: ..
+adapters:
+  - id: llm.claude
+    type: llm.claude
+    args: [-p, --permission-mode, acceptEdits]
+    capabilities: [report]
+    fix_safety: review
+steps:
+  - id: llm-claude
+    adapter: llm.claude
+    on_fail: continue
+profiles:
+  - name: review
+    steps: [llm-claude]
+artifacts:
+  dir: artifacts
+`)
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	summary, err := NewRunner().Run(context.Background(), Options{Command: CommandFix, Config: cfg, Profile: "review"})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	got := summary.Results[0]
+	if got.GateStatus != config.GatePass || got.RuleID != "llm.claude" {
+		t.Fatalf("claude review result = %#v", got)
+	}
+	promptPath := filepath.Join(dir, ".go-review", "artifacts", "llm-claude-prompt.md")
+	prompt, err := os.ReadFile(promptPath)
+	if err != nil {
+		t.Fatalf("expected prompt artifact %s: %v", promptPath, err)
+	}
+	for _, want := range []string{"Claude 复审任务", "latest.llm.md", "llm-rules.json", "llm-review-stdout.txt", "latest.process.md", "rule_id"} {
+		if !strings.Contains(string(prompt), want) {
+			t.Fatalf("prompt missing %q:\n%s", want, prompt)
+		}
+	}
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("expected claude log: %v", err)
+	}
+	for _, want := range []string{"-p", "--permission-mode", "acceptEdits", "Claude 复审任务"} {
+		if !strings.Contains(string(logData), want) {
+			t.Fatalf("claude command missing %q:\n%s", want, logData)
+		}
+	}
+	stdoutArtifact, err := os.ReadFile(filepath.Join(dir, ".go-review", "artifacts", "llm-claude-stdout.txt"))
+	if err != nil || !strings.Contains(string(stdoutArtifact), "claude-ok") {
+		t.Fatalf("stdout artifact = %q err=%v", stdoutArtifact, err)
+	}
+
+	claudeReport, err := os.ReadFile(filepath.Join(dir, ".go-review", "reports", "latest.process.md"))
+	if err != nil || !strings.Contains(string(claudeReport), "claude-ok") {
+		t.Fatalf("claude report = %q err=%v", claudeReport, err)
+	}
+
 }
 
 func writeExecutable(t *testing.T, path, body string) {

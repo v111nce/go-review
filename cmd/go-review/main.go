@@ -82,6 +82,10 @@ func runCommand(command string, args []string) int {
 			fmt.Fprintf(os.Stdout, "initialized config=%s\n", created)
 			discovered = created
 		}
+		if ensureErr := writeDefaultProjectFiles(filepath.Dir(discovered)); ensureErr != nil {
+			fmt.Fprintf(os.Stderr, "go-review %s: %v\n", command, ensureErr)
+			return 2
+		}
 		resolvedConfigPath = discovered
 	}
 	resolvedReportDir := *reportDir
@@ -149,7 +153,10 @@ func writeDefaultProjectFiles(configDir string) error {
 	if err := writeDefaultLLMRules(configDir); err != nil {
 		return err
 	}
-	return writeDefaultSemanticConfig(configDir)
+	if err := writeDefaultSemanticConfig(configDir); err != nil {
+		return err
+	}
+	return writeDefaultGolangCIConfig(configDir)
 }
 
 // writeDefaultRuleCatalog 初始化消费方项目内的轻量规则 catalog。
@@ -304,6 +311,21 @@ func writeDefaultSemanticConfig(configDir string) error {
 	return nil
 }
 
+// writeDefaultGolangCIConfig 写入 go-review 管理的 golangci-lint 基础降噪配置。
+//
+// go-review 仍然通过命令行显式指定默认 linter 列表；这个文件只放跨项目误报排除项，
+// 例如 go-zero 配置常用的 `json:",optional"` 会被 staticcheck SA5008 误判。
+// 文件不存在时才创建，用户可以在项目内按团队需要继续维护。
+func writeDefaultGolangCIConfig(configDir string) error {
+	path := filepath.Join(configDir, "golangci.yml")
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return os.WriteFile(path, []byte(defaultGolangCIConfig()), 0o644)
+}
+
 // defaultConfig 是 `go-review init` 生成的默认配置模板。
 //
 // 模板中所有主要 step 都使用 on_fail: continue，确保 format、lint、test、semantic 互不阻断；
@@ -317,6 +339,7 @@ tools:
     go.test: "go"
     go.semantic: "builtin"
     llm.review: "codex"                 # optional runtime; disabled by default via steps[].enabled.
+    llm.claude: "claude"                 # optional second-pass runtime; disabled by default via steps[].enabled.
     # Optional adapters. Uncomment after installing the named tools.
     # go.vet: "go"                       # built in with Go; uncomment the adapter/step/profile entries below to enable.
     # staticcheck: "staticcheck"          # install: go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -342,8 +365,8 @@ adapters:
     type: go.lint
     args:
       - run
-      - --no-config
-      - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,revive,thelper,errorlint,errname,forcetypeassert,predeclared,bodyclose,perfsprint,gocritic,godot,godoclint,nonamedreturns,nakedret,testifylint,importas,forbidigo,varnamelen,gochecknoglobals,gochecknoinits,paralleltest,makezero,prealloc,gosec
+      - --config=.go-review/golangci.yml
+      - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,errorlint,errname,forcetypeassert,predeclared,bodyclose,gosec
       - --output.text.print-issued-lines=false
       - --show-stats=false
     capabilities: [check]
@@ -363,6 +386,10 @@ adapters:
     fix_safety: review
   - id: llm.review
     type: llm.review
+    capabilities: [report]
+    fix_safety: review
+  - id: llm.claude
+    type: llm.claude
     capabilities: [report]
     fix_safety: review
   # Optional: go vet (no extra install; ships with Go).
@@ -419,6 +446,12 @@ steps:
     adapter: llm.review
     enabled: false
     on_fail: continue
+  # Set enabled: true after Claude Code CLI is installed and logged in.
+  # This optional second-pass reviewer consumes latest.llm.md and Codex artifacts.
+  - id: llm-claude
+    adapter: llm.claude
+    enabled: false
+    on_fail: continue
   # Optional steps. Uncomment the matching adapter above before enabling.
   # Each step uses on_fail: continue so one review area does not prevent others from running.
   # - id: vet
@@ -441,10 +474,23 @@ profiles:
   - name: nightly
     steps: [format-check, lint, test, semantic]
   - name: review
-    steps: [format-check, lint, test, semantic, llm-review]
+    steps: [format-check, lint, test, semantic, llm-review, llm-claude]
   # Optional after enabling the matching steps above:
   # - name: full
   #   steps: [format-check, test, semantic, vet, staticcheck, vulncheck, security]
+	`
+}
+
+func defaultGolangCIConfig() string {
+	return `version: "2"
+linters:
+  exclusions:
+    rules:
+      # go-zero 配置结构会使用 json:",optional" 表达可选配置；
+      # staticcheck SA5008 按标准 encoding/json 解释标签，会把 optional 当成未知选项。
+      - text: "SA5008: invalid appearance of unknown ` + "`optional`" + ` tag option"
+        linters:
+          - staticcheck
 `
 }
 

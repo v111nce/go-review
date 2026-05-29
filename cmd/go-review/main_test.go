@@ -54,8 +54,8 @@ func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
 	if !strings.Contains(stdout, "SUCCESS profile=fast") {
 		t.Fatalf("default check output missing pass summary:\n%s", stdout)
 	}
-	if _, err := os.Stat(filepath.Join(reportDir, "latest.llm.md")); err != nil {
-		t.Fatalf("expected LLM report: %v", err)
+	if _, err := os.Stat(filepath.Join(reportDir, "latest.process.md")); err != nil {
+		t.Fatalf("expected process report: %v", err)
 	}
 }
 
@@ -75,16 +75,19 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 		}
 	}
 	semanticDefault := filepath.Join(dir, ".go-review", "semantic", "default.yaml")
+	golangciConfig := filepath.Join(dir, ".go-review", "golangci.yml")
 	rulesCatalog := filepath.Join(dir, ".go-review", "rules.json")
 	llmRules := filepath.Join(dir, ".go-review", "llm-rules.json")
 	for _, path := range []string{
 		filepath.Join(dir, ".go-review", "go-review.yaml"),
+		golangciConfig,
 		semanticDefault,
 		filepath.Join(dir, ".go-review", "semantic", "custom.yaml"),
 		rulesCatalog,
 		llmRules,
 		filepath.Join(dir, ".go-review", "reports", "latest.md"),
 		filepath.Join(dir, ".go-review", "reports", "latest.llm.md"),
+		filepath.Join(dir, ".go-review", "reports", "latest.process.md"),
 		filepath.Join(dir, ".go-review", "artifacts", "latest", "format-check-stdout.txt"),
 	} {
 		if _, err := os.Stat(path); err != nil {
@@ -139,6 +142,15 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 			t.Fatalf("semantic custom config missing %q:\n%s", want, semanticCustom)
 		}
 	}
+	golangciData, err := os.ReadFile(golangciConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"version: \"2\"", "SA5008", "staticcheck"} {
+		if !strings.Contains(string(golangciData), want) {
+			t.Fatalf("golangci config missing %q:\n%s", want, golangciData)
+		}
+	}
 	if strings.Contains(string(semanticConfig), "exclude:") {
 		t.Fatalf("semantic config should not own project exclude:\n%s", semanticConfig)
 	}
@@ -167,8 +179,9 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 		"llm.review: \"codex\"",
 		"type: llm.review",
 		"enabled: false",
-		"steps: [format-check, lint, test, semantic, llm-review]",
+		"steps: [format-check, lint, test, semantic, llm-review, llm-claude]",
 		"on_fail: continue",
+		"--config=.go-review/golangci.yml",
 	} {
 		if !strings.Contains(string(projectConfig), want) {
 			t.Fatalf("project config missing %q:\n%s", want, projectConfig)
@@ -325,10 +338,12 @@ func captureRun(args []string) (stdout string, stderr string, code int) {
 	return outBuf.String(), errBuf.String(), code
 }
 
-// TestDefaultConfigCoversAllDirectGolangciRules 锁定 A 类 direct golangci 规则的默认承接。
-// 这不是跑每个 linter 的真实 fixture，而是全量校验 catalog 中 `tool-golangci` 的每条规则
-// 都能被默认 go.lint.format/go.lint.static 配置覆盖，避免 catalog 标了 implemented 但默认配置漏启用。
-func TestDefaultConfigCoversAllDirectGolangciRules(t *testing.T) {
+// TestDefaultConfigCoversLowNoiseGolangciRules 锁定默认低噪声 golangci 规则承接。
+//
+// catalog 中有些规则是 strict/team 风格规则，例如 paralleltest、varnamelen、revive
+// 注释句式等；它们可以保持 implemented，但不应强制进入通用默认配置。这里仅要求
+// default_profile 属于 default/ci 的直接工具规则被默认 go.lint 参数覆盖。
+func TestDefaultConfigCoversLowNoiseGolangciRules(t *testing.T) {
 	cfg, err := config.Load(strings.NewReader(defaultConfig()))
 	if err != nil {
 		t.Fatalf("Load(defaultConfig): %v", err)
@@ -342,14 +357,17 @@ func TestDefaultConfigCoversAllDirectGolangciRules(t *testing.T) {
 		if rule.Handling != "tool-golangci" {
 			continue
 		}
+		if !isDefaultGateProfile(rule.DefaultProfile) {
+			continue
+		}
 		if !rule.Implemented {
-			t.Fatalf("direct golangci rule %s should be implemented", rule.ID)
+			t.Fatalf("default golangci rule %s should be implemented", rule.ID)
 		}
 		if rule.Adapter != "go.lint" {
-			t.Fatalf("direct golangci rule %s adapter=%q, want go.lint", rule.ID, rule.Adapter)
+			t.Fatalf("default golangci rule %s adapter=%q, want go.lint", rule.ID, rule.Adapter)
 		}
 		if len(rule.ToolRules) == 0 {
-			t.Fatalf("direct golangci rule %s missing tool_rules", rule.ID)
+			t.Fatalf("default golangci rule %s missing tool_rules", rule.ID)
 		}
 		covered := false
 		for _, toolRule := range rule.ToolRules {
@@ -359,7 +377,7 @@ func TestDefaultConfigCoversAllDirectGolangciRules(t *testing.T) {
 			}
 		}
 		if !covered {
-			t.Fatalf("direct golangci rule %s tool_rules=%v not covered by default go.lint args; enabled=%v", rule.ID, rule.ToolRules, enabled)
+			t.Fatalf("default golangci rule %s tool_rules=%v not covered by default go.lint args; enabled=%v", rule.ID, rule.ToolRules, enabled)
 		}
 	}
 }
@@ -387,8 +405,24 @@ func TestCatalogToolRulesHaveKnownExecutionOwners(t *testing.T) {
 		"govet composites":             true,
 		"govet printf":                 true,
 		"govet printf analyzer config": true,
+		"godoclint":                    true,
+		"godot":                        true,
+		"nakedret":                     true,
+		"nonamedreturns":               true,
+		"paralleltest":                 true,
+		"varnamelen":                   true,
+		"gochecknoglobals":             true,
+		"gochecknoinits":               true,
+		"gocritic":                     true,
+		"perfsprint":                   true,
+		"thelper":                      true,
+		"testifylint":                  true,
+		"importas":                     true,
+		"makezero":                     true,
+		"prealloc":                     true,
 		"package denylist":             true,
 		"perf linters":                 true,
+		"revive":                       true,
 		"revive error-strings":         true,
 		"revive naming":                true,
 		"semantic":                     true,
@@ -411,6 +445,15 @@ func TestCatalogToolRulesHaveKnownExecutionOwners(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func isDefaultGateProfile(profile string) bool {
+	switch profile {
+	case "", "default", "ci":
+		return true
+	default:
+		return false
 	}
 }
 

@@ -49,6 +49,9 @@ func (a GoLintAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, er
 	result.FixSafety = a.cfg.FixSafety
 	result.FixAvailable = a.cfg.FixSafety == config.FixSafe && isGolangciLintFmt(args)
 	result.Kind = ResultArtifact
+	if !isGolangciLintFmt(args) {
+		applyGolangciLintNoiseFilter(&result, stepCtx)
+	}
 	if !fixMode {
 		if result.GateStatus == config.GateFail {
 			result.Kind = ResultViolation
@@ -74,6 +77,105 @@ func (a GoLintAdapter) Run(ctx context.Context, stepCtx StepContext) (Result, er
 		}
 	}
 	return result, err
+}
+
+// applyGolangciLintNoiseFilter 过滤 go-review 默认策略认定的跨项目高概率误报。
+//
+// 这些过滤项不是通用 golangci-lint 能力替代，而是为了让旧项目里仍带 `--no-config` 的
+// go-review.yaml 也能获得同一套低噪音默认行为：go-zero 的 optional 配置标签不作为失败项，
+// 测试中启动本地子进程的 G204 不作为默认安全门禁。
+func applyGolangciLintNoiseFilter(result *Result, stepCtx StepContext) {
+	changed := false
+	for i, artifact := range result.Artifacts {
+		filtered := filterGolangciLintNoiseLines(artifact.Content)
+		if filtered != artifact.Content {
+			result.Artifacts[i].Content = filtered
+			changed = true
+		}
+	}
+	if !changed {
+		return
+	}
+	if dir := stepCtx.Config.Artifacts.Dir; dir != "" {
+		if written, err := writeArtifacts(resolveWorkdir(stepCtx.ProjectRoot, dir), stepCtx.Step.ID, result.Artifacts); err == nil {
+			result.Artifacts = written
+		}
+	}
+	if strings.TrimSpace(combinedArtifactContent(result.Artifacts)) == "" {
+		result.GateStatus = config.GatePass
+		result.Message = "golangci-lint run clean"
+	}
+}
+
+func filterGolangciLintNoiseLines(content string) string {
+	if strings.TrimSpace(content) == "" {
+		return content
+	}
+	var kept []string
+	for _, line := range strings.Split(content, "\n") {
+		if isNoisyGolangciLintLine(line) {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return strings.Join(kept, "\n")
+}
+
+func isNoisyGolangciLintLine(line string) bool {
+	return strings.Contains(line, "SA5008: invalid appearance of unknown `optional` tag option") ||
+		(strings.Contains(line, "_test.go:") && strings.Contains(line, "G204: Subprocess launched with variable"))
+}
+
+func combinedArtifactContent(artifacts []Artifact) string {
+	var b strings.Builder
+	for _, artifact := range artifacts {
+		b.WriteString(artifact.Content)
+	}
+	return b.String()
+}
+
+// configRelativeGolangciArgs 把 --config 指向的相对路径解析成相对当前执行 workdir 可用的路径。
+//
+// go-review 的配置文件通常在仓库根 .go-review/go-review.yaml，而 adapter 实际执行目录可能是
+// defaults.workdir（例如 api/）。若直接把 `.go-review/golangci.yml` 传给 golangci-lint，它会在
+// api/.go-review 下查找并失败；这里统一按 go-review.yaml 所在目录解析后转成 workdir 相对路径。
+func configRelativeGolangciArgs(args []string, stepCtx StepContext) []string {
+	out := append([]string{}, args...)
+	workdir := resolveWorkdir(stepCtx.ProjectRoot, stepCtx.Adapter.Workdir)
+	for i := 0; i < len(out); i++ {
+		arg := out[i]
+		if arg == "--config" || arg == "-c" {
+			if i+1 < len(out) {
+				out[i+1] = workdirRelativeConfigPath(out[i+1], stepCtx.ConfigPath, workdir)
+				i++
+			}
+			continue
+		}
+		for _, prefix := range []string{"--config=", "-c="} {
+			if strings.HasPrefix(arg, prefix) {
+				out[i] = prefix + workdirRelativeConfigPath(strings.TrimPrefix(arg, prefix), stepCtx.ConfigPath, workdir)
+				break
+			}
+		}
+	}
+	return out
+}
+
+func workdirRelativeConfigPath(value, goReviewConfigPath, workdir string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || filepath.IsAbs(value) {
+		return value
+	}
+	configDir := filepath.Dir(goReviewConfigPath)
+	if strings.HasPrefix(filepath.ToSlash(value), ".go-review/") && filepath.Base(configDir) == ".go-review" {
+		configDir = filepath.Dir(configDir)
+	}
+	absConfig := filepath.Join(configDir, value)
+	rel, err := filepath.Rel(workdir, absConfig)
+	if err != nil {
+		return absPath(absConfig)
+	}
+	return filepath.ToSlash(rel)
 }
 
 // formatDiffFile 从 golangci-lint fmt --diff 的 artifact 中提取首个受影响文件。
@@ -368,6 +470,9 @@ func golangciLintArgs(configured []string, fixMode bool, stepCtx StepContext) ([
 		args = removeArg(args, "--diff")
 	} else if isGolangciLintFmt(args) && !hasArg(args, "--diff") {
 		args = append(args, "--diff")
+	}
+	if !isGolangciLintFmt(args) {
+		args = configRelativeGolangciArgs(args, stepCtx)
 	}
 	if !isGolangciLintFmt(args) || hasPathArg(args) {
 		return args, nil

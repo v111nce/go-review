@@ -85,3 +85,17 @@ func TestWriteLLMMarkdown(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteProcessMarkdown(t *testing.T) {
+	var buf bytes.Buffer
+	report := sampleReport()
+	if err := WriteProcessMarkdown(&buf, report); err != nil {
+		t.Fatalf("WriteProcessMarkdown() error = %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"# go-review 过程文档", "Safe fix 执行结果", "工具检测结果", "第一模型执行结果", "第二模型复盘结果"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("process markdown output missing %q:\n%s", want, out)
+		}
+	}
+}

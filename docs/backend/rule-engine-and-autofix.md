@@ -23,7 +23,7 @@
 - `golangci-lint` 只负责通用 lint/format 聚合，不替代 `go.test`、安全漏洞扫描、报告生成或 pipeline 编排。
 - `go/analysis` 只负责 analyzer 编写和诊断表达，不负责 profile、artifact、中文/LLM 报告或跨工具调度。
 - pipeline 必须能表达顺序、并行、依赖、超时、失败策略和 profile。
-- 自动修复必须是局部、可格式化、可测试、可回滚的修改。
+- 自动修复必须是局部、可格式化、可测试的修改；单次写入失败需回滚该次写入，后续验证失败则保留已完成 safe fix 并报告失败。
 - 架构边界和目录归属默认不自动迁移，只报告违规。
 
 ## 核心设计
@@ -143,7 +143,7 @@ report-github depends_on: lint, arch, test, security
 | --- | --- | --- |
 | `go/analysis` | 编写 Go 语义 analyzer，读取 AST/type info，产出 diagnostic / SuggestedFix | 不负责配置 profile、跨工具调度、报告归一、CI artifact |
 | `golangci-lint` | 运行成熟通用 linters 和 formatters，提供缓存、并发和常见 formatter/fixer 能力 | 不替代 `go test`、自研 review pipeline、中文/LLM 报告、业务 semantic 规则治理 |
-| `go-review` | 统一编排 lint/format/test/security/semantic/report steps，归一结果，执行 safe fix transaction，生成报告 | 不重复实现成熟 lint 规则，不把所有语义规则硬编码在 runner 中 |
+| `go-review` | 统一编排 lint/format/test/security/semantic/report steps，归一结果，执行 safe fix application，生成报告 | 不重复实现成熟 lint 规则，不把所有语义规则硬编码在 runner 中 |
 
 推荐集成方式：
 
@@ -222,12 +222,12 @@ Diagnostic
 ## 失败和安全策略
 
 - adapter 启动失败时，按 step 的 `on_fail` 决定继续、跳过下游或失败。
-- 自动修复后格式化失败时，回滚该修复并报告。
+- 自动修复本身执行失败时，回滚该次写入并报告。
 - 自动修复后依赖 step 失败时，保留失败证据，不把该修复标记为安全完成。
 - 同一文件存在多个互相重叠的 text edit 时，必须拒绝自动应用并转人工处理。
 - 豁免必须记录 adapter ID、规则 ID、原因和范围。
 - CI 环境默认只检查，不直接改写主分支代码。
-- `fix` 命令当前只会自动应用配置为 `safe` 且 step `allow_fix: true` 的 `go.lint` format 修复；随后运行依赖验证 step，验证失败时回滚已应用格式化修改并保留失败证据。
+- `fix` 命令当前只会自动应用配置为 `safe` 且 step `allow_fix: true` 的 `go.lint` format 修复；随后运行依赖验证 step，验证失败时保留已应用格式化修改并记录失败证据。
 
 ## 测试策略
 

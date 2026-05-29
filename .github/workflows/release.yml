@@ -72,7 +72,7 @@ jobs:
               go build -trimpath -ldflags "${LDFLAGS}" -o "dist/${name}/${binary}" ./cmd/go-review
 
             cp docs/adoption/consumer-project.md "dist/${name}/ADOPTION.md"
-            cp docs/quickstart.md "dist/${name}/QUICKSTART.md"
+            cp README.md "dist/${name}/QUICKSTART.md"
 
             if [[ "${GOOS}" == "windows" ]]; then
               (cd dist && zip -qr "${name}.zip" "${name}")
