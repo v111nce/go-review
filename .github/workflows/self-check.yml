@@ -46,7 +46,8 @@ jobs:
           COMPLIANT="$ROOT/testdata/fixtures/regression-gates/compliant-project"
           VIOLATING="$ROOT/testdata/fixtures/regression-gates/violating-project"
           SEMANTIC="$ROOT/testdata/fixtures/regression-gates/semantic-violating-project"
-          AUTOFIX="$RUNNER_TEMP/go-review-autofix-project"
+          FIXTURE_TEMP="$RUNNER_TEMP/regression-gates"
+          AUTOFIX="$FIXTURE_TEMP/autofix-project"
 
           echo "== fast compliant profile should pass =="
           go run ./cmd/go-review check \
@@ -66,7 +67,7 @@ jobs:
           fi
           cat "$RUNNER_TEMP/ci.out"
           grep -q "FAILED profile=ci" "$RUNNER_TEMP/ci.out"
-          grep -q "gofmt would change files" "$RUNNER_TEMP/ci.out"
+          grep -q "golangci-lint fmt would change files" "$RUNNER_TEMP/ci.out"
 
           echo "== nightly compliant profile should pass with slow/full lanes =="
           go run ./cmd/go-review check \
@@ -91,6 +92,8 @@ jobs:
           grep -q "main.go:" "$RUNNER_TEMP/semantic.out"
 
           echo "== fix profile should apply only safe fixes and rerun validation =="
+          mkdir -p "$FIXTURE_TEMP"
+          cp -R testdata/fixtures/regression-gates/scripts "$FIXTURE_TEMP/scripts"
           cp -R testdata/fixtures/regression-gates/autofix-project "$AUTOFIX"
           go run ./cmd/go-review fix \
             --config "$CONFIG" \
