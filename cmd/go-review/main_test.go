@@ -31,31 +31,33 @@ func TestRunVersionCommands(t *testing.T) {
 	}
 }
 
-func TestRunHelpMentionsDefaultCheck(t *testing.T) {
+func TestRunHelpMentionsDefaultFix(t *testing.T) {
 	stdout, stderr, code := captureRun([]string{"--help"})
 	if code != 0 {
 		t.Fatalf("help code=%d stderr=%q", code, stderr)
 	}
-	for _, want := range []string{"go-review [check]", "check    run configured adapters without applying edits (default; initializes missing config)", "version"} {
+	for _, want := range []string{"go-review [--config <path>] [--profile fast]", "fix      run configured adapters in fix mode", "(default)", "check    run configured adapters without applying edits", "version"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help output missing %q:\n%s", want, stdout)
 		}
 	}
 }
 
-func TestRunDefaultsToCheckAndDiscoversRootConfig(t *testing.T) {
+func TestRunDefaultsToFixAndDiscoversRootConfig(t *testing.T) {
 	installFakeGolangciLint(t)
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/default-check\n")
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/default-fix\n")
 	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
 	writeFile(t, filepath.Join(dir, "go-review.yaml"), minimalConfig())
 	reportDir := filepath.Join(dir, "reports")
 	stdout, stderr, code := captureRun([]string{"--workdir", dir, "--report-dir", reportDir})
 	if code != 0 {
-		t.Fatalf("default check code=%d stderr=%q stdout=%q", code, stderr, stdout)
+		t.Fatalf("default fix code=%d stderr=%q stdout=%q", code, stderr, stdout)
 	}
-	if !strings.Contains(stdout, "SUCCESS profile=fast") {
-		t.Fatalf("default check output missing pass summary:\n%s", stdout)
+	for _, want := range []string{"START profile=fast command=fix", "SUCCESS profile=fast"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("default fix output missing %q:\n%s", want, stdout)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(reportDir, "latest.json")); err != nil {
 		t.Fatalf("expected json report: %v", err)
@@ -71,9 +73,9 @@ func TestRunAutoInitializesMissingConfig(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
 	stdout, stderr, code := captureRun([]string{"--workdir", dir})
 	if code != 0 {
-		t.Fatalf("auto init check code=%d stderr=%q stdout=%q", code, stderr, stdout)
+		t.Fatalf("auto init fix code=%d stderr=%q stdout=%q", code, stderr, stdout)
 	}
-	for _, want := range []string{"initialized config=", "SUCCESS profile=fast"} {
+	for _, want := range []string{"initialized config=", "START profile=fast command=fix", "SUCCESS profile=fast"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("auto init output missing %q:\n%s", want, stdout)
 		}
@@ -209,7 +211,7 @@ func TestRunBareAutoInitializesFromProjectRoot(t *testing.T) {
 		t.Fatalf("bare auto init code=%d stderr=%q stdout=%q", code, stderr, stdout)
 	}
 	if strings.Contains(stdout, ".go-review/.go-review") {
-		t.Fatalf("generated config should resolve artifacts from project root, stdout=%s", stdout)
+		t.Fatalf("generated config should resolve reports from project root, stdout=%s", stdout)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".go-review", "reports", "latest.json")); err != nil {
 		t.Fatalf("expected report under project .go-review: %v", err)

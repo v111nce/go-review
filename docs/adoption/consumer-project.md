@@ -19,7 +19,7 @@ The framework does not need to know the consumer repository layout beyond `--wor
 - Use `golangci-lint` as the preferred runner for common lint and formatter checks when a project wants broad lint coverage.
 - Use the currently supported `go/analysis` semantic rule kind for simple direct-call bans; add analyzers or external tools for project-specific semantic rules that need deeper AST and type information.
 - Keep `go test` as an independent step; `golangci-lint` does not replace test execution, coverage, or race checks.
-- Keep `go-review` responsible for profiles, `on_fail` behavior, artifacts, reports, safe fix application, and LLM repair context.
+- Keep `go-review` responsible for profiles, `on_fail` behavior, reports, safe fix application, and LLM review context.
 
 ## Minimal developer commands
 
@@ -28,8 +28,8 @@ From a consumer repository root:
 ```bash
 go-review version
 go-review init         # optional; bare go-review also initializes missing config
-go-review              # defaults to check --profile fast
-go-review fix          # applies only safe allowed fixes
+go-review              # defaults to fix --profile fast; applies only safe allowed fixes
+go-review check        # read-only check
 go-review --profile ci
 go-review --profile nightly
 ```

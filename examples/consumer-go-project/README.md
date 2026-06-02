@@ -14,7 +14,7 @@ It is intentionally small: the goal is to show project-local configuration and C
 ```bash
 go run ../../cmd/go-review init --workdir .
 go run ../../cmd/go-review --profile fast --workdir .
-go run ../../cmd/go-review fix --profile fast --workdir .
+go run ../../cmd/go-review check --profile fast --workdir .
 ```
 
 ## Consumer repository flow after release
@@ -22,6 +22,7 @@ go run ../../cmd/go-review fix --profile fast --workdir .
 ```bash
 go install github.com/v111nce/go-review/cmd/go-review@v0.1.0
 go-review --profile ci
+go-review check --profile ci
 ```
 
 Replace `v0.1.0` with the real release tag once published.

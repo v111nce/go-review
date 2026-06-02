@@ -59,7 +59,7 @@ func run(args []string) int {
 			return 2
 		}
 	}
-	return runCommand("check", args)
+	return runCommand("fix", args)
 }
 
 func runCommand(command string, args []string) int {
@@ -882,16 +882,16 @@ func printHelp() {
 	fmt.Fprintln(os.Stdout, `go-review runs configured Go code-review quality gates.
 
 Usage:
-  go-review [check] [--config <path>] [--profile fast]
-  go-review fix [--config <path>] [--profile fast]
+  go-review [--config <path>] [--profile fast]
+  go-review check [--config <path>] [--profile fast]
   go-review init [--workdir <dir>]
   go-review rules <list|get|add|upsert|delete|validate|render-doc>
   go-review update [--yes]
   go-review version
 
 Commands:
-  check    run configured adapters without applying edits (default; initializes missing config)
-  fix      run configured adapters in fix mode when adapters support safe fixes such as golangci-lint fmt
+  fix      run configured adapters in fix mode when adapters support safe fixes such as golangci-lint fmt (default)
+  check    run configured adapters without applying edits
   init     create .go-review/go-review.yaml without running checks
   rules    manage JSON rule catalog and render Markdown docs
   update   check latest release, confirm upgrade, replace binary, and append missing config
