@@ -15,8 +15,6 @@ defaults:
 # exclude:
 #   - generated
 #   - third_party
-artifacts:
-  dir: "artifacts/go-review"
 adapters:
   - id: go.lint
     type: go.lint

@@ -1,0 +1,77 @@
+{
+  "schema_version": "go-review.rules.v1",
+  "rules": [
+    {
+      "id": "go.official.gofmt",
+      "title": "Go 代码格式化",
+      "description": "代码必须使用 gofmt 统一格式化，避免人工风格争论。",
+      "source": {
+        "name": "Go Code Review Comments",
+        "url": "https://go.dev/wiki/CodeReviewComments",
+        "section": "Gofmt"
+      },
+      "handling": "tool-golangci",
+      "adapter": "go.lint",
+      "tool_rules": [
+        "gofmt"
+      ],
+      "default_profile": "default",
+      "severity": "error",
+      "autofix": {
+        "supported": true,
+        "safety": "safe"
+      },
+      "status": "active",
+      "implemented": true,
+      "notes": "机械格式化，可 safe fix；报告 rule_id 输出 go.official.gofmt。"
+    },
+    {
+      "id": "go.official.imports",
+      "title": "Import 整理",
+      "description": "import 应自动整理、删除未用项并按 Go 习惯分组。",
+      "source": {
+        "name": "Go Code Review Comments",
+        "url": "https://go.dev/wiki/CodeReviewComments",
+        "section": "Imports"
+      },
+      "handling": "tool-golangci",
+      "adapter": "go.lint",
+      "tool_rules": [
+        "gci",
+        "goimports"
+      ],
+      "default_profile": "default",
+      "severity": "error",
+      "autofix": {
+        "supported": true,
+        "safety": "safe"
+      },
+      "status": "active",
+      "implemented": true,
+      "notes": "配置 goimports/gci formatter 时，报告 rule_id 输出 go.official.imports。"
+    },
+    {
+      "id": "team.semantic.max-params",
+      "title": "函数参数上限",
+      "description": "函数/方法入参个数不得超过配置阈值。",
+      "source": {
+        "name": "Team semantic rules",
+        "section": "max-params"
+      },
+      "handling": "tool-semantic",
+      "adapter": "go.semantic",
+      "tool_rules": [
+        "max-params"
+      ],
+      "default_profile": "strict",
+      "severity": "medium",
+      "autofix": {
+        "supported": false,
+        "safety": "none"
+      },
+      "status": "active",
+      "implemented": true,
+      "notes": "确定性 AST 子规则；配置使用该 catalog id 时，报告 rule_id 保持一致。"
+    }
+  ]
+}

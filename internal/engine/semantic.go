@@ -46,7 +46,7 @@ type semanticRuleMeta struct {
 // semanticBuiltInAnalyzers 是 go-review 随默认配置提供的内置语义规则集合。
 //
 // 内置规则来自 rules/go-rules.json 中已确定能由 AST/type info 自动判断的规范项，用户只需要
-// 在 .go-review/semantic/default.yaml 的 rules 列表中启用/禁用名称，不需要写 Go 代码。
+// 在 .go-review/rules/semantic-default.yaml 的 rules 列表中启用/禁用名称，不需要写 Go 代码。
 var semanticBuiltInAnalyzers = map[string]semanticAnalyzerFactory{
 	// channel-size：限制显式 channel buffer 大小，覆盖 Uber 对大 buffer 需要设计说明的要求。
 	"channel-size": func() (*analysis.Analyzer, semanticRuleMeta) {
@@ -119,7 +119,7 @@ var semanticBuiltInAnalyzers = map[string]semanticAnalyzerFactory{
 // semanticCustomAnalyzers 是无需重新编译 go-review 就能通过 YAML 配置的规则种类。
 //
 // 它不是任意脚本/插件机制，而是“参数化 analyzer”：框架预先实现 kind，用户在
-// .go-review/semantic/custom.yaml 中填写 id、阈值、目标包函数等参数。
+// .go-review/rules/semantic-custom.yaml 中填写 id、阈值、目标包函数等参数。
 var semanticCustomAnalyzers = map[string]semanticCustomAnalyzerFactory{
 	// no-direct-call：配置 package + function，禁止直接调用某个包级函数。
 	"no-direct-call": func(rule semanticCustomRule) (*analysis.Analyzer, semanticRuleMeta) {
@@ -725,21 +725,21 @@ type semanticCustomRule struct {
 	Suggestion string
 }
 
-// semanticConfig 加载 .go-review/semantic/default.yaml 与 custom.yaml。
+// semanticConfig 加载 .go-review/rules/semantic-default.yaml 与 semantic-custom.yaml。
 //
 // 文件名已经区分默认规则和自定义规则，所以两个文件都统一使用 `rules:` 顶层字段：
 // default.yaml 的 rules 是字符串列表；custom.yaml 的 rules 是对象块列表。
 func (a SemanticAdapter) semanticConfig(stepCtx StepContext) (semanticConfig, error) {
 	if strings.TrimSpace(a.cfg.Parser) != "" {
-		return semanticConfig{}, fmt.Errorf("go.semantic does not support adapter parser; configure built-in rules in semantic/default.yaml")
+		return semanticConfig{}, fmt.Errorf("go.semantic does not support adapter parser; configure built-in rules in rules/semantic-default.yaml")
 	}
 	configDir := filepath.Dir(stepCtx.ConfigPath)
 	paths := []struct {
 		path string
 		kind semanticConfigKind
 	}{
-		{path: filepath.Join(configDir, "semantic", "default.yaml"), kind: semanticConfigBuiltInRules},
-		{path: filepath.Join(configDir, "semantic", "custom.yaml"), kind: semanticConfigCustomRules},
+		{path: existingPathOrFallback(filepath.Join(configDir, "rules", "semantic-default.yaml"), filepath.Join(configDir, "semantic", "default.yaml")), kind: semanticConfigBuiltInRules},
+		{path: existingPathOrFallback(filepath.Join(configDir, "rules", "semantic-custom.yaml"), filepath.Join(configDir, "semantic", "custom.yaml")), kind: semanticConfigCustomRules},
 	}
 	var merged semanticConfig
 	for _, source := range paths {

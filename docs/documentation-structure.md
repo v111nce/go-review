@@ -54,7 +54,7 @@
 | 规则类别 | 权威来源 | 执行位置 | 报告关联 |
 | --- | --- | --- | --- |
 | A 类：golangci-lint 可覆盖 | `rules/go-rules.json`、`docs/quality/go-rule-catalog.md` | `internal/engine/go_lint.go` 调用 `golangci-lint fmt/run`。 | `golangciLinterRuleID` / formatter 推断映射到 `rule_id`。 |
-| B 类：确定性语义规则 | `rules/go-rules.json`、`.go-review/semantic/*.yaml` | `internal/engine/semantic.go` 中的 `go/analysis` analyzer。 | analyzer diagnostic category 映射到 `rule_id`。 |
+| B 类：确定性语义规则 | `rules/go-rules.json`、`.go-review/rules/semantic-*.yaml` | `internal/engine/semantic.go` 中的 `go/analysis` analyzer。 | analyzer diagnostic category 映射到 `rule_id`。 |
 | C 类：LLM review | `AGENTS.md`、`rules/go-rules.json` | LLM 审阅 checklist，不是确定性 gate。 | catalog 中 `adapter=llm.review`、`tool_rules=[AGENTS.md]`。 |
 | D 类：candidate | `rules/go-rules.json` | 暂不实现。 | `implemented=false`，避免误报为已落地能力。 |
 

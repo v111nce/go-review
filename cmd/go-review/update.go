@@ -219,7 +219,7 @@ func applyUpdate(ctx context.Context, plan *updatePlan, binaryPath string, confi
 	if err := writeDefaultProjectFiles(filepath.Dir(configPath)); err != nil {
 		return updateResult{}, err
 	}
-	added = append(added, "llm/default.json", "llm/custom.json")
+	added = append(added, "rules/llm-default.json", "rules/llm-custom.json")
 	skipped = append(skipped, "旧 llm-rules.json 已废弃，存在时会被删除")
 	result.ConfigPath = configPath
 	result.ConfigAdded = added

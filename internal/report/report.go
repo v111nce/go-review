@@ -58,9 +58,10 @@ type Step struct {
 
 // ArtifactRef 指向捕获到的命令或工具输出。
 type ArtifactRef struct {
-	StepID string `json:"step_id"`
-	Name   string `json:"name"`
-	Path   string `json:"path"`
+	StepID  string `json:"step_id"`
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Summary string `json:"summary,omitempty"`
 }
 
 // Summary 保存人、LLM 和机器都容易消费的高层计数。
@@ -219,10 +220,12 @@ func WriteMarkdown(w io.Writer, r RunReport) error {
 
 ## 产物
 
-{{if .Artifacts}}| 步骤 | 名称 | 路径 |
-| --- | --- | --- |
+产物用于保留完整 stdout/stderr、prompt 和模型过程输出；主阅读入口是本报告，通常不需要逐个打开产物，除非要追溯原始命令输出。
+
+{{if .Artifacts}}| 步骤 | 名称 | 摘要 | 路径 |
+| --- | --- | --- | --- |
 {{- range .Artifacts}}
-| {{md .StepID}} | {{md .Name}} | {{md .Path}} |
+| {{md .StepID}} | {{md .Name}} | {{md .Summary}} | {{md .Path}} |
 {{- end}}
 {{else}}没有写入产物。{{end}}
 
@@ -254,7 +257,7 @@ func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 
 ## 重要约束
 
-- 不要修改 .go-review/artifacts/ 或 artifacts/go-review/ 下的生成产物。
+- 不要修改 .go-review/reports/ 下的生成报告；如果 debug artifacts 存在，也不要把它们当源码修改。
 - 除非有明确理由，不要通过关闭规则来规避问题。
 - 优先做小而保持行为不变的修改。
 - go-review check 是只读命令，不应修改源码。
@@ -315,9 +318,8 @@ func WriteLLMMarkdown(w io.Writer, r RunReport) error {
 
 // WriteProcessMarkdown 写入统一过程文档。
 //
-// 这个文档是 review/fix 的主阅读入口：它按执行过程解释哪些 safe fix 已应用、哪些
-// lint/semantic/test 只提供检测意见、后续 LLM step 的修改/复盘输出在哪里。latest.llm.md
-// 继续保留为模型输入上下文，但不承担人类主报告职责。
+// 这个文档是兼容旧调试流的过程视图：它按执行过程解释哪些 safe fix 已应用、哪些
+// lint/semantic/test 只提供检测意见、后续 LLM step 的修改/复盘输出在哪里。
 func WriteProcessMarkdown(w io.Writer, r RunReport) error {
 	r.Normalize()
 	const tpl = `# go-review 过程文档
@@ -334,6 +336,10 @@ func WriteProcessMarkdown(w io.Writer, r RunReport) error {
 | 开始时间 | {{time .StartedAt}} |
 | 耗时 | {{duration .Duration}} |
 
+## 0.1 本次改动 / Review 总览
+
+{{reviewOverview .}}
+
 ## 1. Safe fix 执行结果
 
 {{safeFixSection .}}
@@ -342,7 +348,7 @@ func WriteProcessMarkdown(w io.Writer, r RunReport) error {
 
 {{toolDetectionSection .}}
 
-说明：只检测不修复的规则不会自动改代码；它们通过本节给出 rule_id、步骤、文件位置、失败信息和建议。若 gate 为 fail，终端会显示 FAILED，并在 latest.md / latest.process.md 中保留具体失败项。
+说明：只检测不修复的规则不会自动改代码；它们通过本节给出 rule_id、步骤、文件位置、失败信息和建议。若 gate 为 fail，终端会显示 FAILED，并在 latest.md 中保留具体失败项。
 
 ## 3. 第一模型执行结果
 
@@ -350,7 +356,7 @@ func WriteProcessMarkdown(w io.Writer, r RunReport) error {
 
 ## 4. LLM 规则审阅与修复说明
 
-LLM 规则来源：.go-review/llm/default.json 和 .go-review/llm/custom.json。default 由框架维护，custom 由用户维护；这些规则需要上下文判断，默认不作为确定性工具 gate。
+LLM 规则来源：.go-review/rules/llm-default.json 和 .go-review/rules/llm-custom.json。default 由框架维护，custom 由用户维护；这些规则需要上下文判断，默认不作为确定性工具 gate。
 
 {{llmRulesSection .}}
 
@@ -360,38 +366,33 @@ LLM 规则来源：.go-review/llm/default.json 和 .go-review/llm/custom.json。
 
 ## 6. 产物索引
 
-{{if .Artifacts}}| 步骤 | 名称 | 路径 |
-| --- | --- | --- |
+产物的目的：保存完整 prompt、stdout、stderr 和过程证据，便于审计和排错；日常查看请优先看上面的总览、工具检测结果、第一模型输出和第二模型复盘。
+
+{{if .Artifacts}}| 步骤 | 名称 | 摘要 | 路径 |
+| --- | --- | --- | --- |
 {{- range .Artifacts}}
-| {{md .StepID}} | {{md .Name}} | {{md .Path}} |
+| {{md .StepID}} | {{md .Name}} | {{md .Summary}} | {{md .Path}} |
 {{- end}}
 {{else}}没有写入产物。{{end}}
 `
 	return executeTemplate(w, "process-markdown", tpl, r)
 }
 
-// WriteFiles 同时写入 latest 和带时间戳的人类、LLM、JSON 报告。
+// WriteFiles 写入默认最小报告集：latest.md 给人阅读，latest.json 给 CI/机器消费。
 func WriteFiles(dir string, r RunReport) error {
 	if strings.TrimSpace(dir) == "" {
 		return nil
 	}
 	r.Normalize()
-	if err := os.MkdirAll(filepath.Join(dir, "runs"), 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	stamp := reportStamp(r)
 	files := []struct {
 		path  string
 		write func(io.Writer, RunReport) error
 	}{
 		{filepath.Join(dir, "latest.md"), WriteMarkdown},
-		{filepath.Join(dir, "latest.llm.md"), WriteLLMMarkdown},
-		{filepath.Join(dir, "latest.process.md"), WriteProcessMarkdown},
 		{filepath.Join(dir, "latest.json"), WriteJSON},
-		{filepath.Join(dir, "runs", stamp+".md"), WriteMarkdown},
-		{filepath.Join(dir, "runs", stamp+".llm.md"), WriteLLMMarkdown},
-		{filepath.Join(dir, "runs", stamp+".process.md"), WriteProcessMarkdown},
-		{filepath.Join(dir, "runs", stamp+".json"), WriteJSON},
 	}
 	for _, file := range files {
 		if err := writeOne(file.path, r, file.write); err != nil {
@@ -423,6 +424,7 @@ func executeTemplate(w io.Writer, name, tpl string, r RunReport) error {
 		"md":                   escapeMarkdownCell,
 		"nextActions":          nextActions,
 		"recommendation":       recommendation,
+		"reviewOverview":       reviewOverview,
 		"safeFixSection":       safeFixSection,
 		"toolDetectionSection": toolDetectionSection,
 		"llmStepSection":       llmStepSection,
@@ -557,6 +559,59 @@ func nextActions(r RunReport) string {
 	return strings.Join(lines, "\n")
 }
 
+func reviewOverview(r RunReport) string {
+	var lines []string
+	lines = append(lines, fmt.Sprintf("- 总体状态：`%s`；步骤 %d 个，通过 %d 个，失败 %d 个，告警 %d 个。",
+		r.GateStatus, r.Summary.StepsTotal, r.Summary.StepsPassed, r.Summary.StepsFailed, r.Summary.StepsWarned))
+	if r.Summary.FixesApplied > 0 {
+		lines = append(lines, fmt.Sprintf("- 自动/安全修复：本次报告记录已应用 %d 个修复。", r.Summary.FixesApplied))
+	} else if r.Command == "fix" {
+		lines = append(lines, "- 自动/安全修复：本次没有记录到已应用的 safe fix。若 LLM 修改了源码，请看下面模型 stdout 摘要和 git diff。")
+	} else {
+		lines = append(lines, "- 代码改动：`check` 为只读命令，本次不应修改源码。")
+	}
+	for _, stepID := range []string{"llm-review", "llm-claude"} {
+		step, ok := findProcessStep(r, stepID)
+		if !ok {
+			continue
+		}
+		label := "第一模型"
+		if stepID == "llm-claude" {
+			label = "第二模型"
+		}
+		lines = append(lines, fmt.Sprintf("- %s `%s`：状态 `%s`，信息：%s", label, step.ID, step.Status, dash(step.Message)))
+		if summary := preferredArtifactSummary(r, stepID); summary != "" {
+			lines = append(lines, fmt.Sprintf("  摘要：%s", summary))
+		}
+	}
+	if r.GateStatus == GateFail {
+		lines = append(lines, "- 下一步：先看“工具检测结果”的失败项；若模型步骤已运行，再看对应 stdout 摘要确认它修了什么或建议了什么。")
+	} else {
+		lines = append(lines, "- 下一步：优先保留 latest.md 作为可读证据；只有排错时再打开 debug artifacts 下的完整 stdout/stderr。")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func preferredArtifactSummary(r RunReport, stepID string) string {
+	preferred := map[string]int{"review": 1, "process": 2, "stdout": 3, "stderr": 4}
+	bestRank := 100
+	best := ""
+	for _, artifact := range r.Artifacts {
+		if artifact.StepID != stepID || strings.TrimSpace(artifact.Summary) == "" {
+			continue
+		}
+		rank, ok := preferred[artifact.Name]
+		if !ok {
+			continue
+		}
+		if rank < bestRank {
+			bestRank = rank
+			best = artifact.Summary
+		}
+	}
+	return best
+}
+
 func recommendation(f Finding) string {
 	if strings.TrimSpace(f.Suggestion) != "" {
 		return f.Suggestion
@@ -570,7 +625,7 @@ func recommendation(f Finding) string {
 func llmRulesSection(r RunReport) string {
 	paths := llmRulesPaths(r.ConfigPath)
 	if len(paths) == 0 {
-		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 .go-review/llm/default.json 和 .go-review/llm/custom.json。"
+		return "- 未发现配置路径；如需 LLM 审阅，请在项目内维护 .go-review/rules/llm-default.json 和 .go-review/rules/llm-custom.json。"
 	}
 	var b strings.Builder
 	fmt.Fprintln(&b, "- 规则文件：")
@@ -603,9 +658,16 @@ func llmRulesPaths(configPath string) []llmRuleSource {
 	}
 	dir := filepath.Dir(configPath)
 	return []llmRuleSource{
-		{Name: "default", Path: filepath.Join(dir, "llm", "default.json")},
-		{Name: "custom", Path: filepath.Join(dir, "llm", "custom.json")},
+		{Name: "default", Path: existingReportPathOrFallback(filepath.Join(dir, "rules", "llm-default.json"), filepath.Join(dir, "llm", "default.json"))},
+		{Name: "custom", Path: existingReportPathOrFallback(filepath.Join(dir, "rules", "llm-custom.json"), filepath.Join(dir, "llm", "custom.json"))},
 	}
+}
+
+func existingReportPathOrFallback(primary, fallback string) string {
+	if _, err := os.Stat(primary); err == nil {
+		return primary
+	}
+	return fallback
 }
 
 func summarizeLLMRules(data []byte, sourceName string) string {

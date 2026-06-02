@@ -68,7 +68,7 @@ func runCommand(command string, args []string) int {
 	configPath := fs.String("config", "", "path to go-review YAML config")
 	profile := fs.String("profile", "fast", "profile to run")
 	workdir := fs.String("workdir", "", "project working directory override")
-	reportDir := fs.String("report-dir", "", "directory for latest.md, latest.llm.md, and latest.json reports")
+	reportDir := fs.String("report-dir", "", "directory for latest.md and latest.json reports")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -145,9 +145,9 @@ func initProject(workdir string) (string, error) {
 
 // writeDefaultProjectFiles 写入 go-review 配置目录下的伴随规则文件。
 //
-// 这些文件都是 go-review 配置目录下的项目本地输入：rules.json 提供轻量规则索引；
-// llm/default.json 由框架默认覆盖，llm/custom.json 只在不存在时创建；semantic/default.yaml
-// 由框架默认覆盖，semantic/custom.yaml 只在不存在时创建。这样默认规则可升级，用户规则不被覆盖。
+// 这些文件都是 go-review 配置目录下的项目本地输入：rules/catalog.json 提供轻量规则索引；
+// rules/llm-default.json 和 rules/semantic-default.yaml 由框架默认覆盖，custom 文件只在
+// 不存在时创建。这样默认规则可升级，用户规则不被覆盖。
 func writeDefaultProjectFiles(configDir string) error {
 	if err := writeDefaultRuleCatalog(configDir); err != nil {
 		return err
@@ -158,7 +158,7 @@ func writeDefaultProjectFiles(configDir string) error {
 	if err := writeDefaultSemanticConfig(configDir); err != nil {
 		return err
 	}
-	return writeDefaultGolangCIConfig(configDir)
+	return removeLegacyGolangCIConfig(configDir)
 }
 
 // writeDefaultRuleCatalog 初始化消费方项目内的轻量规则 catalog。
@@ -166,10 +166,13 @@ func writeDefaultProjectFiles(configDir string) error {
 // 完整规则库在仓库根目录 rules/go-rules.json；初始化用户项目时只写入最小示例，
 // 让报告中的 rule_id 有本地可读解释，同时避免把 200+ 条规则一次性灌进用户配置。
 func writeDefaultRuleCatalog(configDir string) error {
-	path := filepath.Join(configDir, "rules.json")
+	path := filepath.Join(configDir, "rules", "catalog.json")
 	if _, err := os.Stat(path); err == nil {
 		return nil
 	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 	return rulecatalog.SaveFile(path, defaultRuleCatalog())
@@ -177,17 +180,17 @@ func writeDefaultRuleCatalog(configDir string) error {
 
 // writeDefaultLLMRules 初始化消费方项目内的 LLM 审阅规则文件。
 //
-// default.json 是框架默认规则，允许 init/update 覆盖；custom.json 是用户团队规则，
+// llm-default.json 是框架默认规则，允许 init/update 覆盖；llm-custom.json 是用户团队规则，
 // 只在不存在时创建。两者共同构成 LLM 审阅输入；旧 llm-rules.json 会被删除且不再读取。
 func writeDefaultLLMRules(configDir string) error {
-	llmDir := filepath.Join(configDir, "llm")
-	if err := os.MkdirAll(llmDir, 0o755); err != nil {
+	rulesDir := filepath.Join(configDir, "rules")
+	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		return err
 	}
-	if err := rulecatalog.SaveFile(filepath.Join(llmDir, "default.json"), defaultLLMRuleCatalog()); err != nil {
+	if err := rulecatalog.SaveFile(filepath.Join(rulesDir, "llm-default.json"), defaultLLMRuleCatalog()); err != nil {
 		return err
 	}
-	customPath := filepath.Join(llmDir, "custom.json")
+	customPath := filepath.Join(rulesDir, "llm-custom.json")
 	if _, err := os.Stat(customPath); err == nil {
 		return removeLegacyLLMRules(configDir)
 	} else if err != nil && !os.IsNotExist(err) {
@@ -201,14 +204,21 @@ func writeDefaultLLMRules(configDir string) error {
 
 // removeLegacyLLMRules 删除已废弃的单文件 LLM 规则。
 //
-// 当前配置契约只认 llm/default.json 和 llm/custom.json；保留旧 llm-rules.json
+// 当前配置契约优先读取 rules/llm-default.json 和 rules/llm-custom.json；保留旧 llm-rules.json
 // 容易让用户误以为它还会被读取，所以初始化/升级时直接清理。
 func removeLegacyLLMRules(configDir string) error {
-	err := os.Remove(filepath.Join(configDir, "llm-rules.json"))
-	if err == nil || os.IsNotExist(err) {
-		return nil
+	for _, path := range []string{
+		filepath.Join(configDir, "llm-rules.json"),
+		filepath.Join(configDir, "llm", "default.json"),
+		filepath.Join(configDir, "llm", "custom.json"),
+	} {
+		err := os.Remove(path)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
-	return err
+	_ = os.Remove(filepath.Join(configDir, "llm"))
+	return nil
 }
 
 // defaultLLMRuleCatalog 返回内置规则库中的 C 类 LLM review 规则。
@@ -250,7 +260,7 @@ func defaultFallbackLLMRules() []rulecatalog.Rule {
 			Source:         rulecatalog.Source{Name: "Go Code Review Comments", URL: "https://go.dev/wiki/CodeReviewComments", Section: "Goroutine Lifetimes"},
 			Handling:       "llm-review",
 			Adapter:        "llm.review",
-			ToolRules:      []string{".go-review/llm/default.json", ".go-review/llm/custom.json"},
+			ToolRules:      []string{".go-review/rules/llm-default.json", ".go-review/rules/llm-custom.json"},
 			DefaultProfile: "review",
 			Severity:       "medium",
 			Autofix:        rulecatalog.Autofix{Supported: false, Safety: "none"},
@@ -316,38 +326,39 @@ func defaultRuleCatalog() rulecatalog.Catalog {
 	}
 }
 
-// writeDefaultSemanticConfig 写入 semantic/default.yaml 和 semantic/custom.yaml。
-// default.yaml 每次 init 都覆盖为当前框架默认；custom.yaml 只在不存在时创建，避免覆盖用户规则。
+// writeDefaultSemanticConfig 写入 rules/semantic-default.yaml 和 rules/semantic-custom.yaml。
+// default 文件每次 init 都覆盖为当前框架默认；custom 文件只在不存在时创建，避免覆盖用户规则。
 func writeDefaultSemanticConfig(configDir string) error {
-	semanticDir := filepath.Join(configDir, "semantic")
-	if err := os.MkdirAll(semanticDir, 0o755); err != nil {
+	rulesDir := filepath.Join(configDir, "rules")
+	if err := os.MkdirAll(rulesDir, 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(semanticDir, "default.yaml"), []byte(defaultSemanticConfig()), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rulesDir, "semantic-default.yaml"), []byte(defaultSemanticConfig()), 0o644); err != nil {
 		return err
 	}
-	customPath := filepath.Join(semanticDir, "custom.yaml")
+	customPath := filepath.Join(rulesDir, "semantic-custom.yaml")
 	if _, err := os.Stat(customPath); os.IsNotExist(err) {
-		return os.WriteFile(customPath, []byte(customSemanticConfig()), 0o644)
+		if err := os.WriteFile(customPath, []byte(customSemanticConfig()), 0o644); err != nil {
+			return err
+		}
 	} else if err != nil {
 		return err
 	}
-	return nil
+	return removeLegacySemanticConfig(configDir)
 }
 
-// writeDefaultGolangCIConfig 写入 go-review 管理的 golangci-lint 基础降噪配置。
-//
-// go-review 仍然通过命令行显式指定默认 linter 列表；这个文件只放跨项目误报排除项，
-// 例如 go-zero 配置常用的 `json:",optional"` 会被 staticcheck SA5008 误判。
-// 文件不存在时才创建，用户可以在项目内按团队需要继续维护。
-func writeDefaultGolangCIConfig(configDir string) error {
-	path := filepath.Join(configDir, "golangci.yml")
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	} else if err != nil && !os.IsNotExist(err) {
-		return err
+func removeLegacySemanticConfig(configDir string) error {
+	for _, path := range []string{
+		filepath.Join(configDir, "semantic", "default.yaml"),
+		filepath.Join(configDir, "semantic", "custom.yaml"),
+	} {
+		err := os.Remove(path)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
-	return os.WriteFile(path, []byte(defaultGolangCIConfig()), 0o644)
+	_ = os.Remove(filepath.Join(configDir, "semantic"))
+	return nil
 }
 
 // defaultConfig 是 `go-review init` 生成的默认配置模板。
@@ -376,8 +387,6 @@ defaults:
 # exclude:
 #   - generated
 #   - third_party
-artifacts:
-  dir: "artifacts/latest"
 adapters:
   - id: go.lint.format
     type: go.lint
@@ -389,7 +398,6 @@ adapters:
     type: go.lint
     args:
       - run
-      - --config=.go-review/golangci.yml
       - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,errorlint,errname,forcetypeassert,predeclared,bodyclose,gosec
       - --output.text.print-issued-lines=false
       - --show-stats=false
@@ -471,7 +479,7 @@ steps:
     enabled: false
     on_fail: continue
   # Set enabled: true after Claude Code CLI is installed and logged in.
-  # This optional second-pass reviewer consumes latest.llm.md and Codex artifacts.
+  # This optional second-pass reviewer consumes latest.md and Codex output.
   - id: llm-claude
     adapter: llm.claude
     enabled: false
@@ -505,17 +513,12 @@ profiles:
 	`
 }
 
-func defaultGolangCIConfig() string {
-	return `version: "2"
-linters:
-  exclusions:
-    rules:
-      # go-zero 配置结构会使用 json:",optional" 表达可选配置；
-      # staticcheck SA5008 按标准 encoding/json 解释标签，会把 optional 当成未知选项。
-      - text: "SA5008: invalid appearance of unknown ` + "`optional`" + ` tag option"
-        linters:
-          - staticcheck
-`
+func removeLegacyGolangCIConfig(configDir string) error {
+	err := os.Remove(filepath.Join(configDir, "golangci.yml"))
+	if err == nil || os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 // defaultSemanticConfig 是框架内置 semantic 规则列表。
@@ -542,7 +545,7 @@ func customSemanticConfig() string {
 # Currently supported custom kinds:
 # - no-direct-call: reports calls to an imported package function, including aliased imports.
 # - max-params: reports functions/methods whose parameter count is greater than max.
-# Built-in semantic/default.yaml supports: import-blank, custom-contexts, no-tfatal-goroutine,
+# Built-in rules/semantic-default.yaml supports: import-blank, custom-contexts, no-tfatal-goroutine,
 # channel-size, enum-start-one, exit-in-main, and no-direct-os-getenv.
 # Example: ban direct fmt.Println and require injected logging instead.
 rules:
@@ -898,7 +901,7 @@ Flags:
   --config     path to go-review YAML config; defaults to .go-review/go-review.yaml or go-review.yaml
   --profile    profile name, defaults to fast
   --workdir    project working directory override
-  --report-dir directory for latest.md, latest.llm.md, and latest.json reports`)
+  --report-dir directory for latest.md and latest.json reports`)
 }
 
 func printVersion() {

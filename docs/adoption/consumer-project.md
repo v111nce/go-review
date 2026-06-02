@@ -47,7 +47,7 @@ The default location is `.go-review/go-review.yaml`; root-level `go-review.yaml`
 - `go.lint` as a safe local formatter/checker backed by `golangci-lint fmt`.
 - `go.test` through the generic `cmd` adapter; keep it separate from lint.
 - `fast`, `ci`, and `nightly` profiles.
-- artifact output under `artifacts/go-review`.
+- minimal reports under `.go-review/reports/latest.md` and `.go-review/reports/latest.json`.
 - optional commented adapters for `staticcheck`, `govulncheck`, and `gosec`, with install commands next to each disabled block.
 - future-ready path to replace scattered lint/format commands with a `golangci-lint` adapter while keeping `go-review` as the orchestrator.
 - `on_fail: continue` on generated steps so formatting, tests, semantic checks, and any enabled optional scanners all run independently and report together.
@@ -58,15 +58,19 @@ Every `check` and `fix` run writes deterministic reports. By default, reports ar
 
 ```txt
 .go-review/
+  go-review.yaml
+  rules/
+    catalog.json
+    llm-default.json
+    llm-custom.json
+    semantic-default.yaml
+    semantic-custom.yaml
   reports/
     latest.md        # human-readable summary
-    latest.llm.md    # repair context designed to paste into an LLM
-    latest.process.md # unified process: safe fix, findings, LLM edits, second-pass review
     latest.json      # machine-readable result contract
-    runs/            # timestamped copies of each run
 ```
 
-`latest.md` answers "did it pass, what failed, can it auto-fix, and what do I do next?". `latest.llm.md` repeats the same deterministic results in a repair-oriented prompt shape with file/line/column, rule, message, suggestion, fix safety, and artifact paths. No LLM is required to generate either report. When `llm.review` or `llm.claude` is enabled, those adapters consume `latest.llm.md` as stable context; it also remains useful for manual review and historical audit. Human readers should use `latest.process.md` as the unified process document: it records safe fixes, deterministic findings, first-model output, LLM-rule review context, and second-pass review output.
+`latest.md` answers "did it pass, what failed, can it auto-fix, what did LLM review report, and what do I do next?". `latest.json` carries the same result contract for CI and other automation. Debug artifacts and timestamped history are intentionally not part of the default tree.
 
 ## Safe fix behavior
 
@@ -79,9 +83,9 @@ Running `go-review init` creates:
 ```text
 .go-review/
   go-review.yaml
-  semantic/
-    default.yaml  # built-in/default semantic rules
-    custom.yaml   # team-owned semantic rules
+  rules/
+    semantic-default.yaml  # built-in/default semantic rules
+    semantic-custom.yaml   # team-owned semantic rules
 ```
 
 Project-wide `exclude` belongs in `.go-review/go-review.yaml`, not in semantic rule files. The generated config does **not** enable project excludes by default; it only includes a commented example. Add paths only when the repository owner intentionally wants them skipped. Once configured, every built-in project scanner that honors project excludes skips those paths, including `go.lint` and `go.semantic`. Example:
@@ -92,14 +96,14 @@ exclude:
   - third_party
 ```
 
-`default.yaml` and `custom.yaml` only list semantic rules. Built-in rules go under `rules:`:
+`semantic-default.yaml` and `semantic-custom.yaml` only list semantic rules. Built-in rules go under `rules:`:
 
 ```yaml
 rules:
   - no-direct-os-getenv
 ```
 
-Team-owned semantic rules go under `rules:` in `.go-review/semantic/custom.yaml`. Supported rule kinds include `no-direct-call` and `max-params`. `no-direct-call` matches direct calls to an imported package function, including aliased imports such as `import f "fmt"` followed by `f.Println(...)`:
+Team-owned semantic rules go under `rules:` in `.go-review/rules/semantic-custom.yaml`. Supported rule kinds include `no-direct-call` and `max-params`. `no-direct-call` matches direct calls to an imported package function, including aliased imports such as `import f "fmt"` followed by `f.Println(...)`:
 
 ```yaml
 rules:
@@ -122,7 +126,7 @@ rules:
     suggestion: "拆分参数对象或引入配置结构"
 ```
 
-When enabled, the report rule ID is prefixed with `semantic.`, for example `semantic.no-direct-fmt-println` or `semantic.max-four-params`. This configuration is intentionally limited: it is a supported rule kind, not a general-purpose semantic DSL. The `go.semantic` adapter does not use the adapter `parser` field; built-in rules are configured in `.go-review/semantic/default.yaml`, and `parser` is not a plugin mechanism. A semantic step currently reports the first failing finding for the step, not a full multi-diagnostic stream, and review-only semantic rules do not auto-fix code. Rules such as return counts, body length, context ordering, or import boundaries need additional implementation: add new `go/analysis` analyzers to `go.semantic`, or use external tools via `cmd`. Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
+When enabled, the report rule ID is prefixed with `semantic.`, for example `semantic.no-direct-fmt-println` or `semantic.max-four-params`. This configuration is intentionally limited: it is a supported rule kind, not a general-purpose semantic DSL. The `go.semantic` adapter does not use the adapter `parser` field; built-in rules are configured in `.go-review/rules/semantic-default.yaml`, and `parser` is not a plugin mechanism. A semantic step currently reports the first failing finding for the step, not a full multi-diagnostic stream, and review-only semantic rules do not auto-fix code. Rules such as return counts, body length, context ordering, or import boundaries need additional implementation: add new `go/analysis` analyzers to `go.semantic`, or use external tools via `cmd`. Keep one `semantic` step in `go-review.yaml`; use the top-level project `exclude` list to skip packages or directories that no profile should scan.
 
 ## GitHub Actions template
 

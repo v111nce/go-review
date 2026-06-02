@@ -337,7 +337,7 @@ func (s RunSummary) Report() report.RunReport {
 		reportSteps = append(reportSteps, step)
 		for _, artifact := range result.Artifacts {
 			if artifact.Path != "" {
-				artifacts = append(artifacts, report.ArtifactRef{StepID: result.StepID, Name: artifact.Name, Path: artifact.Path})
+				artifacts = append(artifacts, report.ArtifactRef{StepID: result.StepID, Name: artifact.Name, Path: artifact.Path, Summary: artifactSummary(artifact)})
 			}
 		}
 		if result.GateStatus == config.GatePass || result.Kind == ResultArtifact {
@@ -403,6 +403,48 @@ func artifactPaths(artifacts []Artifact) []string {
 		}
 	}
 	return paths
+}
+
+func artifactSummary(artifact Artifact) string {
+	content := strings.TrimSpace(artifact.Content)
+	switch artifact.Name {
+	case "prompt":
+		if content == "" {
+			return "模型输入 prompt。"
+		}
+		return "模型输入 prompt；完整内容见产物。"
+	case "stdout":
+		if content == "" {
+			return "无 stdout 输出。"
+		}
+		return truncateSingleLine(content, 240)
+	case "stderr":
+		if content == "" {
+			return "无 stderr 输出。"
+		}
+		return truncateSingleLine(content, 240)
+	case "process", "review":
+		if content == "" {
+			return "模型过程输出已写入统一过程文档。"
+		}
+		return truncateSingleLine(content, 240)
+	default:
+		if content == "" {
+			return ""
+		}
+		return truncateSingleLine(content, 240)
+	}
+}
+
+func truncateSingleLine(value string, limit int) string {
+	value = strings.Join(strings.Fields(value), " ")
+	if limit <= 0 || len(value) <= limit {
+		return value
+	}
+	if limit <= 3 {
+		return value[:limit]
+	}
+	return value[:limit-3] + "..."
 }
 
 func orderedProfileSteps(cfg *config.Config, profile *config.Profile, requested string) ([]config.Step, error) {

@@ -975,7 +975,7 @@ profiles:
 	}
 }
 
-// 验证 go.semantic 不再兼容 adapter parser 字段；内置规则必须写在 semantic/default.yaml。
+// 验证 go.semantic 不再兼容 adapter parser 字段；内置规则必须写在 rules/semantic-default.yaml。
 func TestSemanticAdapterRejectsAdapterParserField(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0o644); err != nil {
@@ -1442,7 +1442,10 @@ func TestLLMReviewAdapterRunsCodexDirectly(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "api"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "llm", "default.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "rules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "rules", "llm-default.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
@@ -1477,7 +1480,7 @@ artifacts:
 	if err != nil {
 		t.Fatalf("expected prompt artifact %s: %v", promptPath, err)
 	}
-	for _, want := range []string{"LLM 审阅任务", "llm/default.json", "llm/custom.json", "latest.llm.md", "rule_id"} {
+	for _, want := range []string{"LLM 审阅任务", "rules/llm-default.json", "rules/llm-custom.json", "latest.md", "rule_id"} {
 		if !strings.Contains(string(prompt), want) {
 			t.Fatalf("prompt missing %q:\n%s", want, prompt)
 		}
@@ -1511,10 +1514,10 @@ func TestFixRevalidatesAfterSuccessfulLLMReview(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, ".go-review"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "llm"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "rules"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "llm", "default.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "rules", "llm-default.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/llm-revalidate\n"), 0o644); err != nil {
@@ -1565,7 +1568,7 @@ profiles:
 	}
 }
 
-// 验证 llm.claude adapter 会消费 latest.llm.md、规则文件和 Codex 产物，并直接调用 Claude CLI。
+// 验证 llm.claude adapter 会消费 latest.md、规则文件和 Codex 产物，并直接调用 Claude CLI。
 func TestClaudeReviewAdapterRunsClaudeDirectly(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell fixture uses sh")
@@ -1580,13 +1583,13 @@ func TestClaudeReviewAdapterRunsClaudeDirectly(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "reports"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "llm"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".go-review", "rules"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "reports", "latest.llm.md"), []byte("# latest llm"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "reports", "latest.md"), []byte("# latest"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".go-review", "llm", "default.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".go-review", "rules", "llm-default.json"), []byte(`{"schema_version":"go-review.rules.v1","rules":[]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	cfg := writeConfig(t, filepath.Join(dir, ".go-review"), `schema_version: "1.0"
@@ -1622,7 +1625,7 @@ artifacts:
 	if err != nil {
 		t.Fatalf("expected prompt artifact %s: %v", promptPath, err)
 	}
-	for _, want := range []string{"Claude 复审任务", "latest.llm.md", "llm/default.json", "llm/custom.json", "llm-review-stdout.txt", "latest.process.md", "rule_id"} {
+	for _, want := range []string{"Claude 复审任务", "latest.md", "rules/llm-default.json", "rules/llm-custom.json", "llm-review-stdout.txt", "rule_id"} {
 		if !strings.Contains(string(prompt), want) {
 			t.Fatalf("prompt missing %q:\n%s", want, prompt)
 		}
@@ -1640,12 +1643,16 @@ artifacts:
 	if err != nil || !strings.Contains(string(stdoutArtifact), "claude-ok") {
 		t.Fatalf("stdout artifact = %q err=%v", stdoutArtifact, err)
 	}
-
-	claudeReport, err := os.ReadFile(filepath.Join(dir, ".go-review", "reports", "latest.process.md"))
-	if err != nil || !strings.Contains(string(claudeReport), "claude-ok") {
-		t.Fatalf("claude report = %q err=%v", claudeReport, err)
+	reportArtifacts := summary.Report().Artifacts
+	hasStdoutSummary := false
+	for _, artifact := range reportArtifacts {
+		if artifact.StepID == "llm-claude" && artifact.Name == "stdout" && strings.Contains(artifact.Summary, "claude-ok") {
+			hasStdoutSummary = true
+		}
 	}
-
+	if !hasStdoutSummary {
+		t.Fatalf("expected report artifact summary to expose claude stdout, artifacts=%#v", reportArtifacts)
+	}
 }
 
 func writeExecutable(t *testing.T, path, body string) {

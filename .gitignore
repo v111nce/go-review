@@ -14,5 +14,11 @@ artifacts/
 dist/
 
 # go-review local reports
-.go-review/
 **/.go-review/
+!/.go-review/
+/.go-review/reports/
+/.go-review/artifacts/
+!/.go-review/go-review.yaml
+!/.go-review/rules/
+!/.go-review/rules/**
+/.omc/

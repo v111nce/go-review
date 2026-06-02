@@ -18,8 +18,6 @@ exclude:
   - testdata
 #   - generated
 #   - third_party
-artifacts:
-  dir: "artifacts/latest"
 adapters:
   - id: go.lint.format
     type: go.lint
@@ -31,7 +29,6 @@ adapters:
     type: go.lint
     args:
       - run
-      - --config=.go-review/golangci.yml
       - --enable-only=errcheck,govet,staticcheck,unused,ineffassign,errorlint,errname,forcetypeassert,predeclared,bodyclose,gosec
       - --output.text.print-issued-lines=false
       - --show-stats=false

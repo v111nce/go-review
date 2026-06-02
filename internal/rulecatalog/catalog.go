@@ -303,7 +303,7 @@ func renderHandlingDefinitions(w io.Writer) error {
 		{"tool-golangci-config", "可由 golangci-lint 处理，但必须配置阈值、名单、例外或具体 linter", "先沉淀推荐配置，再按 profile 启用。"},
 		{"tool-go-test", "通过 `go test`、example test 或测试运行本身验证", "保持独立 `go.test` step。"},
 		{"tool-external", "更适合独立工具，例如 `govulncheck`、`gosec`", "独立 adapter 或可选 profile。"},
-		{"tool-semantic", "已确认需要 AST/type info，且能写成稳定 `go.semantic` analyzer", "进入 `.go-review/semantic/custom.yaml` 支持范围或新增 analyzer。"},
+		{"tool-semantic", "已确认需要 AST/type info，且能写成稳定 `go.semantic` analyzer", "进入 `.go-review/rules/semantic-custom.yaml` 支持范围或新增 analyzer。"},
 		{"llm-review", "需要上下文判断、原则解释或设计取舍；不适合确定性工具 gate", "写入规范文档，并进入 LLM report / 人工 review checklist；默认不阻断。"},
 		{"candidate", "候选规则，仍需验证工具覆盖、误判率和启用成本", "不默认启用。"},
 	}
